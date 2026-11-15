@@ -4,6 +4,8 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ## Unreleased
 
+- Vults can tell you when a new version is out. The island asks once whether it may look at its releases on GitHub; with your yes it looks at most once a day and shows the version with **Open release page** and **Later**. **Settings → General → Updates** has the switch and **Check now**. Nothing is downloaded or installed, and AUR packages are built without it.
+
 - A session that finishes or fails while you are looking at its terminal no longer plays a sound or brings the island forward; cards always do. **Settings → General → Stay quiet when I am looking**, on by default, turns it off.
 
 - An uncertain or interrupted GitHub merge, Actions rerun or cancel, or branch deletion can be proposed again 15 minutes later, when a fresh read shows it did not take effect; before, it stayed blocked for 90 days.

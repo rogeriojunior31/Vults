@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 4b0a547997d1 -->
+<!-- source: 7ecafa61a501 -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -325,6 +325,21 @@ login.
 - **Claude Code** (Pro ou Max): ele só informa o uso a uma linha de status, então instalar os hooks
   acrescenta uma nossa, que roda a sua se você tiver uma ([como](../reference/settings.md#agent-configs-vults-edits)).
   Os números chegam depois da primeira resposta de uma sessão.
+
+<a id="a-new-version"></a>
+
+## Uma versão nova
+
+Uma vez, a ilha aberta pergunta: *May Vults look at its releases on GitHub?* (o Vults pode olhar as
+versões dele no GitHub?). Com **Yes, once a day**, o Vults lê a lista pública das versões dele cerca
+de 30 segundos depois de abrir e, depois, no máximo uma vez por dia. Com **No**, ou em **Settings →
+General → Updates**, ele nunca olha. Sem resposta, a pergunta volta no dia seguinte. Aprovações,
+perguntas e uma sessão que precisa de você sempre vêm antes: a pergunta e o aviso esperam por elas.
+
+Quando sai uma versão mais nova, um ponto acende na ilha compacta e a ilha aberta mostra *Vults 0.2.0
+is available* com a primeira linha das notas. **Open release page** abre a página no GitHub; **Later**
+esconde essa versão por um dia, e uma mais nova aparece na hora. Nada é baixado nem instalado. Os
+pacotes que a sua distribuição atualiza (o AUR) não têm aviso de atualização.
 
 <a id="getting-to-a-session"></a>
 

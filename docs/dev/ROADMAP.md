@@ -1043,10 +1043,16 @@ happens until FF4.3. `docs/safety.md` lists the request (both languages).
   `should_check` **at most daily** (rule 4), snooze 24 h, ask again after a day if unanswered.
 - [x] FF4.2 a gate feature `update` in `app/src/gate.rs` (switch, small budget, trace); one
   unauthenticated GET of the releases list; add it to `scripts/network-allowlist.txt`.
-- [ ] FF4.3 consent asked once in the island; Settings › General › Updates with *Check now*; the notice
+2026-11-15, branch `feat/update-notice-ui`: FF4.3 and FF4.4 done. Validated in the running app
+(Windows 11, isolated profile, embedded UI): the question in Quick, Yes saving consent and the
+first real look traced (`request update`), Settings › General › Updates with the result and
+*Check now* (`request update-now`), a seeded 0.2.0 notice lighting Mini's dot and naming it,
+*Later* hiding it for a day. *Open release page* was not clicked (it would open a browser on a
+fake tag); the AUR `--no-default-features` build is checked by Clippy and tests only.
+- [x] FF4.3 consent asked once in the island; Settings › General › Updates with *Check now*; the notice
   card (version, notes, *Open release page*, *Later*); Zeca's badge only when nothing else waits.
   Distro builds (AUR) compile the feature out. Strings in four languages.
-- [ ] FF4.4 docs: `docs/safety.md` request list, settings reference, ADR 0019 *History*, both
+- [x] FF4.4 docs: `docs/safety.md` request list, settings reference, ADR 0019 *History*, both
   languages; CHANGELOG.
 
 **Done when:** with the switch off, no request is made (traces empty); with it on, at most one a day,
