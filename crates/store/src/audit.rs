@@ -74,6 +74,12 @@ pub(crate) fn insert_audit(conn: &rusqlite::Connection, at: i64, a: &Audit) -> R
 const RECEIPTS: &str = "act='external-write' AND tool IN ('github_actions_rerun_failed','github_actions_rerun_run','github_actions_rerun_job','github_actions_cancel','github_pull_request_merge','github_pull_request_delete_branch')
         AND json_extract(CASE WHEN json_valid(target) THEN target ELSE '{}' END,'$.receipt')=1";
 
+/// Every receipt outcome blocks a new control except a definite refusal or a reread that found
+/// nothing (`reconcile_github_control`).
+fn blocks(outcome: &str) -> bool {
+    !matches!(outcome, "rejected" | "reconciled_absent")
+}
+
 fn last_github_control_outcome(conn: &rusqlite::Connection, key: &str) -> Result<Option<String>, Error> {
     Ok(conn
         .query_row(
@@ -122,7 +128,7 @@ impl Store {
         let tx = self
             .conn
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
-        if last_github_control_outcome(&tx, key)?.is_some_and(|outcome| outcome != "rejected") {
+        if last_github_control_outcome(&tx, key)?.is_some_and(|outcome| blocks(&outcome)) {
             return Ok(false);
         }
         insert_audit(&tx, at, a)?;
@@ -131,7 +137,54 @@ impl Store {
     }
 
     pub fn github_control_blocked(&self, key: &str) -> Result<bool, Error> {
-        Ok(last_github_control_outcome(&self.conn, key)?.is_some_and(|outcome| outcome != "rejected"))
+        Ok(last_github_control_outcome(&self.conn, key)?.is_some_and(|outcome| blocks(&outcome)))
+    }
+
+    /// After an outcome nobody could confirm, the app reread GitHub (its `prepare` passed: the run
+    /// attempt, the open pull request or the branch is exactly as before the write) and may let a
+    /// new control through. Only an `uncertain` receipt, or a `reserved` one a killed process left,
+    /// at least `quiet` seconds old: GitHub needs time to show an accepted write. `line` records
+    /// it (`reconciled_absent`). True when the key is free now.
+    pub fn reconcile_github_control(
+        &mut self,
+        key: &str,
+        now: i64,
+        quiet: i64,
+        line: &Audit,
+    ) -> Result<bool, Error> {
+        let value: serde_json::Value = serde_json::from_str(&line.target)
+            .map_err(|_| Error::Invalid("Invalid GitHub control receipt."))?;
+        if value["controlKey"] != key || value["receipt"] != true || value["outcome"] != "reconciled_absent" {
+            return Err(Error::Invalid("Invalid GitHub control reconciliation."));
+        }
+        let tx = self
+            .conn
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let last: Option<(String, i64)> = tx
+            .query_row(
+                &format!(
+                    "SELECT json_extract(target,'$.outcome'), at FROM audit WHERE {RECEIPTS}
+                     AND json_extract(CASE WHEN json_valid(target) THEN target ELSE '{{}}' END,'$.controlKey')=?1
+                     ORDER BY id DESC LIMIT 1"
+                ),
+                params![key],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .optional()?;
+        let free = match last {
+            None => true,
+            Some((outcome, _)) if !blocks(&outcome) => true,
+            Some((outcome, at))
+                if matches!(outcome.as_str(), "uncertain" | "reserved")
+                    && now.saturating_sub(at) >= quiet =>
+            {
+                insert_audit(&tx, now, line)?;
+                true
+            }
+            Some(_) => false,
+        };
+        tx.commit()?;
+        Ok(free)
     }
 
     /// The newest `limit` lines, newest first.
@@ -194,7 +247,7 @@ pub(crate) fn clear_audit_in(tx: &rusqlite::Transaction) -> Result<(), Error> {
             &format!(
                 "DELETE FROM audit WHERE id NOT IN (
                     SELECT a.id FROM audit a WHERE {RECEIPTS}
-                    AND json_extract(a.target,'$.outcome') IS NOT 'rejected'
+                    AND json_extract(a.target,'$.outcome') NOT IN ('rejected','reconciled_absent')
                     AND a.id = (SELECT MAX(b.id) FROM audit b WHERE {RECEIPTS}
                         AND json_extract(b.target,'$.controlKey') = json_extract(a.target,'$.controlKey')))"
             ),
@@ -410,6 +463,66 @@ mod actions_receipts_tests {
             &serde_json::json!({"controlKey":key,"receipt":receipt,"outcome":outcome}).to_string(),
         )
     }
+    #[test]
+    fn only_an_old_uncertain_or_abandoned_receipt_is_reconciled() {
+        let dir = crate::temp("receipts-reconcile");
+        let mut store = Store::open(&dir).unwrap();
+        let quiet = 900;
+        let free = |store: &mut Store, key: &str, now| {
+            store
+                .reconcile_github_control(key, now, quiet, &record(key, "reconciled_absent", true))
+                .unwrap()
+        };
+        let (uncertain, abandoned, accepted, done) = ("k/1", "k/2", "k/3", "k/4");
+        for key in [uncertain, abandoned, accepted, done] {
+            assert!(
+                store
+                    .reserve_github_control(100, &record(key, "reserved", true))
+                    .unwrap()
+            );
+        }
+        store
+            .append_audit(100, &record(uncertain, "uncertain", true))
+            .unwrap();
+        store
+            .append_audit(100, &record(accepted, "accepted_pending_verification", true))
+            .unwrap();
+        store.append_audit(100, &record(done, "verified", true)).unwrap();
+        // Too soon: GitHub may not show an accepted write yet.
+        assert!(!free(&mut store, uncertain, 100 + quiet - 1));
+        assert!(!free(&mut store, abandoned, 100 + quiet - 1));
+        assert!(store.github_control_blocked(uncertain).unwrap());
+        // GitHub said it accepted or did it: never reopened.
+        assert!(!free(&mut store, accepted, 100 + 10 * quiet));
+        assert!(!free(&mut store, done, 100 + 10 * quiet));
+        assert!(free(&mut store, uncertain, 100 + quiet));
+        assert!(free(&mut store, abandoned, 100 + quiet));
+        assert!(!store.github_control_blocked(uncertain).unwrap());
+        // The new control reserves again and blocks again.
+        assert!(
+            store
+                .reserve_github_control(2000, &record(uncertain, "reserved", true))
+                .unwrap()
+        );
+        assert!(store.github_control_blocked(uncertain).unwrap());
+        // A free key needs no line; a line for another key or outcome is refused.
+        assert!(free(&mut store, "k/never", 1));
+        assert!(
+            store
+                .reconcile_github_control("k/1", 9999, quiet, &record("k/2", "reconciled_absent", true))
+                .is_err()
+        );
+        assert!(
+            store
+                .reconcile_github_control("k/1", 9999, quiet, &record("k/1", "rejected", true))
+                .is_err()
+        );
+        // Clear history keeps the blocking receipts only.
+        store.clear_audit().unwrap();
+        assert!(store.github_control_blocked(uncertain).unwrap());
+        assert!(!store.github_control_blocked(abandoned).unwrap());
+    }
+
     #[test]
     fn clear_history_keeps_only_the_receipts_that_still_block_a_write() {
         let dir = crate::temp("receipts-clear");

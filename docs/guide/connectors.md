@@ -307,7 +307,9 @@ Before sending a control, Vults atomically records a durable receipt in the loca
 All rerun variants share one receipt per host, immutable repository, run and attempt; cancellation
 has a separate receipt. Reservations survive restart. Accepted, reserved and uncertain controls
 cannot be sent again for that attempt. A definite rejection permits a fresh proposal and human
-approval. Vults rereads after a request without repeating the POST. If verification is pending or
+approval. So does an uncertain or interrupted control, 15 minutes later, when a fresh read shows
+the same attempt still latest and in the same state, so the control did not take effect; an
+accepted one never does. Vults rereads after a request without repeating the POST. If verification is pending or
 unavailable, inspect the latest run on GitHub rather than resending the control.
 
 ### Safe merge and branch deletion
@@ -335,8 +337,9 @@ readback can report uncertainty when remote state changes concurrently.
 `requestId` UUID returned by an asynchronous request to also inspect its pending or failed result.
 Pending, queued and uncertain requests are never automatically resubmitted. Durable audit receipts
 block duplicate merges for the same repository ID, PR and head SHA, across methods and restarts.
-Only a definite rejection permits another proposal; a reserved or uncertain receipt requires
-inspection on GitHub rather than blindly retrying. No background status polling is enabled.
+Only a definite rejection permits another proposal right away. A reserved or uncertain receipt
+permits one 15 minutes later, and only when a fresh read shows the PR still open, unqueued and on
+the same head (or, for a branch deletion, the branch still there); an accepted request never does. No background status polling is enabled.
 
 `github_pull_request_delete_branch` is a separate human-approved operation after a verified merge.
 It requires the exact merged PR head SHA. Vults only deletes its unchanged head branch in the same

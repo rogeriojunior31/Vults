@@ -774,6 +774,9 @@ pub fn session_detail_exact(view: &Value, key: &vults_core::SessionKey) -> Optio
     flock.sessions.first().map(detail)
 }
 
+/// How long an uncertain GitHub control stays blocked before a fresh read showing it did not
+/// take effect may let it be proposed again: GitHub shows an accepted rerun or merge well within it.
+const RECONCILE_AFTER_SECS: i64 = 15 * 60;
 const NO_INPUT: fn() -> Value = || json!({ "type": "object", "properties": {} });
 
 #[derive(Debug)]

@@ -975,8 +975,9 @@ that acceptance passes.
 writes; network loss and lost readbacks; an account switched between the write and its check.
 Fixed: Clear history deleted the merge/rerun receipts; a definite refusal on an issue or PR write
 now names GitHub's reason; app-level tests show a reservation left by a killed process
-blocks the same rerun or merge after restart. Open: a
-reconciled outcome for uncertain merges/reruns so they can be retried (plan item 7). Fixed
+blocks the same rerun or merge after restart. Plan item 7: an uncertain or abandoned receipt
+15 minutes old is reconciled when `prepare`'s fresh read shows the write did not take effect
+(`Store::reconcile_github_control`); accepted ones stay blocked. Fixed
 later the same day: a specialist's post-write grant check no longer turns a done write into an
 error; it keeps the outcome and drops the data read under the old access.
 - [ ] GH9-1 recovery: app restart mid-write, network loss, account switch and GitHub errors, each with

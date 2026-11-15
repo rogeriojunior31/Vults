@@ -55,16 +55,25 @@ impl Drop for Receipt<'_> {
         ));
     }
 }
-async fn ensure_available(key: String) -> Result<(), String> {
-    let blocked = tauri::async_runtime::spawn_blocking(move || {
+/// `line` reconciles an old uncertain control: the preview it comes with is a fresh read showing
+/// the pull request still open and unqueued on that head, or the branch still there.
+async fn ensure_available(key: String, line: Audit) -> Result<(), String> {
+    let free = tauri::async_runtime::spawn_blocking(move || {
         vults_store::Store::open(&crate::history::dir())
-            .and_then(|store| store.github_control_blocked(&key))
+            .and_then(|mut store| {
+                store.reconcile_github_control(
+                    &key,
+                    crate::history::unix_now(),
+                    super::RECONCILE_AFTER_SECS,
+                    &line,
+                )
+            })
             .map_err(|e| e.to_string())
     })
     .await
     .map_err(|e| e.to_string())??;
-    if blocked {
-        return Err("This exact pull request control is already reserved, accepted or uncertain. Inspect GitHub instead of resending it.".into());
+    if !free {
+        return Err("This exact pull request control is already reserved, accepted or uncertain. Inspect GitHub instead of resending it. An uncertain one can be proposed again 15 minutes after it, if GitHub still shows nothing changed.".into());
     }
     Ok(())
 }
@@ -77,7 +86,17 @@ pub(super) fn prepare(app: GithubSource, action: MergeControl) -> BoxFuture<'sta
             vults_connectors::github::prepare_merge_control(&GithubToolGate::new(app.clone()), &action)
                 .await
                 .map_err(|e| e.to_string())?;
-        ensure_available(action.control_key(&preview).map_err(|e| e.to_string())?).await?;
+        let key = action.control_key(&preview).map_err(|e| e.to_string())?;
+        let line = record(
+            app.subject(),
+            &action,
+            &preview,
+            &action.request_hash(),
+            &key,
+            "reconciled_absent",
+            true,
+        );
+        ensure_available(key, line).await?;
         if !app.github_work_item_allowed() {
             return Err("GitHub tools were disabled while preparing this control.".into());
         }
@@ -147,8 +166,13 @@ pub(crate) async fn merge_row(app: tauri::AppHandle, item: &str, head: &str) -> 
     let preview = vults_connectors::github::prepare_merge_control(&*gate, &action)
         .await
         .map_err(|e| e.to_string())?;
-    ensure_available(action.control_key(&preview).map_err(|e| e.to_string())?).await?;
+    let key = action.control_key(&preview).map_err(|e| e.to_string())?;
     let hash = action.request_hash();
+    ensure_available(
+        key.clone(),
+        record("zeca", &action, &preview, &hash, &key, "reconciled_absent", true),
+    )
+    .await?;
     execute_gated(gate, action, preview, hash, "zeca".into()).await
 }
 #[derive(Debug)]

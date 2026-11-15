@@ -97,15 +97,33 @@ pub(super) fn prepare(
             .await
             .map_err(|error| error.to_string())?;
         let key = control_key(&action, &preview)?;
-        let blocked = tauri::async_runtime::spawn_blocking(move || {
+        // This preview is a fresh read: the attempt is still the latest and in the state the
+        // control needs, so an old uncertain control did not take effect (store's reconcile).
+        let line = record(
+            app.subject(),
+            &action,
+            &preview,
+            &action.request_hash(),
+            &key,
+            "reconciled_absent",
+            true,
+        );
+        let free = tauri::async_runtime::spawn_blocking(move || {
             vults_store::Store::open(&crate::history::dir())
-                .and_then(|store| store.github_control_blocked(&key))
+                .and_then(|mut store| {
+                    store.reconcile_github_control(
+                        &key,
+                        crate::history::unix_now(),
+                        super::RECONCILE_AFTER_SECS,
+                        &line,
+                    )
+                })
                 .map_err(|error| error.to_string())
         })
         .await
         .map_err(|error| error.to_string())??;
-        if blocked {
-            return Err("A control for this exact run attempt is already reserved, accepted or uncertain. Inspect the latest run on GitHub; do not submit it again.".into());
+        if !free {
+            return Err("A control for this exact run attempt is already reserved, accepted or uncertain. Inspect the latest run on GitHub; do not submit it again. An uncertain one can be proposed again 15 minutes after it, if GitHub still shows the same attempt.".into());
         }
         if !app.github_work_item_allowed() {
             return Err("GitHub tools were disabled while the Actions proposal was being prepared.".into());
