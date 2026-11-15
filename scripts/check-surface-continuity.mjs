@@ -80,6 +80,7 @@ globalThis.document = { hidden: false, body: new Element("body"),
 globalThis.window = { innerWidth: 480, innerHeight: 640,
   setTimeout: () => 0, clearTimeout() {}, setInterval: () => 0, clearInterval() {},
   addEventListener: (event, fn) => (windowEvents[event] ??= []).push(fn),
+  removeEventListener: (event, fn) => { windowEvents[event] = (windowEvents[event] ?? []).filter(listener => listener !== fn); },
   matchMedia: query => ({ get matches() {
     const rules = [...query.matchAll(/(min|max)-(width|height):\s*(\d+)px/g)];
     return rules.length > 0 && rules.every(rule => {
@@ -328,8 +329,23 @@ for (const width of [480, 760, 900, 1180]) {
       assert.ok(recipientFailure.querySelector("p").textContent.includes("Your current conversation stays open"));
       assert.equal(recipientFailure.querySelector("details").open, false, "Technical failure detail starts collapsed");
       backend.profiles = async () => [specialist];
+      recipientFailure.querySelector("button").focus();
       recipientFailure.querySelector("button").click(); await tick();
       assert.equal(recipientFailure.hidden, true, "An explicit retry recovers recipient loading");
+      assert.ok(document.activeElement === nest.chat.input, "Recovering recipients returns focus to the retained draft");
+      backend.profiles = async () => { throw new Error("Recipient read failed again"); };
+      recipient.fire("focus"); await tick();
+      let settleRecipientRead;
+      backend.profiles = () => new Promise((resolve, reject) => { settleRecipientRead = { resolve, reject }; });
+      const recipientRetry = recipientFailure.querySelector("button");
+      recipientRetry.focus(); recipientRetry.click(); document.activeElement = document.body;
+      settleRecipientRead.reject(new Error("Retry failed")); await tick();
+      assert.ok(document.activeElement === recipientRetry, "A failed recipient retry restores its keyboard focus");
+      recipientRetry.click();
+      const independentRecipientControl = page.querySelector(".chat-titlebar").querySelector(".model");
+      independentRecipientControl.focus(); settleRecipientRead.resolve([specialist]); await tick();
+      assert.ok(document.activeElement === independentRecipientControl, "A late recipient recovery respects a newer focus choice");
+      backend.profiles = async () => [specialist];
       saveFails = true;
       nest.chat.input.value = "Retained after switch failure"; nest.chat.input.fire("input"); await tick();
       recipient.value = "reviewer"; recipient.fire("change"); await tick(); await tick();
@@ -338,6 +354,7 @@ for (const width of [480, 760, 900, 1180]) {
       assert.equal(recipientFailure.hidden, false);
       assert.ok(recipientFailure.querySelector("p").textContent.includes("Could not open this conversation"));
       saveFails = false;
+      recipientFailure.querySelector("button").focus();
       recipientFailure.querySelector("button").click(); await tick(); await tick();
       assert.equal(recipient.value, "reviewer");
       assert.equal(recipientFailure.hidden, true);
@@ -769,6 +786,24 @@ assert.deepEqual(opened, [34], "Even an old row cannot switch conversations duri
 recentBusy = false; search.value = ""; search.fire("input");
 assert.equal(recent.element.querySelector(".nest-recent-busy"),recentBusyNotice,"Updates retain one live-status node");
 assert.equal(recentBusyNotice.hidden,true);assert.equal(recent.element.querySelector(".nest-new-chat").disabled,false);
+let showMore = recent.element.querySelectorAll("button").find(n => n.textContent === "Show more");
+showMore.focus();
+recent.refresh(); requests.at(-1).resolve(rows); await tick();
+showMore = recent.element.querySelectorAll("button").find(n => n.textContent === "Show more");
+assert.equal(document.activeElement, showMore, "A refresh retains focus on Show more");
+showMore.fire("click");
+assert.equal(document.activeElement, recent.element.querySelectorAll(".nest-recent-row")[30], "Expanding focuses the first newly revealed conversation");
+search.value = "missing"; search.fire("input");
+recent.element.querySelectorAll("button").find(n => n.textContent === "Clear filters").focus();
+recent.refresh(); requests.at(-1).resolve(rows); await tick();
+const clearFilters = recent.element.querySelectorAll("button").find(n => n.textContent === "Clear filters");
+assert.equal(document.activeElement, clearFilters, "A refresh retains focus on Clear filters");
+clearFilters.fire("click");
+assert.equal(document.activeElement, search); assert.equal(search.value, "");
+showMore = recent.element.querySelectorAll("button").find(n => n.textContent === "Show more");
+showMore.focus(); recent.refresh(); requests.at(-1).resolve(rows.slice(0, 2)); await tick();
+assert.equal(document.activeElement, search, "If pagination disappears, focus returns to search");
+recent.refresh(); requests.at(-1).resolve(rows); await tick();
 recent.element.querySelectorAll("button").find(n => n.textContent === "Show more").fire("click");
 assert.equal(recent.element.querySelectorAll(".nest-recent-row").length, 35);
 recent.refresh(); const olderRequest = requests.at(-1); recent.refresh();
@@ -1137,8 +1172,41 @@ const recreatedPanel = new Element("aside"); sidePanel(recreatedPanel, "check-pa
 assert.equal(recreatedPanel.querySelector(".panel-fold").getAttribute("aria-expanded"), "false");
 handle.fire("dblclick"); assert.equal(handle.getAttribute("aria-valuenow"), "300"); assert.equal(foldPanel.getAttribute("aria-expanded"), "true");
 handle.fire("pointerdown", { button: 0, clientX: 100, pointerId: 1, preventDefault() {} });
-handle.fire("pointermove", { clientX: 5000 }); handle.fire("pointerup"); assert.equal(handle.getAttribute("aria-valuenow"), "400");
+handle.fire("pointermove", { clientX: 5000, pointerId: 1 }); handle.fire("pointerup", { pointerId: 1 }); assert.equal(handle.getAttribute("aria-valuenow"), "400");
+handle.fire("dblclick");
+handle.fire("pointerdown", { button: 0, clientX: 100, pointerId: 1, isPrimary: true, preventDefault() {} });
+handle.fire("pointermove", { clientX: 120, pointerId: 1 });
+handle.fire("pointerdown", { button: 0, clientX: 120, pointerId: 2, isPrimary: false, preventDefault() {} });
+handle.fire("pointermove", { clientX: 145, pointerId: 2 });
+assert.equal(handle.getAttribute("aria-valuenow"), "320", "A second pointer cannot resize an active drag");
+handle.fire("pointercancel", { pointerId: 2 });
+handle.fire("pointermove", { clientX: 140, pointerId: 1 });
+assert.equal(handle.getAttribute("aria-valuenow"), "340", "A second pointer cannot cancel the original drag");
+handle.fire("pointercancel", { pointerId: 1 });
+handle.fire("pointermove", { clientX: 170, pointerId: 1 });
+assert.equal(handle.getAttribute("aria-valuenow"), "340", "Cancelled drags stop changing the panel");
+handle.fire("pointerdown", { button: 0, clientX: 50, pointerId: 3, preventDefault() {} });
+handle.fire("pointermove", { clientX: 70, pointerId: 3 });
+assert.equal(handle.getAttribute("aria-valuenow"), "360", "A new drag works after cancellation");
+for (const fn of [...(windowEvents.blur ?? [])]) fn();
+handle.fire("pointermove", { clientX: 80, pointerId: 3 });
+assert.equal(handle.getAttribute("aria-valuenow"), "360", "Leaving the window ends the drag");
+assert.equal(handle.classList.contains("dragging"), false);
+assert.equal(retainedInput.value, "unsent draft");
 handle.fire("keydown", { key: "Home", preventDefault() {} }); assert.equal(handle.getAttribute("aria-valuenow"), "180");
+handle.fire("keydown", { key: "End", preventDefault() {} });
+panelHost.clientWidth = 600;
+handle.focus(); handle.fire("focus");
+assert.equal(handle.getAttribute("aria-valuemax"), "288", "The resize range reflects the available panel space");
+assert.equal(handle.getAttribute("aria-valuenow"), "288", "The current accessible width matches the constrained panel");
+handle.fire("keydown", { key: "ArrowLeft", preventDefault() {} });
+assert.equal(handle.getAttribute("aria-valuenow"), "268", "Keyboard resizing starts from the visible width");
+panelHost.clientWidth = 1180;
+handle.fire("keydown", { key: "End", preventDefault() {} });
+panelHost.clientWidth = 600;
+handle.fire("pointerdown", { button: 0, clientX: 300, pointerId: 4, preventDefault() {} });
+handle.fire("pointermove", { clientX: 280, pointerId: 4 }); handle.fire("pointerup", { pointerId: 4 });
+assert.equal(handle.getAttribute("aria-valuenow"), "268", "Dragging starts from the visible width after a window shrink");
 weekPage.querySelector(".week-settings").click(); assert.deepEqual(weekEffects, ["history-settings"]);
 console.log("check-surface-continuity: resized/folded panel state, retained draft, reset, pointer/keyboard bounds and Settings-owned retention");
 

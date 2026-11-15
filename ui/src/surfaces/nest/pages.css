@@ -16,8 +16,10 @@
   .panel-handle { display: block; position: absolute; top: 0; bottom: 0; right: -5px; width: 10px; z-index: 3; touch-action: none; cursor: col-resize; }
   .panel-right > .panel-handle { right: auto; left: -5px; }
   .panel-handle::before { content: ""; position: absolute; inset: 0 4px; background: transparent; }
-  .panel-handle:hover::before, .panel-handle:focus-visible::before, .panel-handle.dragging::before { background: var(--mark); }
-  .panel-fold:focus-visible { outline: 2px solid var(--mark); outline-offset: 2px; }
+  .panel-handle:hover::before, .panel-handle.dragging::before { background: var(--mark); }
+  .panel-handle:focus-visible::before { background: var(--focus); }
+  .panel-handle:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+  .panel-fold:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
   .panel-folded { padding-inline: 8px !important; min-width: 48px; }
   .panel-folded > :not(.panel-tools) { display: none !important; }
   .panel-folded > .panel-tools { flex-direction: column-reverse; }

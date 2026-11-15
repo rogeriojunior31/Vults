@@ -41,9 +41,10 @@ export function createRecent(on: RecentActions): { element: HTMLElement; refresh
   let statusKey = "";
   let returning: string | null = null;
 
-  const paint = () => {
+  const paint = (restoreFocus = true) => {
     const active = document.activeElement as HTMLElement | null;
-    if (active && (list.contains(active) || status.contains(active))) returning = active.dataset.recentFocus ?? null;
+    if (!restoreFocus) returning = null;
+    else if (active && (list.contains(active) || status.contains(active))) returning = active.dataset.recentFocus ?? null;
     else if (active && active !== document.body) returning = null;
     const scroll = list.scrollTop;
     list.setAttribute("aria-busy", String(loading));
@@ -97,9 +98,17 @@ export function createRecent(on: RecentActions): { element: HTMLElement; refresh
     }
     if (rows !== null && !matches.length) {
       parts.push(viewState("empty", query ? t("No conversations match your search.") : t("No conversations yet.")));
-      if (query) parts.push(el("button", { class: "outline", text: t("Clear filters"), onclick: () => { search.value = ""; rememberQuery(); expanded = false; paint(); search.focus(); } }));
+      if (query) {
+        const clear = el("button", { class: "outline", text: t("Clear filters"), onclick: () => { search.value = ""; rememberQuery(); expanded = false; paint(false); search.focus(); } });
+        clear.dataset.recentFocus = "clear-filters";
+        parts.push(clear);
+      }
     }
-    if (!expanded && matches.length > SHOWN) parts.push(el("button", { class: "outline", text: t("Show more"), onclick: () => { expanded = true; paint(); list.querySelectorAll<HTMLElement>(".nest-recent-row")[SHOWN]?.focus(); } }));
+    if (!expanded && matches.length > SHOWN) {
+      const more = el("button", { class: "outline", text: t("Show more"), onclick: () => { expanded = true; paint(false); list.querySelectorAll<HTMLElement>(".nest-recent-row")[SHOWN]?.focus(); } });
+      more.dataset.recentFocus = "show-more";
+      parts.push(more);
+    }
     list.replaceChildren(...parts);
     list.scrollTop = scroll;
     if (returning) {
