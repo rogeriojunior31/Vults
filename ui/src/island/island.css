@@ -278,12 +278,17 @@ body.still .compact.needs::after {
 .update-notice strong {
   font-weight: 600;
 }
+/* Release notes keep two lines; the question's privacy sentence always reads whole. */
 .update-line {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
   color: var(--fg-dim);
   font-size: var(--text-s);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+}
+.update-ask .update-line {
+  display: block;
 }
 .update-ask .look-chip,
 .update-notice .look-chip {

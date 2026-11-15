@@ -1510,7 +1510,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         ...(news && v.recap ? [recapBox(v.recap)] : []),
         ...(news && v.digest ? [digestBox(v.digest)] : []),
         ...(news && v.alerts.length ? [alertsBox(v.alerts)] : []),
-        ...(news && update && updateVisible(v) ? [updateBox(update, actions, () => { if (!questionShown) { questionShown = true; actions.updateQuestionShown?.(); } })] : []),
+        ...(news && update && updateVisible(v) ? [updateBox(updateNow()!, actions, () => { if (!questionShown) { questionShown = true; actions.updateQuestionShown?.(); } })] : []),
       );
     }
     compact.classList.toggle("on", mode === "compact");
@@ -2000,7 +2000,11 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     return el("div", { class: "digest recap" }, icon("flock", 13), el("span", { class: "digest-text", text: r.text }), open, close);
   }
 
-  function updateVisible(v: ViewModel): boolean { return updateShown(update, v, presenceNow() === "paused", chat.hasWaitingApproval()); }
+  /** Once on screen, the question stays until answered; `asked` only decides whether a later run asks again. */
+  function updateNow(): UpdateStatus | null {
+    return update && questionShown && update.consent.state === "asked" ? { ...update, ask: true } : update;
+  }
+  function updateVisible(v: ViewModel): boolean { return updateShown(updateNow(), v, presenceNow() === "paused", chat.hasWaitingApproval()); }
 
   function alertsBox(alerts: AlertView[]): HTMLElement {
     const more = alerts.length - MAX_ALERTS;
@@ -2327,7 +2331,8 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   onDayPart(() => render(raw));
   const setUpdate = (status: UpdateStatus | null) => {
     update = status;
-    if (!status?.ask) questionShown = false;
+    // Answered (here or in Settings): the question is done. Shown and unanswered, it stays.
+    if (status?.consent.state === "yes" || status?.consent.state === "no") questionShown = false;
     render(raw);
   };
   const setMedia = (now: NowPlaying | null) => {

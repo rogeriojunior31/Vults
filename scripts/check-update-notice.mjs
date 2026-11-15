@@ -85,7 +85,7 @@ const notice = updateBox(status({ ask: false, notice: { version: "0.2.0", name: 
 assert.equal(shown, 1, "a notice is not the question");
 assert.equal(notice.getAttribute("aria-label"), "Vults 0.2.0 is available");
 assert.match(notice.textContent, /Vults 0\.2\.0 is available/);
-assert.match(notice.textContent, /What's new/);
+assert.match(notice.textContent, /Faster island/, "the first line under the heading, not the heading");
 assert.ok(!notice.textContent.includes("https://"), "the link is the app's to open, never shown or passed");
 assert.deepEqual(buttons(notice).map(b => b.textContent), ["Open release page", "Later"]);
 buttons(notice).forEach(b => b.click());

@@ -19,11 +19,13 @@ export function updateShown(update: UpdateStatus | null, v: ViewModel, paused: b
   return !v.sessions.some(s => s.card || s.waiting || s.attention === "needs-you");
 }
 
-/** The notes' first readable line, without Markdown marks; the rest stays on the release page. */
+/** The notes' first readable line, without Markdown marks; the rest stays on the release page.
+ *  A heading ("Highlights") says nothing on its own: the first line under it is preferred. */
 export function firstLine(notes: string): string {
-  return notes.split(/\r?\n/)
-    .map(l => l.replace(/^\s*(?:#{1,6}|[-*+]|>|\d+\.)\s+/, "").replace(/\*\*|__|`/g, "").trim())
-    .find(Boolean) ?? "";
+  const plain = (l: string) => l.replace(/^\s*(?:#{1,6}|[-*+]|>|\d+\.)\s+/, "").replace(/\*\*|__|`/g, "").trim();
+  const lines = notes.split(/\r?\n/).filter(l => l.trim());
+  const body = lines.find(l => !/^\s*#{1,6}\s/.test(l));
+  return plain(body ?? lines[0] ?? "");
 }
 
 /** `shown` runs when the question is built, so a question left unanswered comes back a day later. */
