@@ -975,8 +975,9 @@ that acceptance passes.
 writes; network loss and lost readbacks; an account switched between the write and its check.
 Fixed: Clear history deleted the merge/rerun receipts; a definite refusal on an issue or PR write
 now names GitHub's reason. Open: an app-level restart test (store-level only today); a
-reconciled outcome for uncertain merges/reruns so they can be retried (plan item 7); a
-specialist's post-write grant check can turn a done write into an error.
+reconciled outcome for uncertain merges/reruns so they can be retried (plan item 7). Fixed
+later the same day: a specialist's post-write grant check no longer turns a done write into an
+error; it keeps the outcome and drops the data read under the old access.
 - [ ] GH9-1 recovery: app restart mid-write, network loss, account switch and GitHub errors, each with
   a test.
 - [ ] GH9-2 a controlled test repository and an end-to-end run of the plan's flows.
