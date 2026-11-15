@@ -2500,4 +2500,7 @@ export default {
   "No": "No",
   "May Vults look at its releases on GitHub?": "¿Puede Vults consultar sus versiones en GitHub?",
   "Once a day, to tell you about a new version. Nothing about you is sent.": "Una vez al día, para avisarte de una versión nueva. No se envía nada sobre ti.",
+  "Stay quiet when I am looking": "No sonar cuando estoy mirando",
+  "A session that finishes or fails while its terminal is in front makes no sound, and the island stays put. A card always sounds and opens.": "Una sesión que termina o falla mientras su terminal está al frente no suena, y la isla no se mueve. Una tarjeta siempre suena y se abre.",
+  "Vults reads the active window once, when a turn ends. On GNOME Wayland, and for terminals on Windows, it cannot tell which session is in front, so every finish sounds as before.": "Vults lee la ventana activa una vez, cuando termina un turno. En GNOME con Wayland, y para terminales en Windows, no puede saber qué sesión está al frente, así que cada final suena como antes.",
 } satisfies Record<string, string>;

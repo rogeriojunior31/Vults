@@ -57,6 +57,7 @@ jobs:
           node scripts/check-project-search.mjs
           node scripts/check-surface-continuity.mjs
           node scripts/check-update-notice.mjs
+          node scripts/check-quiet-finish.mjs
           node scripts/check-text-questions.mjs
           node scripts/check-realtime-settings.mjs
           node scripts/check-windows-packaging.mjs

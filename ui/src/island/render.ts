@@ -14,6 +14,7 @@ import type { AlertView, Answer, CardView, DigestView, Hush, ProjectPref, Approv
 import type { WeekView } from "../view.gen";
 import { el } from "../dom";
 import { updateBox, updateShown, type UpdateActions } from "./update";
+import { settledCue } from "./cues";
 import { Sound, type Cue } from "../sound";
 import { Tracked } from "./anim";
 import { DICTATION_HEIGHT, OPEN_ZOOM, miniHeight, miniSessions, miniWidth, quickBounds, quickPixels, restoreWidth, saveWidth, watchWidth, type IslandWidth } from "./geometry";
@@ -826,16 +827,14 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
           // Still in that state after the wait: now it is news.
           if (statuses.get(k) !== status) return;
           announced.add(k);
-          // Quiet keeps only a card's sound (ADR 0021); the rest of the wire stays silent.
-          // Paused, a state that started settling before the pause stays silent too. A muted
-          // project is quiet at rest; its card keeps its sound (ADR 0021).
-          const preset = presenceNow();
+          // Read at the end of the wait: the app's look at the active window lands within it.
           const now = raw.sessions.find((x) => key(x) === k);
-          if (preset !== "paused" && (now?.card || (!now?.muted && preset !== "quiet"))) {
+          const { sound, reveal } = settledCue(now, presenceNow());
+          if (sound) {
             Sound.play(cue, !!now?.card);
             announce(now ?? s, !!now?.card);
           }
-          fsm.reveal(Clock.now());
+          if (reveal) fsm.reveal(Clock.now());
           render(raw);
         }, wait),
       );

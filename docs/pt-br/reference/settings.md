@@ -1,5 +1,5 @@
 # Configurações e arquivos
-<!-- source: bfc9bf4fd199 -->
+<!-- source: a0db8fb47512 -->
 
 **Ditado > Diagnóstico** oferece um teste explícito de microfone de seis segundos,
 somente na memória, estado atual do áudio/desktop/modelos, contadores desde o início do app e tempos
@@ -121,6 +121,7 @@ para destinos compatíveis, comportamento da área de transferência e limites d
 | `version` | `41` | Versão do esquema, para que releases futuras possam migrar o arquivo. Se for mais nova que a do app (você voltou para uma release mais antiga), o app (a partir da 0.1.1) usa as chaves que conhece, guarda o arquivo como estava em `settings.json.v<version>-<time>` e avisa no log; a próxima mudança que você fizer salva só as chaves que ele conhece, na versão dele. Até lá, cada início guarda mais uma cópia. Se nenhuma cópia puder ser guardada, as mudanças não são salvas. Para voltar às configurações da release mais nova, restaure essa cópia. Um arquivo mais antigo é lido com os padrões para as chaves que faltam nele, e é salvo na versão do app |
 | `connectors` | `{}` | Id do conector → ligado |
 | `update_consent` | `{"state":"unasked"}` | A única pergunta da ilha sobre o aviso de atualização: `unasked`, `asked` (com `atMs`; volta depois de um dia), `yes` (uma olhada por dia na lista de versões) ou `no`. Definido na ilha ou em **Settings → General → Updates**. O que a última olhada achou, e o *Later*, ficam em `update.json` ao lado do banco. Não existe nos builds dos pacotes de distribuição |
+| `quiet_when_watching` | `true` | Um término ou falha cujo terminal está na frente não faz som nem abre a ilha; o Vults lê a janela ativa uma vez quando um turno termina. Cards sempre soam. Definido em **Settings → General → Stay quiet when I am looking** |
 | `sounds` | `true` | Sons 8-bit |
 | `volume` | `50` | O volume dos sons, em porcentagem (0 a 100); `50` é o volume em que a 0.1.0 os tocava |
 | `voice_model` | ausente | O modelo de voz compartilhado pelo Chat e pelo ditado (`base`, `small`, `turbo`), baixado em `~/.local/share/vults/voice/` (junto com o detector de fala, `ggml-silero-v6.2.0.bin`); ausente deixa a voz desligada. Cada gravação do Chat guarda até um minuto de áudio; o ditado independente guarda até dez minutos |

@@ -2500,4 +2500,7 @@ export default {
   "No": "不用",
   "May Vults look at its releases on GitHub?": "Vults 可以查看它在 GitHub 上的发布吗?",
   "Once a day, to tell you about a new version. Nothing about you is sent.": "每天一次,用来告诉你有新版本。不会发送任何关于你的信息。",
+  "Stay quiet when I am looking": "我在看时保持安静",
+  "A session that finishes or fails while its terminal is in front makes no sound, and the island stays put. A card always sounds and opens.": "会话结束或失败时,如果它的终端正在前台,就不发声,岛也保持不动。卡片总会发声并打开。",
+  "Vults reads the active window once, when a turn ends. On GNOME Wayland, and for terminals on Windows, it cannot tell which session is in front, so every finish sounds as before.": "Vults 只在一轮结束时读取一次当前活动窗口。在 Wayland 上的 GNOME 中,以及 Windows 上的终端,它无法判断哪个会话在前台,因此每次结束仍像以前一样发声。",
 } satisfies Record<string, string>;

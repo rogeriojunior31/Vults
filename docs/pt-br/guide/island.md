@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 1fa86be215a5 -->
+<!-- source: 7ecafa61a501 -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -465,3 +465,11 @@ conectores; outros mais suaves quando a ilha abre ou se recolhe e quando o Zeca 
 de alto-falante na ilha, ou **Settings → General → Sounds**, os desliga; **Volume** define o quão
 alto. Um card que continua esperando soa de novo, e o **Do not disturb** silencia sons e notificações
 por um tempo: veja [Quando ninguém responde](approvals.md#when-nobody-answers).
+
+Quando uma sessão termina ou falha enquanto você olha para o terminal dela, você viu o fim: ela não
+faz som e a ilha fica onde está; o pássaro dela ainda pousa. O Vults lê a janela ativa uma vez, no
+fim do turno, e só conta um terminal que ele consegue ligar àquela sessão (um servidor de terminal
+compartilhado ou um multiplexador não contam). Um card sempre soa e abre. **Settings → General →
+Stay quiet when I am looking** desliga isso. Onde o desktop não diz qual janela está ativa (GNOME no
+Wayland), e no Windows, onde uma janela de terminal ainda não pode ser ligada a uma única sessão, todo
+término soa como antes.

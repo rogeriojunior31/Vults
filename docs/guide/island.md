@@ -417,3 +417,11 @@ when the island opens or folds and when Zeca reacts to you. The speaker button o
 **Settings → General → Sounds**, turns them off; **Volume** sets how loud. A card that keeps waiting
 sounds again, and **Do not disturb** silences sounds and notifications for a while: see
 [When nobody answers](approvals.md#when-nobody-answers).
+
+When a session finishes or fails while you are looking at its terminal, you saw it end: it makes
+no sound and the island stays put; its bird still lands. Vults reads the active window once, as the
+turn ends, and only a terminal it can tie to that one session counts (a shared terminal server or
+a multiplexer does not). A card always sounds and opens. **Settings → General → Stay quiet when I am
+looking** turns this off. Where the desktop does not say which window is active (GNOME on
+Wayland), and on Windows, where a terminal window cannot yet be tied to one session, every finish
+sounds as before.

@@ -249,10 +249,15 @@ for the design branch to merge.
 - [x] App: from `vults_platform::focus::Tracker`, on change only, map the active window to a session
   with `focus::session()`; send it to core as a plain input.
 - [x] Core: keep `watched: Option<SessionKey>`; expose `SessionView.watched` (regenerate `view.gen.ts`).
-- [ ] UI: in `ui/src/island/render.ts` `cues()`, treat a watched session like a muted one for *done* and
+2026-11-15, branch `feat/quiet-finish`: UI, setting and docs done. Running app (Windows 11,
+isolated profile): the switch shows under Notifications and saves both ways; a fake finished turn
+through the real hook still opens the island. On Windows `focus::session` refuses terminal
+windows (one Windows Terminal process hosts many tabs), so a terminal finish is never `watched`
+there; the quiet path needs the Done-when check on KDE Wayland and X11.
+- [x] UI: in `ui/src/island/render.ts` `cues()`, treat a watched session like a muted one for *done* and
   *fail* (no `Sound.play`, no `fsm.reveal`); cards keep their sound and reveal.
-- [ ] Setting in General › Notifications, on by default; strings in the four languages.
-- [ ] Docs: `guide/island.md`, `reference/settings.md`, both languages.
+- [x] Setting in General › Notifications, on by default; strings in the four languages.
+- [x] Docs: `guide/island.md`, `reference/settings.md`, both languages.
 
 **Done when:** a finish while looking at that terminal makes no sound or reveal; a permission card in
 the same situation still sounds; GNOME Wayland behaves as today.

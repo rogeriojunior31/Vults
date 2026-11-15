@@ -374,6 +374,7 @@ pub fn run() {
             settings::set_zeca_species,
             settings::set_visitors,
             settings::set_notifications,
+            settings::set_quiet_when_watching,
             settings::set_dnd,
             settings::set_zeca,
             panel::set_presence,
