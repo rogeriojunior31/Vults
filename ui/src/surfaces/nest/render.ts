@@ -341,6 +341,13 @@ export function createNest(
   const recipientRetryButton = el("button", { class: "btn", text: t("Try again"), onclick: () => recipientRetry?.() });
   const recipientError = el("div", { class: "nest-close-error chat-recipient-error" }, recipientErrorMessage, recipientRetryButton, recipientErrorDetails);
   recipientError.hidden = true;
+  const restoreRecipientFocus = (requested: boolean) => {
+    if (!requested) return;
+    const active = document.activeElement;
+    // A late recovery must not interrupt someone who has moved to another control.
+    if (active !== document.body && !recipientError.contains(active)) return;
+    (recipientError.hidden ? chat.element.querySelector<HTMLTextAreaElement>("textarea") : recipientRetryButton)?.focus({ preventScroll: true });
+  };
   const clearRecipientError = () => {
     recipientError.hidden = true;
     recipientErrorMessage.textContent = "";
@@ -371,6 +378,7 @@ export function createNest(
     if (!backend.profiles) return;
     const mine = ++profilesRequest;
     const selection = recipientRequest;
+    const returnFocus = recipientError.contains(document.activeElement);
     recipientRetryButton.disabled = true;
     recipientError.setAttribute("aria-busy", "true");
     try {
@@ -386,6 +394,7 @@ export function createNest(
       if (mine === profilesRequest) {
         recipientRetryButton.disabled = false;
         recipientError.setAttribute("aria-busy", "false");
+        if (selection === recipientRequest) restoreRecipientFocus(returnFocus);
       }
     }
   };
@@ -463,6 +472,7 @@ export function createNest(
   async function selectRecipient(profile: AgentProfile | null): Promise<boolean> {
     const mine = ++recipientRequest;
     const previous = chat;
+    const returnFocus = recipientError.contains(document.activeElement);
     clearRecipientError();
     recipientPicker.disabled = true;
     try {
@@ -519,7 +529,12 @@ export function createNest(
       fillRecipients();
       showRecipientError("open", error, () => { void selectRecipient(profile); });
       return false;
-    } finally { if (mine === recipientRequest) recipientPicker.disabled = false; }
+    } finally {
+      if (mine === recipientRequest) {
+        recipientPicker.disabled = false;
+        restoreRecipientFocus(returnFocus);
+      }
+    }
   }
 
   async function askCompanion(text: string): Promise<void> {

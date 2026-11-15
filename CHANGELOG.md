@@ -8,6 +8,16 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 - Clear history keeps the receipt of a GitHub merge, Actions rerun or cancel, or branch deletion that GitHub may have carried out, so the same write can no longer be sent a second time after clearing.
 
+- Resize constrained side panels from their visible width and report the available accessible range without overwriting the saved width on window shrink.
+
+- Use the shared keyboard-focus color for side-panel resize and fold controls across all five themes.
+
+- Keep side-panel resizing with its initiating pointer, ignore additional touches and end interrupted drags cleanly when the window loses focus.
+
+- Return keyboard focus to the retained Chat draft after recipient recovery, keep Retry focused on failure, and respect focus moved while waiting.
+
+- Preserve keyboard focus on Recent conversation pagination and filter clearing during list refresh, with search as the fallback when a control disappears.
+
 - Improve compact Chat navigation, accessible turn announcements, Recent keyboard focus, recipient and Memory recovery, scoped Flock permission disclosure and folder-copy feedback.
 
 - Keep idle and completed-response sessions in Flock instead of expiring them after 10/30 minutes. Confirm local owner exits separately from activity, preserve pending cards, and distinguish Hermes Desktop runtime cleanup/reset from durable conversation closure.
