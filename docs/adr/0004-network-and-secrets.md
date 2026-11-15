@@ -1,8 +1,6 @@
 # 0004. Network, secrets and telemetry
 
 **Status:** Accepted, 2026-10-10. Consolidated on 2026-10-12 from former 0006 and former 0016.
-Amended on 2026-10-17 for N3 V0.4: dictation model requests, loopback limits and realtime spend.
-These are implementation requirements for V3, V5 and V6, not enabled or shipped requests.
 
 ## Context
 
@@ -45,16 +43,16 @@ become telemetry by accident.
 ## Dictation model requests
 
 Local speech-to-text, dictionary passes and deterministic voice commands do not call a remote model.
-The optional N3 model features below are separate requests on the user's behalf, not permission
+The optional model features below are separate requests on the user's behalf, not permission
 to send a transcript merely because recording or Chat is enabled. Each switch is off by default
 and changed in the Settings webview, with the provider, data and limit explained before enabling
 it. Reusing Chat's provider does not reuse consent to a different feature.
 
-| Gate feature | Phase | Data sent to the selected model | Limit in any rolling 24 hours | When off, spent or unavailable |
-|---|---|---|---|---|
-| `dictation-cleanup` | V3 | The dictated text and the vocabulary/style context needed to filter or translate it; no audio | 2,000 attempted model requests, including retries | Keep the raw local transcript; never answer or execute it |
-| `meeting-summary` | V5 | The meeting transcript needed for summary and to-dos; no recorded audio | 20 attempted model requests, including retries | Keep the local transcript; leave model summary unavailable |
-| `voice-realtime` | V6 / K8 | Live conversation audio and the bounded conversation context disclosed in Settings | A positive monetary limit, default US$1; zero disables remote voice | Stop remote audio and continue in text with an explanation |
+| Gate feature | Data sent to the selected model | Limit in any rolling 24 hours | When off, spent or unavailable |
+|---|---|---|---|
+| `dictation-cleanup` | The dictated text and the vocabulary/style context needed to filter or translate it; no audio | 2,000 attempted model requests, including retries | Keep the raw local transcript; never answer or execute it |
+| `meeting-summary` | The meeting transcript needed for summary and to-dos; no recorded audio | 20 attempted model requests, including retries | Keep the local transcript; leave model summary unavailable |
+| `voice-realtime` | Live conversation audio and the bounded conversation context disclosed in Settings | A positive monetary limit, default US$1; zero disables remote voice | Stop remote audio and continue in text with an explanation |
 
 - **One gate, separate budgets.** These identifiers go through `app`'s gate before a request or
   realtime connection starts. Attempts, including failed calls and retries, count toward the
@@ -62,21 +60,19 @@ it. Reusing Chat's provider does not reuse consent to a different feature.
   not reset at midnight. Concurrent work shares the same allowance. A missing or unreadable
   budget cannot grant a fresh allowance. Turning a switch off cancels that feature's in-flight
   model work; local transcription remains usable.
-- **Realtime reserves spend before sending.** V6 must extend the count-only gate with monetary
-  accounting and a bounded streaming allowance before `voice-realtime` can run. Include
-  in-flight reservations, reconcile reported usage and stop streaming before the allowance is
-  exhausted. Missing rates or unknown usage must not mean zero cost or unlimited audio; refuse
-  further remote audio when a safe remaining allowance cannot be established. The amount in
-  the prototype is a chosen limit, not a provider price or evidence that accounting exists.
-- **Loopback is not a consent or quota bypass (Q3).** N3's local Ollama/LM Studio calls still
+- **Realtime reserves spend before sending.** `voice-realtime` runs only with monetary accounting
+  and a bounded streaming allowance: in-flight reservations count, reported usage is reconciled,
+  and streaming stops before the allowance runs out. Missing rates or unknown usage never mean
+  zero cost or unlimited audio; when a safe remaining allowance cannot be established, remote
+  audio is refused.
+- **Loopback is not a consent or quota bypass.** Local Ollama/LM Studio calls still
   use the feature switch, request quota and local trace through the gate. They consume no
-  remote monetary allowance. This supersedes the draft proposal to skip the entire budget:
-  local model work still needs a finite request limit under this record. To qualify as
+  remote monetary allowance, but local model work still needs a finite request limit. To qualify as
   loopback, use an explicitly validated loopback IP endpoint with no proxy or redirects;
   a provider label or a hostname such as `localhost` is insufficient. Do not silently retry
   against a remote provider. This contract governs Vults' connection, not a guarantee that an
   independently configured local service cannot forward data elsewhere. The existing recall
-  embedding path is unchanged; it does not authorize a new N3 request outside the gate.
+  embedding path is unchanged; it does not authorize a new request outside the gate.
 - **Trace operations, not dictation contents.** Keep feature, provider/model, local/remote
   classification, timing, outcome and available usage/cost locally. Never include raw audio,
   transcript text, clipboard contents, keys or restore tokens in a request trace. Unknown
@@ -88,7 +84,7 @@ it. Reusing Chat's provider does not reuse consent to a different feature.
   consent. Remote voice consent does not enable follow-up listening or model clean-up;
   *Voice and audio* below still governs listening and audio.
 
-## Local voice commands (VC1)
+## Local voice commands
 
 Dictation and commands reuse the existing speech transcription model. The app interprets command
 text locally using supported phrases and current targets. This needs no additional text-model
@@ -119,7 +115,7 @@ creates no exemption for other network requests and changes none of the general 
 ## Consequences
 
 - A test runs a day with every feature off and counts zero requests.
-- Before N3's model features ship, extend this check to each feature, local endpoints included.
+- The same check covers each model feature, local endpoints included.
   Cover exact quota boundaries, retries, concurrent reservations, restart, unreadable budget
   state, mid-stream disablement and unknown realtime cost, plus raw-transcript fallback and
   traces without transcript contents. Register the actual call sites in the network inventory
@@ -133,23 +129,13 @@ creates no exemption for other network requests and changes none of the general 
 
 ## History
 
-- 2026-11-15: FF4 ships the update notice before any installer: one question in the island,
-  a switch and *Check now* in Settings, one look a day at the public releases list through the
-  gate (`update`, 4 a day; `update-now` for the click), a notice with *Open release page* and
-  *Later*. AUR builds compile it out (`--no-default-features`). Signed installs remain after 0.2.0.
-
-- 2026-10-26: owner correction withdraws the unactivated command-intent network proposal;
-  existing speech transcription plus local command matching needs no separate text provider.
-
-- 2026-10-26: VC1 initially proposed independent command-model consent; superseded by the owner
-  correction above before activation.
-
-- 2026-10-17: N3 V0.4 names the three independently opted-in model features and their rolling
-  limits. Q3 keeps loopback calls behind the switch, quota and trace; only remote monetary
-  accounting is exempt. Realtime requires spend accounting before implementation can ship.
-- former 0006, 2026-10-04: secrets only in the keyring; no telemetry;
-  leaving the machine is the user's choice.
-- former 0016, 2026-10-08: the update check, asked for, signed,
-  one channel at a time.
-- 2026-11-15: fold in the privacy rules of the voice and dictation records (former 0028 and former 0032),
-  which are retired, as *Voice and audio*.
+- former 0006, 2026-10-04: secrets only in the keyring; no telemetry; leaving the machine is the
+  user's choice.
+- former 0016, 2026-10-08: the update check, asked for, signed, one channel at a time.
+- 2026-10-17: dictation clean-up, meeting summaries and realtime voice are three separate opt-ins,
+  each with its own rolling limit; loopback calls count too, and realtime needs spend accounting.
+- 2026-10-26: voice commands need no text model and no network: the existing transcript is matched
+  locally.
+- 2026-11-15: the update check ships as a notice only, never an installer; AUR builds leave it out.
+- 2026-11-15: fold in the privacy rules of the voice and dictation records (former 0028 and former
+  0032), which are retired, as *Voice and audio*.

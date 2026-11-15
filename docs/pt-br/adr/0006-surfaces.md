@@ -1,11 +1,8 @@
 # 0006. Superfícies: um núcleo, quatro tamanhos, um card respondido onde você está
-<!-- source: df23854b4007 -->
+<!-- source: 90e3f97ce8e9 -->
 
 **Status:** Aceita, 2026-10-11. Consolidada em 2026-10-12 a partir da antiga 0008, da antiga 0009, da antiga 0022, da
 antiga 0023, da antiga 0024 e da antiga 0030. Alterada em 2026-10-16: o Nest não tem aba Tasks.
-Alterada em 2026-10-17 para a N3 V0.3: a área de Ditado e seu contrato de apresentação de estado.
-Essas adições chegam nas fases de seus recursos; a decisão não afirma entrega da interface em
-produção nem validação nativa.
 
 <a id="context"></a>
 
@@ -77,7 +74,7 @@ texto dos agentes, que pode trazer palavras feitas para conduzir quem as lê.
   repouso). Em *Paused*, o `core` não confirma cards e os libera na hora, então o agente pergunta no
   terminal sem esperar, e os conectores param o polling.
 - **O Nest** tem Flock, Chat, Connections e Activity (Week com *By project*, History,
-  Cost, Traces, Audit), com Dictation como quinta aba quando a N3 a entregar. Memory fica num
+  Cost, Traces, Audit), com Dictation como quinta aba. Memory fica num
   painel lateral do Chat, com as Configurações atrás de uma
   engrenagem e a tabela de capacidades dos agentes em Configurações › Agents. Trocar de tamanho
   mantém a seleção: a sessão é o `focus` do core; a aba, os filtros e a conexão escolhida são
@@ -134,7 +131,7 @@ texto dos agentes, que pode trazer palavras feitas para conduzir quem as lê.
   tem nomes e contagens das abas, o menu de apresentação (os quatro tamanhos e os sons), e um rodapé que liga e
   desliga o Zeca e traz à frente o terminal da sessão da frente (ela guarda só quem é essa sessão).
   As páginas são General, Agents, Chat & voice, Approvals, Projects, Activity, Connectors, Phone,
-  Flock & Zeca e About. A configuração do Ditado na N3 usa essa webview sob sua própria aba,
+  Flock & Zeca e About. A configuração do Ditado usa essa webview sob sua própria aba,
   fora da lista global de Configurações.
 - **Uma superfície oferece só as ações que funcionam.** O app só alcança um agente enquanto um hook
   espera e não é dono do processo de um agente observado, então um menu mostra o que funciona
@@ -158,75 +155,32 @@ texto dos agentes, que pode trazer palavras feitas para conduzir quem as lê.
   pediu.
 - No Wayland, o compositor posiciona a janela do Nest; ela não pode ser presa embaixo do lugar da
   ilha.
-- As verificações de interface da N3 devem exercitar cada estado de ditado junto à chegada de
+- As verificações de interface devem exercitar cada estado de ditado junto à chegada de
   uma permissão ou pergunta, com Zeca ligado e desligado, Black e Light e movimento reduzido.
   A validação nativa cobre geometria, foco e regiões de entrada no Mini/Quick, além do Room em
-  480 x 360 e tamanhos maiores, no X11 e no Plasma Wayland. A revisão visual P12 do protótipo e
-  os aceites posteriores no app em execução continuam separados.
+  480 x 360 e tamanhos maiores, no X11 e no Plasma Wayland.
 
 <a id="history"></a>
 
 ## Histórico
 
-- antiga 0008, 2026-10-04: um núcleo, várias superfícies; a ilha é o
-  único lugar dos cards.
-- antiga 0009, 2026-10-04: nenhum modo de presença esconde um card
-  confirmado.
-- antiga 0022, 2026-10-12: só as Configurações têm os poderes (então
-  numa janela própria).
-- antiga 0023, 2026-10-12: as Configurações viram uma webview da
-  janela do Nest; as verificações vão pelo label da webview.
-- antiga 0024, 2026-10-12: a ilha sai enquanto o Nest está aberto.
-- antiga 0030, 2026-10-12: o Nest também responde um card, enquanto o usuário está nele.
-
-- 2026-10-15: o Chat usa uma composição Quick mais larga dentro da superfície fixa atual.
-  A geometria aplica o zoom uma única vez e limita as dimensões à área disponível antes
-  da medição. A configuração nativa inicial acompanha os 720 x 640 do runtime; Mini
-  e as outras abas do Quick mantêm suas larguras. Larguras pareadas escolhidas pelo
-  usuário continuam como trabalho futuro.
-- 2026-10-16 (antiga 0031): remover Tasks do Nest; preservar D7, gastos e
-  orçamento e o limite de D8 para `/continue`.
-
-- 2026-10-17: N2.2 adiciona a caixa Now do Quick, revisão pelo pedido exato e links explícitos aos
-  detalhes existentes do Nest; os cards mantêm sua autoridade, registro e prazo originais.
-- 2026-10-17: a N3 V0.3 adiciona a quinta aba do Nest por fases, a responsabilidade das
-  Configurações e da Activity, o estado transitório do ditado e a prioridade dos cards. Segue a
-  decisão revisada de R6 por Configurações centrais e a remoção de Tasks; não introduz sexta aba
-  nem configurações privilegiadas próprias da área.
-
-- 2026-10-18: reunir a configuração do ditado na aba Ditado a pedido do mantenedor, com um
-  editor por opção e navegação compartilhada. Mover os controles de transcrição compartilhados
-  para lá e oferecer um link no Chat. Manter a configuração na webview de Configurações e as
-  páginas com transcrições no Nest; a autoridade sobre aprovações, gravação e comandos privilegiados
-  continua igual.
-
-- 2026-10-19: mover o status de ditado no Linux para uma cápsula passiva inferior, com feedback
-  interno como alternativa na falha de criação; preservar prioridade de cards/bloqueio e foco capturado.
-
-- 2026-10-21: UX7 adiciona uma preferência compartilhada de largura para Mini/Quick e uma
-  sobreposição fixa de 880 x 640 reservada na inicialização. Mantém as larguras padrão originais,
-  a altura do Mini, o comportamento de Room/Full e a autoridade; a seleção muda apenas a
-  geometria do conteúdo e seu retângulo de entrada medido de forma síncrona.
-
-- 2026-10-21: UX7.2 aplica as alturas de referência de 56/600 pixels lógicos apenas às larguras
-  escolhidas. Preserva os padrões originais e a escala dos sprites; limita toda a caixa do Quick,
-  incluindo o estado de ditado na ilha, antes da medição síncrona do retângulo de entrada.
-
-- 2026-10-21: UX7.3 reserva uma ação no Mini para as sessões além dos poleiros disponíveis.
-  Mantém a pílula em repouso sem texto visível, com alvo separado de teclado e a navegação
-  existente para o Bando do Nest. Os cartões mantêm a prioridade e o responsável original pelas ações.
-
-- 2026-10-21: o retorno do mantenedor restaura a altura de 38 px do Mini para qualquer largura,
-  evitando altura extra da barra em repouso sobre as abas dos aplicativos. Expõe a mesma preferência
-  de layout em Geral e no Quick, com armazenamento compartilhado, sem nova configuração
-  privilegiada nem autoridade sobre permissões.
-
-- 2026-10-21: UX8 começa com Perfis de agentes dentro do Bando, mantendo as cinco abas principais. O Nest lê o catálogo integrado e preserva o destino limitado `flock-profiles`. O catálogo independe do Zeca e nunca controla permissões nem grava configurações de agentes.
-- 2026-10-21: Os perfis de agentes no Bando podem criar cópias locais e editar seu nome/instruções. Somente o Nest controla esses salvamentos; os rascunhos sobrevivem à navegação na janela e são mantidos após falhas ao salvar. Não há nova aba principal, escrita de configurações de agentes nem responsável por permissões.
-- 2026-10-21: O editor de perfis adiciona seletores nativos de espécie/acessório e uma prévia estática do quadro completo. Edições de aparência usam o mesmo Salvar/Cancelar local e limite de revisão; não modificam configurações do Zeca nem sessões observadas.
-- 2026-10-21: Os registros de conversas vinculadas a perfis mantêm seu próprio snapshot imutável após edições de perfil, renomeação, reinício e reabertura. O Chat atual do Zeca não expõe esses registros nem os reinterpreta como conversas do companheiro; nenhum botão de Chat do perfil ou seletor de destinatário é habilitado nesta etapa de armazenamento.
-- 2026-10-21: O primeiro runtime especializado é exclusivo do Claude Code, com briefing fixo e sem contexto automático ou MCP do companheiro. Nenhum seletor de destinatário, ação de Chat do perfil ou reabertura de conversa especializada é habilitado nesta etapa exclusiva de runtime; o Nest e o Quick existentes continuam com o responsável atual pela conversa.
-- 2026-10-21: A restauração nativa de conversas de perfil preserva o modelo, esforço, sessão e snapshot do perfil salvos, em vez das edições atuais do perfil ou configurações do companheiro. A verificação anterior ao turno rejeita destinatários e origens incompatíveis e substituições não suportadas por voz/menções/origem. A interface atual do Chat ainda recusa registros de perfil até poder apresentar e preservar esses responsáveis entre superfícies.
-- 2026-11-11: Os cabeçalhos da ilha e do Nest trocam o seletor de tamanho, o botão de tela cheia e o botão de som por um único menu de apresentação. Ele mostra o tamanho em uso e lista os quatro tamanhos, cada um com o que é, e os sons; os tamanhos e o comportamento deles não mudam.
+- antiga 0008, 2026-10-04: um núcleo, muitas superfícies; a ilha é a única que mostra cards.
+- antiga 0009, 2026-10-04: nenhum modo de presença esconde um card confirmado.
+- antiga 0022, 2026-10-12: só as Configurações têm os poderes (então como janela própria).
+- antiga 0023, 2026-10-12: as Configurações viram um webview da janela do Nest; as checagens vão
+  pelo label do webview.
+- antiga 0024, 2026-10-12: a ilha sai da frente enquanto o Nest está aberto.
+- antiga 0030, 2026-10-12: o Nest também responde a um card, enquanto o usuário está nele.
+- 2026-10-16 (antiga 0031): remover Tasks do Nest; manter D7, gastos e orçamento, e o limite de D8
+  para `/continue`.
+- 2026-10-17: a caixa Agora do Quick abre o responsável de cada linha e nunca responde a um card.
+- 2026-10-17 a 2026-10-19: o Ditado vira a quinta aba do Nest; a configuração dele fica no webview
+  das Configurações, o status no Linux vai para uma cápsula passiva, e os cards sempre vêm primeiro.
+- 2026-10-21: Mini e Quick compartilham uma largura escolhida dentro de uma sobreposição fixa que
+  nunca é redimensionada; o Mini continua com 38 px de altura.
+- 2026-10-21: os perfis de agentes ficam no Bando e o Nest é dono dos salvamentos; nenhuma aba
+  principal nova.
+- 2026-11-11: um único menu de apresentação nos cabeçalhos substitui o seletor de tamanho, a tela
+  cheia e o botão de som.
 - 2026-11-15: incorporar *Oferecer só as ações que os agentes permitem* (antiga 0011), que foi
   aposentada.

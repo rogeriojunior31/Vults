@@ -2,8 +2,6 @@
 
 **Status:** Accepted, 2026-10-11. Consolidated on 2026-10-12 from former 0008, former 0009, former 0022, former 0023, former 0024
 and former 0030. Amended on 2026-10-16: the Nest has no Tasks tab.
-Amended on 2026-10-17 for N3 V0.3: the Dictation area and its feedback contract. These additions
-land with their feature phases; the decision does not claim production UI or native validation.
 
 ## Context
 
@@ -68,7 +66,7 @@ meant to steer whatever reads them.
   *Paused* `core` does not acknowledge cards and releases them at once, so the agent asks in its
   terminal with no wait, and connectors stop polling.
 - **The Nest** has Flock, Chat, Connections and Activity (Week with *By project*,
-  History, Cost, Traces, Audit), with Dictation as the fifth tab when N3 delivers it. Memory is a
+  History, Cost, Traces, Audit), with Dictation as the fifth tab. Memory is a
   side panel of the Chat, with Settings behind a gear and
   the agents' capability table in Settings › Agents. Changing size keeps the selection: the session
   is core's `focus`; the tab, filters and chosen connection are look the app hands to the Nest. The
@@ -118,7 +116,7 @@ meant to steer whatever reads them.
   `policies::from_settings`). The two webviews share the origin's storage, which Settings never reads. Settings shows no agent's text: its frame holds tab names and counts,
   the presentation menu (the four sizes and sounds), and a footer that switches Zeca and brings up the terminal of
   the session in front (it keeps only who that session is). Its pages are General, Agents, Chat &
-  voice, Approvals, Projects, Activity, Connectors, Phone, Flock & Zeca and About. N3 Dictation
+  voice, Approvals, Projects, Activity, Connectors, Phone, Flock & Zeca and About. Dictation
   configuration uses this webview under its own tab, outside the global Settings sidebar.
 - **A surface offers only the actions that work.** The app reaches an agent only while a hook waits
   and does not own a watched agent's process, so a menu shows what works on this desktop and says
@@ -139,66 +137,28 @@ meant to steer whatever reads them.
   show-all. Opening on Settings loads the Nest's page too, hidden and resting. An event the app
   sends reaches every webview's listeners; a page still draws only what it asked for.
 - On Wayland the compositor places the Nest's window; it cannot be pinned under the island's spot.
-- N3 UI checks must exercise each dictation state alongside an arriving permission or question,
+- UI checks must exercise each dictation state alongside an arriving permission or question,
   with Zeca on and off, Black and Light, and reduced motion. Native validation covers Mini/Quick
   geometry, focus and input regions, plus Room at 480 x 360 and larger sizes, on X11 and Plasma
-  Wayland. The prototype's P12 visual review and the later running-app sign-offs remain separate.
+  Wayland.
 
 ## History
 
-- former 0008, 2026-10-04: one core, many surfaces; the island is the
-  only card host.
-- former 0009, 2026-10-04: no presence mode hides an acknowledged
-  card.
-- former 0022, 2026-10-12: only Settings holds the powers (then as a
-  window of its own).
-- former 0023, 2026-10-12: Settings becomes a webview of the
-  Nest's window; checks go by webview label.
+- former 0008, 2026-10-04: one core, many surfaces; the island is the only card host.
+- former 0009, 2026-10-04: no presence mode hides an acknowledged card.
+- former 0022, 2026-10-12: only Settings holds the powers (then as a window of its own).
+- former 0023, 2026-10-12: Settings becomes a webview of the Nest's window; checks go by webview
+  label.
 - former 0024, 2026-10-12: the island steps aside while the Nest is open.
 - former 0030, 2026-10-12: the Nest answers a card too, while the user is in it.
-
-- 2026-10-15: Chat uses a wider Quick composition within the existing fixed overlay.
-  Geometry accounts for zoom once and clamps to the viewport before measurement.
-  Initial native configuration matches the runtime's 720 x 640 size; Mini and the
-  other Quick tabs retain their widths. User-selectable paired widths remain future work.
-- 2026-10-16 (former 0031): remove Tasks from the Nest; preserve D7, spend and
-  budget, and the D8 boundary for `/continue`.
-
-- 2026-10-17: N2.2 adds Quick's Now inbox, exact-request review and explicit links to the existing
-  Nest details; cards keep their original authority, ledger and deadline.
-- 2026-10-17: N3 V0.3 adds the phased fifth Nest tab, Settings and Activity ownership, transient
-  dictation feedback and card priority. It follows R6's revised central Settings decision and
-  Tasks removal; neither a sixth tab nor area-owned privileged settings is introduced.
-
-- 2026-10-18: consolidate dictation configuration under the Dictation tab at the maintainer's
-  request, with one editor per setting and shared navigation. Move the shared transcription
-  controls there and link from Chat. Keep configuration in the Settings webview and all
-  transcript work pages in Nest; approval, recording and privileged-command authority is unchanged.
-
-- 2026-10-19: move Linux dictation status to a passive bottom capsule, with existing inline
-  feedback as a creation-failure fallback; preserve card/lock priority and the captured focus.
-
-- 2026-10-21: UX7 adds a shared Mini/Quick width preference and a fixed 880 x 640 overlay
-  reserved at startup. Keep the original default widths, Mini height, Room/Full behavior and
-  authority; selection changes only content geometry and its synchronous input rectangle.
-
-- 2026-10-21: UX7.2 applies the paired 56/600 logical-pixel height references only to selected
-  widths. Preserve original defaults and sprite scale; bound the whole Quick box, including
-  inline feedback, before synchronous input-region measurement.
-
-- 2026-10-21: UX7.3 reserves a Mini overflow action for sessions beyond the available perches.
-  Keep the resting pill free of visible text, with a separate keyboard target and the existing
-  Nest/Flock navigation. Cards retain their priority and original action owner.
-
-- 2026-10-21: maintainer feedback restores Mini's 38 px height for every width, avoiding extra
-  resting-bar height over application tabs. Expose the same layout preference in General and
-  Quick, with shared storage and no additional privileged setting or permission authority.
-
-- 2026-10-21: UX8 starts with Agent profiles inside Flock, preserving the five main tabs. The Nest reads the built-in catalog and retains the bounded `flock-profiles` destination. The catalog is independent of Zeca and never owns a permission or agent-config write.
-- 2026-10-21: Agent profiles in Flock can create local copies and edit their name/instructions. The Nest alone owns these saves; drafts survive in-window navigation, and failed saves retain them. No new main tab, agent-config write or permission owner is introduced.
-- 2026-10-21: The profile editor adds native species/accessory selectors and a static full-frame preview. Appearance edits share the same local Save/Cancel and revision boundary; neither Zeca settings nor watched sessions are modified.
-- 2026-10-21: Profile-bound conversation records retain their own immutable snapshot across profile edits, rename, restart and reopen. The current Zeca Chat does not expose these records or reinterpret them as companion conversations; no profile Chat button or recipient selector is enabled in this storage slice.
-- 2026-10-21: The first specialist runtime is Claude Code only, with a fixed brief and no automatic companion context or MCP. No recipient selector, profile Chat action or specialist conversation reopening is enabled by this runtime-only slice; the existing Nest and Quick remain on their current conversation owner.
-- 2026-10-21: Native profile conversation restoration preserves the saved model, effort, session and profile snapshot rather than current profile edits or companion settings. Turn preflight rejects mismatched recipients, sources and unsupported voice/mention/source overrides. The existing Chat UI still refuses profile records until it can present and preserve these owners across surfaces.
-- 2026-11-11: The island's and the Nest's headers trade the size switch, the full-screen button and the sound toggle for one presentation menu. It names the size in use and lists the four sizes, each with what it is, and the sounds; the sizes and their behavior are unchanged.
+- 2026-10-16 (former 0031): remove Tasks from the Nest; keep D7, spend and budget, and the D8
+  boundary for `/continue`.
+- 2026-10-17: Quick's Now inbox opens each row's owner and never answers a card.
+- 2026-10-17 to 2026-10-19: Dictation becomes the fifth Nest tab; its configuration stays in the
+  Settings webview, its Linux status moves to a passive capsule, and cards always come first.
+- 2026-10-21: Mini and Quick share a chosen width inside a fixed overlay that is never resized;
+  Mini stays 38 px high.
+- 2026-10-21: agent profiles live in Flock and the Nest owns their saves; no new main tab.
+- 2026-11-11: one presentation menu in the headers replaces the size switch, full screen and sound
+  toggle.
 - 2026-11-15: fold in *Offer only the actions the agents allow* (former 0011), which is retired.

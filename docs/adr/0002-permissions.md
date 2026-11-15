@@ -80,15 +80,12 @@ Above all of these:
 
 ## History
 
-- former 0014, 2026-10-10: accepted policies may answer; a deny beats
-  an allow, destructive always asks, the audit log, the budget's hard stop.
-- former 0017, 2026-10-10: a signed answer from a paired
-  phone counts as a click; Kotlin and Android as the one exception.
-- former 0025, 2026-10-12: no *Always* rule answers a destructive
-  call.
-- former 0026, 2026-10-12: who answers Zeca's chat cards
-  is the user's choice.
-
-- 2026-10-22: At the maintainer's request, the Chat access picker may increase or decrease access directly. Keep the selected recipient explicit, persist before applying authority, and retain all policy, destructive-action and outside-content guards.
+- former 0014, 2026-10-10: accepted policies may answer; a deny beats an allow, destructive always
+  asks, the audit log, the budget's hard stop.
+- former 0017, 2026-10-10: a signed answer from a paired phone counts as a click; Kotlin and
+  Android as the one exception.
+- former 0025, 2026-10-12: no *Always* rule answers a destructive call.
+- former 0026, 2026-10-12: who answers Zeca's chat cards is the user's choice.
+- 2026-10-22: the Chat access picker may raise or lower access directly; every guard stays.
 - 2026-11-15: fold in the permission rules of the voice and dictation records (former 0028 and
   former 0032), which are retired.

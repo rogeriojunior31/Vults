@@ -1,5 +1,5 @@
 # 0002. Quem responde a uma permissão
-<!-- source: 7d377ca22b2e -->
+<!-- source: 9f67c4d31422 -->
 
 **Status:** Aceita, 2026-10-04. Consolidada em 2026-10-12 a partir da antiga 0014, da antiga 0017, da antiga 0025 e da
 antiga 0026.
@@ -97,15 +97,13 @@ Acima de tudo isso:
 
 ## Histórico
 
-- antiga 0014, 2026-10-10: políticas aceitas podem responder; um deny
-  vence um allow, o destrutivo sempre pergunta, o log de auditoria, o hard stop do orçamento.
-- antiga 0017, 2026-10-10: a resposta assinada de um celular
-  pareado vale como clique; Kotlin e o Android como a única exceção.
-- antiga 0025, 2026-10-12: nenhuma regra *Always* responde a uma
-  chamada destrutiva.
-- antiga 0026, 2026-10-12: quem responde os cards do chat
-  do Zeca é escolha do usuário.
-
-- 2026-10-22: A pedido do mantenedor, o seletor de acesso do Chat pode aumentar ou reduzir o acesso diretamente. Manter o destinatário explícito, salvar antes de aplicar a autoridade e preservar as regras de políticas, ações destrutivas e conteúdo externo.
+- antiga 0014, 2026-10-10: políticas aceitas podem responder; um deny vence um allow, o destrutivo
+  sempre pergunta, o log de auditoria, a parada do orçamento.
+- antiga 0017, 2026-10-10: uma resposta assinada de um telefone pareado vale como um clique; Kotlin e
+  Android como a única exceção.
+- antiga 0025, 2026-10-12: nenhuma regra *Sempre* responde a uma chamada destrutiva.
+- antiga 0026, 2026-10-12: quem responde aos cards do chat do Zeca é escolha do usuário.
+- 2026-10-22: o seletor de acesso do Chat pode aumentar ou reduzir o acesso diretamente; todas as
+  proteções ficam.
 - 2026-11-15: incorporar as regras de permissão dos registros de voz e ditado (antigas 0028 e
-  antiga 0032), que foram aposentados.
+  0032), que foram aposentados.
