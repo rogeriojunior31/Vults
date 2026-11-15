@@ -39,7 +39,7 @@ build() {
   export CARGO_TARGET_DIR="$srcdir/$pkgname/target"
   cargo build --release --locked -p vults-hook
   # --no-bundle still builds with the production protocol (no dev server).
-  # Distro packages ship without the update notice (ADR 0019): pacman updates them.
+  # Distro packages ship without the update notice (ADR 0004): pacman updates them.
   npx tauri build --no-bundle --config app/tauri.bundle.linux.json -- --no-default-features
 }
 

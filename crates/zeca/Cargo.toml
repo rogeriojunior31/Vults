@@ -1,16 +1,16 @@
 [package]
 name = "vults-zeca"
-description = "Zeca's brain (ADR 0018): reads the flock, keeps his memory; never answers a permission"
+description = "Zeca's brain (ADR 0005): reads the flock, keeps his memory; never answers a permission"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish.workspace = true
 
 # No vults-core: Zeca reads the flock through his own snapshot types, so nothing in this crate can
-# even name an Intent (ADR 0018; the compile-fail test in flock.rs).
+# even name an Intent (ADR 0005; the compile-fail test in flock.rs).
 [dependencies]
 serde.workspace = true
-# His memory is a git repository: every write a commit, undone by a revert (plan-zeca S9, M6).
+# His memory is a git repository: every write a commit, undone by a revert.
 gix = { version = "0.90", default-features = false, features = ["sha1", "index"] }
 
 [lints]

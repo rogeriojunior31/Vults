@@ -1,4 +1,4 @@
-//! Writing Zeca's memory (`docs/dev/plan-zeca.md` M6). Only the user writes it: `/remember` and
+//! Writing Zeca's memory. Only the user writes it: `/remember` and
 //! `/forget` in the chat are the user's own words, committed as theirs; whatever Zeca would add
 //! (his `memory_propose` tool, or what he read in a finished conversation) waits as a proposal
 //! until the user accepts it in the Nest's Memory tab, and accepting is a commit, undone by a

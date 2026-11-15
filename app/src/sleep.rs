@@ -1,4 +1,4 @@
-//! Zeca's sleep (`docs/dev/plan-zeca.md` M8): once a day, from two in the morning and while nothing
+//! Zeca's sleep: once a day, from two in the morning and while nothing
 //! is working (no agent, no chat turn), he looks over his memory. A fact that repeats another in
 //! its section becomes a proposal to remove it (no model). With the sleep's own switch on, a small
 //! model also reads what he remembers about the user and across projects and the last days'

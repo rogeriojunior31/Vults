@@ -1,10 +1,10 @@
 import { connectQuestions } from "../../question-bridge";
 import { dictationStatus } from "../../island/dictation";
 import { applyTheme, DEFAULT_THEME } from "../../theme";
-// The Nest: the Panel and Full sizes (ADR 0021), a window built when opened and gone when closed
-// (ADR 0021, D6). It opens with Zeca off too, without its Chat. Its Chat is the island's
+// The Nest: the Panel and Full sizes (ADR 0006), a window built when opened and gone when closed
+// (ADR 0006, D6). It opens with Zeca off too, without its Chat. Its Chat is the island's
 // conversation in full Markdown: the same chat, so a message sent in either shows in both. Its
-// cards, and the flock's, are answered here while the user is in it (ADR 0021).
+// cards, and the flock's, are answered here while the user is in it (ADR 0006).
 import { Bridge } from "../../bridge";
 import { setLang, t } from "../../i18n";
 import { el } from "../../dom";
@@ -132,7 +132,7 @@ const nest = createNest(
       savePlace: Bridge.flockPlaceSet,
       focus: (s) => void Bridge.sessionFocus(s && { agent: s.agent, id: s.id }),
       jump: (s) => void Bridge.sessionJump(s.agent, s.id),
-      // The card waits on the Flock, its session in front (ADR 0021).
+      // The card waits on the Flock, its session in front (ADR 0006).
       review: (s) => {
         void Bridge.sessionFocus({ agent: s.agent, id: s.id });
         nest.open("flock");
@@ -167,7 +167,7 @@ const nest = createNest(
     savePlace: async tab => { ++navigationRevision; questions.depart(); await Bridge.nestTabSet(tab); },
     openDictation: () => void Bridge.openNest("dictation"),
     setZeca: (on) => void Bridge.setZeca(on),
-    // Back to the island is Quick: the Nest closes and the island opens (ADR 0021).
+    // Back to the island is Quick: the Nest closes and the island opens (ADR 0006).
     island: () => void changeSize(() => Bridge.setSize("quick", nest.current())),
     sound: (on) => void Bridge.setSounds(on),
     media: (action) => void Bridge.mediaControl(action),
@@ -227,7 +227,7 @@ Bridge.onChat((d) => { nest.chat.receive(d); dictationContext(); });
 Bridge.onAgentProfileState(({ profile, state }) => nest.profileStateChanged(profile, state));
 Bridge.onSpecialistChat(({ profile, delta }) => nest.receiveSpecialistChat(profile, delta));
 Bridge.onSpecialistChatSync(({ profile, sync }) => nest.syncSpecialistChat(profile, sync));
-// Allow and Deny's keys come here while the user is in the Nest (ADR 0021).
+// Allow and Deny's keys come here while the user is in the Nest (ADR 0006).
 Bridge.onShortcut((id) => nest.shortcut(id));
 void Bridge.shortcutKeys().then((keys) => nest.setKeys(shownKeys(keys)), () => {});
 Bridge.onShortcutKeys((keys) => nest.setKeys(shownKeys(keys)));

@@ -1,38 +1,44 @@
 # Decisões
-<!-- source: 498ea40e382f -->
+<!-- source: d75d99b7aebd -->
 
-Registros de decisão de arquitetura (ADRs): um arquivo por tema que molda o projeto, com a regra em
-vigor, o contexto em que foi feita e o que ela custa. O código e os guias dizem *o que* o app faz;
-estes registros dizem *por quê*.
+Seis registros, um por regra em que o projeto inteiro se apoia. Os registros 0001 a 0004 guardam os
+motivos das quatro regras do `CLAUDE.md`, com os mesmos números; 0005 e 0006 guardam os dois limites
+que todo recurso atravessa. O código e os guias dizem *o que* o app faz; estes dizem *por quê*.
+Planos ficam no [roadmap](../../dev/ROADMAP.md), o que já saiu no [changelog](../../../CHANGELOG.md).
 
-| Tema | Registro | Status | Incorporados |
+| # | Registro | Regra no `CLAUDE.md` | Antes de 2026-11-15 |
 |---|---|---|---|
-| Como decidimos | [0001](0001-record-decisions.md) Registrar decisões como ADRs | Aceita | |
-| Stack | [0002](0002-rust-backend-no-sidecars.md) Rust em todo o backend; nenhum sidecar em Python | Aceita | |
-| O hook | [0003](0003-never-block-an-agent.md) O hook nunca bloqueia um agente | Aceita | |
-| Permissões | [0004](0004-a-human-answers-permissions.md) Quem responde a uma permissão | Aceita | 0014, 0017, 0025, 0026 |
-| Permissões | [0027](0027-an-open-reply-for-any-tool.md) Uma resposta aberta para qualquer ferramenta que peça uma | Proposta | |
-| Configurações dos agentes | [0005](0005-agent-configs-backup-diff-click.md) As configurações dos agentes, e os agentes que suportamos | Aceita | 0029 |
-| Ações | [0011](0011-only-actions-that-work.md) Oferecer só as ações que os agentes permitem | Aceita | |
-| Zeca | [0018](0018-zeca-as-an-agent.md) Zeca: opcional, separado do bando, regras antes de modelos | Aceita | 0010, 0012 |
-| Rede e segredos | [0019](0019-requests-on-the-users-behalf.md) Rede, segredos e telemetria | Aceita | 0006, 0016 |
-| Releases | [0020](0020-0.2.0-at-wave-4-then-0.2.x.md) Releases: pequenas e frequentes | Aceita | 0007, 0015 |
-| Superfícies | [0021](0021-four-sizes-one-nest.md) Superfícies: um núcleo, quatro tamanhos, um card respondido onde você está | Aceita | 0008, 0009, 0022, 0023, 0024, 0030 |
-| Voz | [0028](0028-spoken-replies-through-a-realtime-model.md) Voz: escuta local, respostas faladas opcionais | Aceita | 0013 |
-| Remoção de Tasks | [0031](0031-tasks-leave-vults.md) Tasks sai do Vults | Aceita | |
-| Ditado | [0032](0032-dictation-into-other-apps.md) Ditado em outros aplicativos | Aceita | |
+| [0001](0001-hook-never-blocks.md) | O hook nunca bloqueia um agente | 1 | 0003 |
+| [0002](0002-permissions.md) | Quem responde a uma permissão, inclusive por voz | 2 | 0004, com as regras de voz da 0028 e da 0032 |
+| [0003](0003-agent-configs.md) | As configurações dos agentes, e os agentes que suportamos | 3 | 0005 |
+| [0004](0004-network-and-secrets.md) | Rede, segredos, telemetria, voz e áudio | 4 | 0019, com as regras de privacidade da 0028 e da 0032 |
+| [0005](0005-zeca.md) | Zeca: opcional, separado do bando, regras antes de modelos | | 0018 |
+| [0006](0006-surfaces.md) | Superfícies: um núcleo, quatro tamanhos, um card respondido onde você está; só ações que funcionam | | 0021, com a 0011 |
 
-Um número da última coluna foi um registro próprio até 2026-10-12; um commit ou PR antigo que o
-cita quer dizer o registro em que ele foi incorporado. Números nunca são reusados: o próximo tema é
-o 0033.
+<a id="old-numbers"></a>
+
+## Números antigos
+
+Os registros foram renumerados em 2026-11-15. Um commit, PR ou entrada do changelog de antes dessa
+data usa os números antigos: leia-os pela última coluna acima. Dentro dos registros, *antiga NNNN*
+sempre quer dizer um número antigo. Aposentados sem sucessor, com o texto no histórico do git: 0001
+(como escrever um registro, abaixo), 0002 (Rust, sem sidecars, sem GPL: agora *Stack* no
+`CLAUDE.md`), 0020 (releases: [Releasing](../../dev/releasing.md)), 0027 (uma resposta aberta para
+qualquer ferramenta: G1/G2 do roadmap) e 0031 (remoção de Tasks: o changelog). Números mais antigos,
+incorporados antes (0006 a 0030), estão no *Histórico* de cada registro.
 
 <a id="writing-one"></a>
 
 ## Como escrever um
 
-Uma decisão sobre um tema que já tem registro é uma edição desse registro, num PR próprio, com uma
-linha datada no seu *Histórico*. Só um tema novo ganha número novo: copie o formato de um registro
-existente (**Status**, **Contexto**, **Decisão**, **Consequências**), dê a ele o próximo número e
-acrescente-o à tabela. Escreva ou edite um quando uma escolha muda uma regra do `CLAUDE.md`, a
-arquitetura, o plano de releases ou o que o app promete aos usuários
-([0001](0001-record-decisions.md)).
+Um registro só existe para uma regra em que o projeto inteiro se apoia: uma regra do `CLAUDE.md`, ou
+um limite que todo recurso precisa respeitar. Uma escolha que pertence a um recurso não é registro;
+vai no guia ou na referência desse recurso. Um plano, uma fase, uma meta de release ou uma remoção
+também não é decisão: isso vai no roadmap ou no changelog.
+
+- **Uma decisão nova é uma edição do registro da sua regra**, num PR próprio, com uma linha datada
+  no seu *Histórico*. Um registro novo precisa antes de uma regra nova no `CLAUDE.md`; ele ganha o
+  próximo número e uma linha aqui.
+- **O histórico registra decisões, não entregas.** Uma linha datada diz qual regra mudou e por quê.
+  Qual PR ou etapa a implementou vai no changelog.
+- **Uma regra do `CLAUDE.md` muda primeiro no seu registro**, nunca só no `CLAUDE.md`.

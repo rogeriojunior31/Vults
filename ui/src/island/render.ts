@@ -99,9 +99,9 @@ export interface Actions extends UpdateActions {
   stepDiff(agent: SessionView["agent"], id: string, step: number): Promise<Diff | null>;
   /** Settings in the Nest, at that page (General when none). */
   openSettings(page?: string): void;
-  /** The size switch's Room and Full (ADR 0021), at the Nest's tab for what the island shows. */
+  /** The size switch's Room and Full (ADR 0006), at the Nest's tab for what the island shows. */
   setSize?(size: Size, tab: string): void;
-  /** Quick's short views: this week, and the settings its gear shows (ADR 0021). */
+  /** Quick's short views: this week, and the settings its gear shows (ADR 0006). */
   /** This week, or (`previous`) the one before, when the history has it. */
   week?(previous?: boolean): Promise<{ week: WeekView; history: boolean }>;
   quickSettings?(): Promise<QuickSettings>;
@@ -127,7 +127,7 @@ export interface Actions extends UpdateActions {
   media(action: MediaAction): void;
 }
 
-/** Quick's short views (ADR 0021): this week, the gear's settings, and Connections with none on. */
+/** Quick's short views (ADR 0006): this week, the gear's settings, and Connections with none on. */
 type QuickKind = "activity" | "settings" | "connections" | "now";
 
 /** News rows shown at once; the rest are counted. */
@@ -299,7 +299,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   const perch = el("div", { class: "perch" }, el("span", { class: "glow" }), focusScene.canvas);
 
   const badges = el("div", { class: "badges" });
-  // Mini has no text (ADR 0021): what it would say is its label, for a screen reader.
+  // Mini has no text (ADR 0006): what it would say is its label, for a screen reader.
   // The prototype's fuel: each plan's most-used window as a hairline under the pill, in its color.
   const fuel = el("div", { class: "pill-fuel" });
   fuel.setAttribute("aria-hidden", "true");
@@ -387,7 +387,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   /** The paused view, made once per view (a new one would be news to `cues` each time). */
   let pausedFrom: ViewModel | null = null;
   let pausedAs: ViewModel = last;
-  /** Paused (ADR 0021), the island is empty: core sends every card to its terminal, the
+  /** Paused (ADR 0006), the island is empty: core sends every card to its terminal, the
    *  connectors stop, and the pill says so. */
   function drawn(v: ViewModel): ViewModel {
     if (presenceNow() !== "paused") return v;
@@ -473,7 +473,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   let boardShown: string | null = null;
   /** The connector last opened: the Connections tab opens on it again. */
   const boardHost = el("div", { class: "board-host" });
-  /** Quick's short view the user opened from its tab (ADR 0021), in place of the overview. */
+  /** Quick's short view the user opened from its tab (ADR 0006), in place of the overview. */
   let quickOpen: QuickKind | null = null;
   let quickShown: QuickKind | null = null;
   /** What the short views show, read when their tab opens; null while it is read. */
@@ -566,7 +566,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   };
   /** What the card on screen shows: rebuilt only when it changes, or a row loses its click. */
   let boardSig = "";
-  /** A permission card waits: it wins over a connector's card (ADR 0021), so their tabs rest. */
+  /** A permission card waits: it wins over a connector's card (ADR 0006), so their tabs rest. */
   let cardWaits = false;
   /** How the open card's connector last polled, once asked. */
   let boardStatus: Pick<ConnectorStatus, "lastOk" | "error"> | null = null;
@@ -997,7 +997,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
         needs,
         needs === 1 ? t("Flock, 1 session needs you") : t("Flock, {n} sessions need you", { n: needs }),
       ),
-      // The chat and its drop zone are Zeca's (ADR 0018).
+      // The chat and its drop zone are Zeca's (ADR 0005).
       ...(zecaShown()
         ? [
             tab("chat", "chat", t("Chat"), () => {
@@ -1007,7 +1007,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
             }),
           ]
         : []),
-      // Quick's short views (ADR 0021); a waiting card keeps the island, as for a connector's card.
+      // Quick's short views (ADR 0006); a waiting card keeps the island, as for a connector's card.
       (() => {
         const b = tab("now", "list", t("Now"), () => openQuick("now"), nowItems(last, zecaShown()).filter(i => i.level === "needs-you" || i.level === "failed").length);
         b.disabled = cardWaits;
@@ -1248,7 +1248,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     inFront = front;
 
     // A settled permission opens the island and keeps it open until it is answered, unless the
-    // user is in the Nest, which answers it there (ADR 0021). Going there folds the island.
+    // user is in the Nest, which answers it there (ADR 0006). Going there folds the island.
     const here = (pending && v.approval && !nestHoldsCards()) || !!textQuestion;
     if (here && !fsm.pinned) fsm.openPinned();
     else if (!here && fsm.pinned && !held) {
@@ -1304,7 +1304,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     quickShown = quick;
     // Zeca stays on the wire with nobody there, so the island is never a blank shape. In the chat
     // he is the chat: thinking, swallowing a file, waiting for an answer.
-    // With Zeca off (ADR 0018) an empty wire stays empty. Paused, he sleeps: the pill has no words,
+    // With Zeca off (ADR 0005) an empty wire stays empty. Paused, he sleeps: the pill has no words,
     // and asleep is how it tells a pause from nothing running.
     const idle = zecaShown() ? { clip: presenceNow() === "paused" ? "sleep" : idleClip(), agent: "claude" as const, alone: true } : null;
     assignSpecies(shown);
@@ -2152,7 +2152,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     if (id === "talk-cancel") { chat.cancelVoice(); return; }
     // Unfolds it, as a click on the pill would, and takes the keys: it was asked for from the
     // keyboard. It folds as usual once the pointer is away, and gives them back then.
-    // Mini from the size switch or its key (ADR 0021): the pill, as the fold button does.
+    // Mini from the size switch or its key (ADR 0006): the pill, as the fold button does.
     if (id === "fold") {
       foldNow();
       return;
@@ -2203,7 +2203,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
   };
   // The island's own keys, while it holds them (opened from the keyboard) and no field is typed in.
   // None of them answers a card but Y / N on a permission and a number on a question's choice,
-  // the same answers a click gives (ADR 0004).
+  // the same answers a click gives (ADR 0002).
   window.addEventListener("keydown", (e) => {
     if (!keysMode || fsm.mode !== "open" || chat.isOpen() || e.ctrlKey || e.altKey || e.metaKey) return;
     const target = e.target as HTMLElement | null;

@@ -1,4 +1,4 @@
-//! The local database (`docs/dev/plan-zeca.md`, S1): one `vults.sqlite` in the data folder, the
+//! The local database: one `vults.sqlite` in the data folder, the
 //! user's alone, upgraded by numbered migrations. Each table arrives with the step that needs it;
 //! the history of turns ([`history`]), the audit log ([`audit`]), the user's consents
 //! ([`consents`]), traces ([`traces`]), Zeca's conversations ([`conversations`]) and the
@@ -109,7 +109,7 @@ const MIGRATIONS: &[&str] = &[
     -- copy and their removal never copies twice, while a newer file (written by an older Vults
     -- after a downgrade) still comes in.
     CREATE TABLE imports (name TEXT PRIMARY KEY, mtime INTEGER NOT NULL);",
-    // 2: the audit log (ADR 0004): who answered each card, how, and on what.
+    // 2: the audit log (ADR 0002): who answered each card, how, and on what.
     audit::TABLE,
     // 3: traces, one span per model call, tool and action (S6).
     traces::TABLE,

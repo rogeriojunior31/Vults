@@ -1,4 +1,4 @@
-//! A local embedding for recall (plan-zeca M5): Ollama on this computer, `127.0.0.1` only, so the
+//! A local embedding for recall: Ollama on this computer, `127.0.0.1` only, so the
 //! journal's words never leave it. When no Ollama answers, or it lacks the model, recall goes on
 //! with full-text search alone.
 

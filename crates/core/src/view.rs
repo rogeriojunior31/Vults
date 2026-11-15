@@ -16,7 +16,7 @@ pub struct ViewModel {
     pub sessions: Vec<SessionView>,
     pub approval: Option<ApprovalView>,
     /// Every permission card waiting, in line order (deferred ones included): a surface can show
-    /// the line and answer any of them, each still by a click (ADR 0004). Questions are left out:
+    /// the line and answer any of them, each still by a click (ADR 0002). Questions are left out:
     /// they are answered on their own card.
     #[cfg_attr(test, ts(as = "Option<Vec<ApprovalView>>", optional))]
     pub waiting: Vec<ApprovalView>,
@@ -131,7 +131,7 @@ pub struct SessionView {
     #[cfg_attr(test, ts(as = "Option<bool>", optional))]
     pub skipped: bool,
     /// *Open terminal* can bring it forward (`platform::jump`): its multiplexer's pane, or on KDE
-    /// its window. Elsewhere a quick action offers its folder instead (ADR 0011).
+    /// its window. Elsewhere a quick action offers its folder instead (ADR 0006).
     #[cfg_attr(test, ts(as = "Option<bool>", optional))]
     pub raise: bool,
     /// Its project is muted: no sound for it here, no desktop notification.
@@ -348,7 +348,7 @@ impl State {
 
     /// Who is in front: the session whose card waits, else the one the user chose, else the first.
     /// Work alone never moves it: the birds would trade places with every prompt. Every surface
-    /// agrees on it (ADR 0021).
+    /// agrees on it (ADR 0006).
     pub fn front(&self) -> Option<&SessionKey> {
         self.card_session()
             .or(self.focus.as_ref())
@@ -437,7 +437,7 @@ impl State {
                         self.now
                             .is_some_and(|now| now.saturating_duration_since(at) >= crate::REST_AFTER)
                     }),
-                    // A loud quiet bird is worth a glance on every surface (ADR 0021), not news.
+                    // A loud quiet bird is worth a glance on every surface (ADR 0006), not news.
                     attention: match (s.status, s.watch.level) {
                         _ if s.returned.is_some() => Attention::NeedsYou,
                         (Status::Working, Some(crate::silence::Silence::Loud)) => Attention::Info,
@@ -584,7 +584,7 @@ pub(crate) fn editor(t: &Terminal) -> Option<&'static str> {
 
 /// What `platform::jump` can act on: a multiplexer's pane (herdr, tmux, kitty/wezterm with their
 /// sockets), or, with the agent's process known, a window on KDE or in an X11 session. Elsewhere
-/// on Wayland `jump` still tries an XWayland window, but that is not promised (ADR 0011). Keep in
+/// on Wayland `jump` still tries an XWayland window, but that is not promised (ADR 0006). Keep in
 /// step with `platform::jump::methods`.
 fn raises(t: &Terminal) -> bool {
     let has = |k: &str| t.env.get(k).is_some_and(|v| !v.trim().is_empty());

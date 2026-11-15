@@ -651,7 +651,7 @@ fn a_question_card_can_go_back_to_the_terminal() {
 }
 
 /// Where a quiet intent (one that must never answer a card) sits in the test's coverage list;
-/// `None` for the three that may answer (ADR 0004). Exhaustive on purpose: a new `Intent` stops
+/// `None` for the three that may answer (ADR 0002). Exhaustive on purpose: a new `Intent` stops
 /// the build here until someone decides which it is, and a quiet one needs a sample below.
 fn quiet_index(intent: &Intent) -> Option<usize> {
     match intent {
@@ -750,7 +750,7 @@ fn quiet_intents() -> Vec<Intent> {
     intents
 }
 
-/// Rule 2 (ADR 0004): a card is answered only by a click (`Decide`, `DecideAlways`),
+/// Rule 2 (ADR 0002): a card is answered only by a click (`Decide`, `DecideAlways`),
 /// the same answer signed on a paired phone, an exact *Always* rule, or a policy the user accepted
 /// (W2). Rules and policies answer a new request, never a card already waiting.
 #[test]
@@ -840,7 +840,7 @@ fn only_decide_can_respond() {
         alert("k2", "https://github.com/me/app/pull/13"),
         card(Vec::new()),
     ];
-    // A paired phone (ADR 0004) answers only with the binding of the very card and a counter it
+    // A paired phone (ADR 0002) answers only with the binding of the very card and a counter it
     // can still raise: a binding that differs, another card's, the last counter, or a quiet intent
     // answer nothing.
     let binding = |id: &str| {
@@ -4017,7 +4017,7 @@ fn a_notification_can_only_bring_the_card_up() {
     assert_eq!(s.pending.len(), 2, "both cards still wait");
 }
 
-// ── Presence presets (ADR 0021) ──────────────────────────────────────────────
+// ── Presence presets (ADR 0006) ──────────────────────────────────────────────
 
 fn acked(effects: &[Effect]) -> Vec<RequestId> {
     effects
@@ -4438,7 +4438,7 @@ fn a_muted_or_hidden_project_notifies_only_its_card() {
     assert_eq!(
         notes(n.update(&s, ON)),
         vec![("a".into(), Some(Kind::NeedsYou))],
-        "its card is still news (ADR 0021)"
+        "its card is still news (ADR 0006)"
     );
     let mut s = in_preset(Presence::Panel);
     let mut n = Notifier::default();
@@ -4985,7 +4985,7 @@ fn a_reused_request_id_sends_both_cards_to_the_terminal() {
 }
 
 /// Random sequences of agent events, clicks, presets and time against `reduce`'s invariants
-/// (`docs/dev/plan-zeca.md` S4; its Guarantees and D5; rule 2). A failure prints the shortest
+/// (its Guarantees and D5; rule 2). A failure prints the shortest
 /// sequence that breaks one: paste it into `check(&[...])` to replay it. `PROPTEST_CASES=20000`
 /// runs deeper.
 mod properties {
@@ -5333,7 +5333,7 @@ mod properties {
             for e in &effects {
                 match e {
                     Effect::AckPermission(r) => {
-                        // D5, ADR 0021: Paused never acknowledges a card.
+                        // D5, ADR 0006: Paused never acknowledges a card.
                         prop_assert!(!paused, "acknowledged while paused: {step:?}");
                         open.insert(r.clone(), arrived);
                     }

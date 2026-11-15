@@ -1,4 +1,4 @@
-//! Traces of Zeca's work (docs/safety.md; `docs/dev/plan-zeca.md` S6): a span per chat turn and per
+//! Traces of Zeca's work (docs/safety.md): a span per chat turn and per
 //! tool it asked to run, with OpenTelemetry's GenAI attribute names. Names, timings, tokens, cost
 //! and a tool's target with secrets redacted: never a prompt or a reply. Kept 30 days.
 

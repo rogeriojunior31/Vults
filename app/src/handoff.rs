@@ -1,4 +1,4 @@
-//! `/continue` in the chat (`docs/dev/plan-zeca.md` W7): words for a watched session that has
+//! `/continue` in the chat: words for a watched session that has
 //! stopped, resumed here (`continuation::continue_session`). Typed by the user, sent to no model of Zeca's.
 
 use std::path::PathBuf;

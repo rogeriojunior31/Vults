@@ -1,4 +1,4 @@
-//! The ACP driver (`docs/dev/plan-zeca.md` W10) against a stand-in agent on the PATH that speaks
+//! The ACP driver against a stand-in agent on the PATH that speaks
 //! as OpenCode 1.18.35 does over ACP: a turn that asks before a command, a turn stopped midway, and
 //! a new process resuming the session. Each scenario has its own folder, whose `mode` file picks
 //! the stand-in's behavior. One test: it changes PATH. The stand-in is a bash script: Unix only.

@@ -1,4 +1,4 @@
-// Quick's short views (ADR 0021), as the prototype draws them: this week, and a few settings, at
+// Quick's short views (ADR 0006), as the prototype draws them: this week, and a few settings, at
 // the island's width, each with a way to the Nest for the rest. The week only reads; the settings
 // change only what the tray's menu already can (presence) and how long the island stays open.
 import type { Flock, Presence } from "../bridge";

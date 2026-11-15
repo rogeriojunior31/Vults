@@ -1,4 +1,4 @@
-//! The agents' doctor (`docs/dev/plan-zeca.md` W1): for each agent Vults knows, what it can do
+//! The agents' doctor: for each agent Vults knows, what it can do
 //! with Vults (`vults_agents::caps`) beside what this computer has: its CLI on the `PATH` and the
 //! version it says, and whether its hooks are in and current. Read only: it changes nothing. Its
 //! one process per agent (`--version`) answered offline, at once, for each of the six CLIs

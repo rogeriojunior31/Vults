@@ -1,4 +1,4 @@
-//! Zeca's brain (ADR 0018; `docs/dev/plan-zeca.md` S9). Inert until the app gives it something to
+//! Zeca's brain (ADR 0005). Inert until the app gives it something to
 //! do: no process, no file, no request of its own.
 
 pub mod context;

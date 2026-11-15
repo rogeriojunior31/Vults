@@ -720,8 +720,8 @@ Only request metadata enters the trace. Heard/written text and applied style/out
 follow Dictation history retention. A failed filter keeps local processing labels; an old row does not
 invent a translation. Clean-up timings are recorded when filtering is measured, including a fallback;
 unmeasured stages stay Unknown. Meeting summaries and realtime voice remain later, separate features.
-Dictation never answers an agent's permission; see [insertion rules](../adr/0032-dictation-into-other-apps.md)
-and [voice and recording rules](../adr/0028-spoken-replies-through-a-realtime-model.md).
+Dictation never answers an agent's permission; see [permission rules](../adr/0002-permissions.md)
+and [voice and recording rules](../adr/0004-network-and-secrets.md#voice-and-audio).
 
 ### Check styles locally
 
@@ -1387,7 +1387,7 @@ it flushed the MCP response. An uncertain delivery is explicit: ask for a new qu
 resending the consumed reply. Prompts/replies are not copied into this audit. An existing or newly
 arriving permission takes priority over a text question.
 
-This path implements the [voice decision](../adr/0028-spoken-replies-through-a-realtime-model.md#human-confirmed-question-drafts)
+This path implements the [permission rule for dictated drafts](../adr/0002-permissions.md)
 using local, memory-only transcription. It does not download a model, use provider clean-up, interpret
 voice commands, copy/insert text elsewhere or save dictation history. A permission card never accepts
 dictation or a spoken approval/denial. Ordinary dictation still cannot insert text into a waiting

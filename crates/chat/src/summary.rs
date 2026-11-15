@@ -1,6 +1,6 @@
 //! The shared tool-free text client for journal, memory, sleep and voice questions.
 //! User/project settings and implicit file/memory context are excluded; managed policy remains
-//! enforced. Each app caller admits requests through its own network gate (ADR 0019).
+//! enforced. Each app caller admits requests through its own network gate (ADR 0004).
 
 use std::path::Path;
 use std::process::Stdio;

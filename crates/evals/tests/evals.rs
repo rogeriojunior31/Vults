@@ -109,7 +109,7 @@ fn prompts_sent_to_models() {
     report("prompts", failures);
 }
 
-/// Recall (plan-zeca M5): questions about earlier days, asked as a chat turn asks (strict, today's
+/// Recall: questions about earlier days, asked as a chat turn asks (strict, today's
 /// chat left out); the day that answers each must be among the first three passages for at least
 /// 0.8 of them. Full-text search alone: the local embedding is an addition when it runs.
 #[test]

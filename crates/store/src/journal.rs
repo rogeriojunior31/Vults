@@ -1,4 +1,4 @@
-//! Zeca's journal (`docs/dev/plan-zeca.md` M4): what the flock and the chat did, a line per event,
+//! Zeca's journal: what the flock and the chat did, a line per event,
 //! written only while the user has Zeca's memory on, and each past day's summary. Secrets are
 //! redacted here, the last step before the disk, whoever the caller is: a token typed into a
 //! command or a chat must never be written. Kept [`KEEP_DAYS`] days.

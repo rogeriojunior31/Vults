@@ -1,4 +1,4 @@
-//! The update notice's rules (FF4, ADR 0019), pure so they can be tested without a clock or the
+//! The update notice's rules (FF4, ADR 0004), pure so they can be tested without a clock or the
 //! network: which release tags count, which one is newer, when a check is due (rule 4: at most
 //! daily), when the consent question comes back and how *Later* hides a version.
 

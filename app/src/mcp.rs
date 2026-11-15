@@ -1,4 +1,4 @@
-//! The `vults-zeca` MCP server (`docs/dev/plan-zeca.md` M7): Zeca's own tools for the chat's
+//! The `vults-zeca` MCP server: Zeca's own tools for the chat's
 //! Claude Code, which starts it through `--mcp-config` (no agent config is touched, rule 3). It is
 //! this same binary run as `vults --zeca-mcp`: no other program to ship. It speaks MCP over stdio
 //! (newline-delimited JSON-RPC: `initialize`, `tools/list`, `tools/call`), a protocol small enough

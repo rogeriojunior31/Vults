@@ -1,4 +1,4 @@
-# Fuzz targets (plan-zeca S5): `cargo +nightly fuzz run <target>` from this folder, after
+# Fuzz targets: `cargo +nightly fuzz run <target>` from this folder, after
 # `scripts/fuzz-corpus.sh` seeds the corpus from the agents' fixtures. Its own workspace: it needs
 # nightly and libFuzzer, which the app's build never does. Weekly in `.github/workflows/fuzz.yml`.
 [package]

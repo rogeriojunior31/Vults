@@ -1,5 +1,5 @@
 # Adicionando um agente
-<!-- source: a4d1d199440e -->
+<!-- source: 055b3eedc8c5 -->
 
 O Vults mostra as sessões de um agente de código pelos hooks que o agente roda nos próprios eventos.
 A maioria dos agentes cabe em poucas centenas de linhas: um arquivo em `crates/agents`, uma linha no
@@ -93,8 +93,8 @@ agentes dos alvos de fuzz. O PR do Copilot CLI é o exemplo.
   linha em *O que cada agente consegue fazer*; ele sai das receitas), [Aprovando](../guide/approvals.md),
   a tabela em [Primeiros passos](../getting-started.md), as listas de agentes nos READMEs,
   `docs/README.md` e `architecture.md`.
-- Uma linha no `CHANGELOG.md`, e o passo dele marcado como feito em `docs/dev/plan-every-agent.md`
-  com o que o spike mostrou.
+- Uma linha no `CHANGELOG.md`, e a tarefa dele removida do [roadmap](../../dev/ROADMAP.md); o que o
+  spike mostrou vai no PR.
 
 Depois, as verificações em
 [CONTRIBUTING.md](https://github.com/rogeriojunior31/Vults/blob/main/CONTRIBUTING.md#before-opening-a-pr);

@@ -377,7 +377,7 @@ function sessionBody(
         approval.description ? el("div", { class: "ask-what", text: approval.description }) : null,
         el("pre", { class: "code", text: what }),
         Object.assign(el("div", { class: "ask-what ask-scope", text: t("Working folder: {path}", { path: operationFolder ? shortPath(operationFolder) : t("Not reported") }) }), { title: operationFolder ?? "" }),
-        // One line on why it asks, when there is more to say (ADR 0021); the buttons stay put.
+        // One line on why it asks, when there is more to say (ADR 0006); the buttons stay put.
         approval.why
           ? el("div", { class: `ask-why ${approval.why}` },
               approval.why === "destructive" ? icon("warning", 13, 2) : null,
@@ -387,7 +387,7 @@ function sessionBody(
           "div",
           { class: "actions" },
           // Destructive: Deny is the bright one, so a reflex click is the safe one; the buttons
-          // keep their places. It offers no Always: no rule ever answers it (ADR 0004).
+          // keep their places. It offers no Always: no rule ever answers it (ADR 0002).
           button(t("Deny"), destructive ? "primary" : "secondary", answer("deny"), kbd(actions.keys.deny)),
           destructive
             ? (() => { const b = button(t("Allow"), "secondary danger", answer("allow"), clickOnly()); b.classList.add("allow-by-click"); return b; })()
@@ -776,7 +776,7 @@ export function lastDiff(s: SessionView): { step: number; text: string; files: n
 }
 
 /**
- * A session's quick actions (ADR 0011): only what works here. Open terminal is offered where its
+ * A session's quick actions (ADR 0006): only what works here. Open terminal is offered where its
  * window can be raised; elsewhere the menu says so and opens the folder instead. Nothing here
  * answers a card: a waiting one can only be brought up.
  */
@@ -812,7 +812,7 @@ export function menuCard(
     items.push(item("file", words, () => actions.openFile(s, edit.step)));
   }
   items.push(opts.focused ? item("flock", t("Let the flock choose"), () => actions.focus(null)) : item("flock", t("Keep in front"), () => actions.focus(s)));
-  // The project's choices, kept by folder: sessions come and go, a project stays (ADR 0011).
+  // The project's choices, kept by folder: sessions come and go, a project stays (ADR 0006).
   if (s.cwd) {
     items.push(
       s.muted ? item("sound", t("Unmute this project"), () => actions.projectPref(s, "mute", false)) : item("mute", t("Mute this project"), () => actions.projectPref(s, "mute", true)),

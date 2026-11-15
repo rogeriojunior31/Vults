@@ -175,7 +175,7 @@ pub struct Settings {
     /// always sound; where the active window cannot be read, nothing changes.
     #[serde(default = "yes")]
     pub quiet_when_watching: bool,
-    /// Zeca, the companion who chats and listens. Off, the flock still works (ADR 0018).
+    /// Zeca, the companion who chats and listens. Off, the flock still works (ADR 0005).
     #[serde(default = "yes")]
     pub zeca: bool,
     /// The corner widget's corner; none (the default) for no widget.
@@ -227,7 +227,7 @@ pub struct Settings {
     /// MCPs, hooks and allow rules; a project's only where Claude Code already trusts it).
     #[serde(default = "yes")]
     pub native_chat: bool,
-    /// Who answers the chat's permissions (ADR 0004, from version 22): a card every time until
+    /// Who answers the chat's permissions (ADR 0002, from version 22): a card every time until
     /// the user chooses their policies or full access.
     #[serde(default, skip_serializing_if = "ChatAccess::is_ask")]
     pub chat_access: ChatAccess,
@@ -245,7 +245,7 @@ pub struct Settings {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub nest_size: Option<(u32, u32)>,
     /// Zeca's web tools for the API chat (Z7): a search and a page read, requests on the user's
-    /// behalf (ADR 0019). Off until the user turns them on.
+    /// behalf (ADR 0004). Off until the user turns them on.
     #[serde(default)]
     pub web: bool,
     /// Zeca's memory (M4): a journal of what the flock and the chat did, kept on this computer.
@@ -253,7 +253,7 @@ pub struct Settings {
     #[serde(default)]
     pub memory: bool,
     /// Each past day of the journal summed up by a small model (M4): a request on the user's
-    /// behalf (ADR 0019), off until the user turns it on, and only with the memory on.
+    /// behalf (ADR 0004), off until the user turns it on, and only with the memory on.
     #[serde(default)]
     pub journal_summary: bool,
     /// The day the daily summary was turned on: only days from then go to the model, never the
@@ -265,11 +265,11 @@ pub struct Settings {
     #[serde(default)]
     pub local_embeddings: bool,
     /// After a conversation, a small model proposes what Zeca should remember (M6): a request on
-    /// the user's behalf (ADR 0019), off until turned on, and only with the memory on.
+    /// the user's behalf (ADR 0004), off until turned on, and only with the memory on.
     #[serde(default)]
     pub memory_suggest: bool,
     /// At night, a small model reads Zeca's facts and the last days' summaries to propose merges
-    /// and write a debrief (M8): a request on the user's behalf (ADR 0019), off until turned on.
+    /// and write a debrief (M8): a request on the user's behalf (ADR 0004), off until turned on.
     #[serde(default)]
     pub sleep: bool,
     /// The search engine: `brave`, `tavily` or `searxng`.
@@ -278,8 +278,8 @@ pub struct Settings {
     /// The user's own SearXNG, when that is the engine.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub searxng_url: Option<String>,
-    /// Answering cards from a paired phone (ADR 0004, L2): its relay's requests are on the user's
-    /// behalf (ADR 0019). Off until the user turns it on (from version 17).
+    /// Answering cards from a paired phone (ADR 0002, L2): its relay's requests are on the user's
+    /// behalf (ADR 0004). Off until the user turns it on (from version 17).
     #[serde(default)]
     pub phone: bool,
     /// How the phone is reached: `relay` (a relay's URL) or `direct` (this computer listens on an
@@ -301,7 +301,7 @@ fn web_engine() -> String {
     "brave".into()
 }
 
-/// Who answers the chat's permission cards (ADR 0004). Whatever it is, a deny in a policy denies,
+/// Who answers the chat's permission cards (ADR 0002). Whatever it is, a deny in a policy denies,
 /// and every answer is on the audit log.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -734,7 +734,7 @@ pub fn dnd_instant(until: Option<u64>) -> Option<std::time::Instant> {
 }
 
 /// Do not disturb for `minutes`, or off with none: no sounds and no notifications meanwhile;
-/// cards still open the island (ADR 0021). The core and the file change together.
+/// cards still open the island (ADR 0006). The core and the file change together.
 #[tauri::command]
 pub fn set_dnd(app: AppHandle, minutes: Option<u32>) -> Result<(), String> {
     let until = minutes
@@ -769,7 +769,7 @@ pub fn set_notifications(app: AppHandle, on: bool) -> Result<(), String> {
     Ok(())
 }
 
-/// Zeca on or off (ADR 0018). Off: the chat ends and the mic stops, and neither starts again;
+/// Zeca on or off (ADR 0005). Off: the chat ends and the mic stops, and neither starts again;
 /// the tray loses *Chat…*. The flock, cards, notifications and connectors are untouched.
 #[tauri::command]
 pub fn set_zeca(app: AppHandle, on: bool) -> Result<(), String> {
@@ -1914,7 +1914,7 @@ pub fn peek() -> Settings {
 pub fn load() -> Settings {
     let path = path();
     let Ok(text) = std::fs::read_to_string(&path) else {
-        // A new install: a request on the user's behalf waits for their switch (ADR 0019).
+        // A new install: a request on the user's behalf waits for their switch (ADR 0004).
         return Settings {
             codex_usage: Some(false),
             ..Settings::default()
@@ -1956,7 +1956,7 @@ pub fn load() -> Settings {
 
 /// A file from before the usage read's switch (`older`, read in full) decides it once: on when a
 /// `codex` is installed, so the island keeps the meters it showed. Any other file without it (a
-/// newer one, one we could not read) gets it off: only the user turns a request on (ADR 0019).
+/// newer one, one we could not read) gets it off: only the user turns a request on (ADR 0004).
 /// True when it changed something to save.
 fn upgrade_usage(settings: &mut Settings, older: bool, codex_installed: impl FnOnce() -> bool) -> bool {
     if settings.codex_usage.is_some() {

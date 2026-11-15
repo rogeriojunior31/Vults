@@ -1,4 +1,4 @@
-//! What Zeca knows when a turn starts (plan-zeca M2), in two parts:
+//! What Zeca knows when a turn starts, in two parts:
 //!
 //! - **Frozen**: his memory as it was when the conversation began, after the persona in the system
 //!   prompt. Built once per conversation and kept with it, so the prompt stays byte-identical turn

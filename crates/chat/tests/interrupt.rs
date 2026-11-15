@@ -1,4 +1,4 @@
-//! Stop in the middle of a turn (`docs/dev/plan-zeca.md` S11), against stand-in CLIs on the PATH
+//! Stop in the middle of a turn, against stand-in CLIs on the PATH
 //! that speak as Claude Code 2.1.295 and codex-cli 0.160.1 do. Each scenario has its own folder,
 //! whose `mode` file picks the stand-in's behavior. One test: it changes PATH. The stand-ins are
 //! bash scripts, which Windows can't run as `claude` or `codex`: Unix only.

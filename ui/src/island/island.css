@@ -85,7 +85,7 @@ button:focus-visible,
   padding: 6px 10px 10px;
 }
 
-/* ── Compact (Mini): a bounded pill, only the flock (ADR 0021) ── */
+/* ── Compact (Mini): a bounded pill, only the flock (ADR 0006) ── */
 .compact {
   width: 340px;
   height: 38px;
@@ -581,7 +581,7 @@ body.still .compact.needs::after {
 .inner > .alerts-slot {
   flex: none;
 }
-/* Quick (ADR 0021): the habitat over the card, both the island's whole width. */
+/* Quick (ADR 0006): the habitat over the card, both the island's whole width. */
 .overview {
   display: flex;
   flex-direction: column;
@@ -2722,7 +2722,7 @@ button.ghost:hover {
   height: 40px;
 }
 
-/* Quick's short views (ADR 0021), flat on the island as the prototype draws them: this week, the
+/* Quick's short views (ADR 0006), flat on the island as the prototype draws them: this week, the
    gear's settings; the Nest has the rest. */
 .card.quick {
   border: 0;
@@ -2863,7 +2863,7 @@ button.ghost:hover {
   background: color-mix(in srgb, var(--mark) 7%, transparent);
 }
 
-/* The palette (Ctrl+K, ADR 0021): a search over sessions, commands and the Nest's tabs. The Nest
+/* The palette (Ctrl+K, ADR 0006): a search over sessions, commands and the Nest's tabs. The Nest
    lays it over the tab; the island puts it in its body. It never answers a card. */
 .palette {
   display: flex;

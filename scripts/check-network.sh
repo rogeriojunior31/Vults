@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Fails when code reaches the network outside scripts/network-allowlist.txt (ADR 0019,
+# Fails when code reaches the network outside scripts/network-allowlist.txt (ADR 0004,
 # docs/safety.md, "Every request Vults makes"). Three checks:
 #  - crates: a workspace crate that depends on an HTTP or socket client crate (reqwest, hyper,
 #    ureq, isahc, attohttpc, surf, curl, tungstenite) must be listed as `crate:<name>`. This holds

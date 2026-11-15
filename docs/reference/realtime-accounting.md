@@ -651,7 +651,7 @@ tool registries, input round trips, version restrictions and reply rejection. A 
 synthetic-auth test also proves the ChatGPT-only status check refuses API auth without altering it; the original
 home/auth/keyring are hidden, and HOME/CODEX_HOME values are never reassigned. The same test
 characterizes forced-exec auth deletion only inside that disposable synthetic mount. See the
-[roadmap reproduction command](../dev/plan-dictation.md#v6-talk-with-zeca-k8).
+[roadmap reproduction command](https://github.com/rogeriojunior31/Vults/blob/497677d34a2b2ef75590930452896ba0a7bac4e8/docs/dev/plan-dictation.md#v6-talk-with-zeca-k8).
 
 The native backend now connects this helper through its own consent, durable quota and content-free
 traces, using the shared consultation owner, deadline, cancellation and notice. Claude consent never
@@ -717,4 +717,4 @@ race/IME/leave checks now run in CI alongside the remaining renderer checks.
 V6.7 can now assemble capture and visible controls against the guarded backend. Physical speech,
 provider and native UI acceptance belong to that integration; K8 remains open until they pass.
 Codex consent, tools, gate and helper execution remain unavailable until their own qualification
-is complete. See the [publication checkpoint](../dev/plan-dictation.md#v663-publication-checkpoint-2026-10-20).
+is complete. See the [publication checkpoint](https://github.com/rogeriojunior31/Vults/blob/497677d34a2b2ef75590930452896ba0a7bac4e8/docs/dev/plan-dictation.md#v663-publication-checkpoint-2026-10-20).

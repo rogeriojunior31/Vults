@@ -1,5 +1,5 @@
 //! The desktop's half, on the command line, to try `phone` against a relay before the app sends
-//! real cards (plan-zeca L2). It shows the QR's text, waits for the phone, sends it one card, and
+//! real cards. It shows the QR's text, waits for the phone, sends it one card, and
 //! prints what `core` does with the phone's answer.
 //!
 //! ```text

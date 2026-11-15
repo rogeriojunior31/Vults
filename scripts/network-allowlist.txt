@@ -1,5 +1,5 @@
 # Every crate and Rust file that may reach the network, and why (scripts/check-network.sh,
-# ADR 0019). One line each: a path or crate:<name>, then the reason. docs/safety.md, "Every request
+# ADR 0004). One line each: a path or crate:<name>, then the reason. docs/safety.md, "Every request
 # Vults makes", lists the same requests for users; change both together.
 
 crate:vults-chat   the chat's HTTP client (providers.rs client()) and filter.rs's independently gated dictation clean-up and meeting-summary client; api.rs and openai.rs send each turn the user wrote through it, and providers.rs models() lists a provider's models when Settings -> Chat opens; embed.rs asks a local Ollama on 127.0.0.1 only for recall's embeddings (M5); realtime/transport.rs uses a fixed-origin TLS WebSocket through app-owned monetary admission

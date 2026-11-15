@@ -57,7 +57,7 @@ pub struct Connectors {
     runtime: Runtime,
 }
 
-/// Each connector as it should run now: the user's switch, all off while paused (ADR 0021).
+/// Each connector as it should run now: the user's switch, all off while paused (ADR 0006).
 fn running(app: &AppHandle) -> BTreeMap<String, bool> {
     // Paused, or the screen locked: nobody is there to read the news.
     let paused = crate::panel::presence(app) == crate::panel::Presence::Paused || crate::lock::locked(app);
@@ -166,7 +166,7 @@ static MERGING: std::sync::Mutex<std::collections::BTreeSet<String>> =
 
 /// *Squash and merge*, from the user's confirmed click on a row the core offered it for
 /// (`Effect::MergeRow`): through their `gh`, only with the connector on and only at `head`, the
-/// commit the card showed green, with a local trace (ADR 0019). The card is read again whatever
+/// commit the card showed green, with a local trace (ADR 0004). The card is read again whatever
 /// the answer: a merge that timed out, or merged but kept its branch, may still have happened.
 pub async fn merge(app: AppHandle, connector: String, item: String, head: String) {
     if !MERGING.lock().is_ok_and(|mut m| m.insert(item.clone())) {

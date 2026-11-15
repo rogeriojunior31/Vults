@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Records a real agent's hooks without an account (docs/dev/plan-every-agent.md, F2): a scratch
+# Records a real agent's hooks without an account: a scratch
 # home with our hooks installed as Settings writes them, a fake model scripting its tool calls, a
 # fake app answering its cards, and the agent's own CLI, found on the PATH.
 #

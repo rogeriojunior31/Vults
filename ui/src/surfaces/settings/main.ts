@@ -6,7 +6,7 @@ import { sidePanel } from "../nest/panels";
 import { createAudit } from "../nest/records";
 import { applyTheme, DEFAULT_THEME } from "../../theme";
 import { ISLAND_WIDTHS, restoreWidth, saveWidth, watchWidth } from "../../island/geometry";
-// Settings, a webview of the Nest's window (ADR 0021): a sidebar and one page per section. Installing hooks always goes through a
+// Settings, a webview of the Nest's window (ADR 0006): a sidebar and one page per section. Installing hooks always goes through a
 // diff the user reviews first.
 import { getVersion } from "@tauri-apps/api/app";
 import { Bridge, type WebEngine, type WebSettings, type ApiProvider, type ConnectorStatus, type Flock, type InstallAgent, type InstallPreview, type InstallStatus, type Corner, type Presence, type ProjectPrefs, type Rule, type VoiceStatus, type ChatAccess, type UpdateStatus, type DictationPermission, type DictationMusic, type Theme } from "../../bridge";
@@ -117,7 +117,7 @@ Bridge.onMediaAudioCleared(() => playerAudio.changed());
 
 const budget = createBudget({ today: Bridge.spendToday, setBudget: Bridge.budgetSet });
 Bridge.onSpend(() => { if (page === "activity") budget.refresh(); });
-// Settings is a webview of the Nest's window (ADR 0021), under the Nest's own header: a tab goes
+// Settings is a webview of the Nest's window (ADR 0006), under the Nest's own header: a tab goes
 // back to the Nest's webview, the size switch keeps Settings in front.
 let nestFull = false;
 const head = createNestHead({
@@ -152,7 +152,7 @@ const foot = createNestFoot({
   terminal: () => {
     if (front) void Bridge.sessionJump(front.agent, front.id);
   },
-  // Back to the island is Quick: the Nest closes and the island opens (ADR 0021).
+  // Back to the island is Quick: the Nest closes and the island opens (ADR 0006).
   island: () => void Bridge.setSize("quick"),
 });
 root.after(foot.element);
@@ -280,7 +280,7 @@ let permissionEvents = 0;
 let dictationPermission: DictationPermission = "off";
 Bridge.onDictationPermission(state => { permissionEvents++; dictationPermission = state; if (page === "dictation") render(); });
 void Bridge.dictationPermission().then(state => { if (permissionEvents) return; dictationPermission = state; if (page === "dictation") render(); }, () => {});
-/** Who answers the chat's cards (ADR 0004). */
+/** Who answers the chat's cards (ADR 0002). */
 let chatAccess: ChatAccess = "ask";
 /** Zeca's memory (M4): the journal, and each day summed up by a small model. */
 let memory = false;

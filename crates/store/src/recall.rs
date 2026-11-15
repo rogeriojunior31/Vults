@@ -1,4 +1,4 @@
-//! Recall over Zeca's journal (`docs/dev/plan-zeca.md` M5): full-text search (FTS5, stemmed) over
+//! Recall over Zeca's journal: full-text search (FTS5, stemmed) over
 //! the journal's lines and the days' summaries, and, when a local embedding model gave vectors,
 //! the summaries nearest the question; the lists merged by reciprocal rank fusion. Every hit is
 //! the journal's words: whoever shows it to a model shows it as untrusted content.

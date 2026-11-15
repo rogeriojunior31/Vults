@@ -1,4 +1,4 @@
-//! How the app runs an agent itself (`docs/dev/plan-zeca.md` S8, S11), whatever the agent: what
+//! How the app runs an agent itself, whatever the agent: what
 //! to run it with (a [`Spec`]), a turn, and a way to interrupt it while the turn runs. Today the
 //! chat's Claude Code and Codex, `/continue`, and ACP agents (W10). No runtime here (this crate is in the Core layer): futures are boxed, and whoever runs a
 //! driver brings the runtime and a [`Sink`].

@@ -1,8 +1,8 @@
-# 0004. Quem responde a uma permissão
-<!-- source: ee12a2a39f96 -->
+# 0002. Quem responde a uma permissão
+<!-- source: 7d377ca22b2e -->
 
-**Status:** Aceita, 2026-10-04. Consolidada em 2026-10-12 a partir da 0014, da 0017, da 0025 e da
-0026.
+**Status:** Aceita, 2026-10-04. Consolidada em 2026-10-12 a partir da antiga 0014, da antiga 0017, da antiga 0025 e da
+antiga 0026.
 
 <a id="context"></a>
 
@@ -24,7 +24,7 @@ uma escolha de um humano:
 - **Uma regra exata** que o usuário salvou: o mesmo agente, pasta, ferramenta e alvo. `cargo test`
   não permite `cargo test && rm -rf build`.
 - **Uma política** que o usuário escreveu, viu como diff e aceitou com um clique, como uma config de
-  agente ([0005](0005-agent-configs-backup-diff-click.md)). As políticas classificam as ações como
+  agente ([0003](0003-agent-configs.md)). As políticas classificam as ações como
   leitura, leitura externa, escrita, destrutiva, gasto ou externa (`core::policy`), e um deny vence
   um allow.
 - **A resposta de um celular Android pareado**, que vale como clique só quando passa por estas
@@ -39,8 +39,8 @@ uma escolha de um humano:
     recusada depois de `min(120 s, limits::SERVER_DECISION_TIMEOUT)`, com um contador por aparelho.
   - O desktop continua a fonte da verdade e o único que age; o celular só decide. Um relay vê só
     envelopes cifrados; ligar o celular é uma requisição em nome do usuário
-    ([0019](0019-requests-on-the-users-behalf.md)). No desktop, a ilha continua o único lugar dos
-    cards ([0021](0021-four-sizes-one-nest.md)).
+    ([0004](0004-network-and-secrets.md)). No desktop, a ilha continua o único lugar dos
+    cards ([0006](0006-surfaces.md)).
   - Kotlin é permitido só para a casca Android; a lógica dela é o núcleo Rust via UniFFI. O Android
     é a única exceção a "Linux primeiro e só Linux"; iOS e macOS vêm depois, no mesmo protocolo.
 - **Só no chat do Zeca, o que o usuário escolheu** no Chat ou em Settings → Chat & voice → *Who answers Zeca's
@@ -74,6 +74,11 @@ Acima de tudo isso:
 - Nada mais responde. Um teste alimenta todas as outras entradas e verifica que nenhuma responde;
   todo novo `Intent` entra nele, com um caso para cada decisão do celular, válida e forjada (sem
   assinatura, aparelho revogado, oferta expirada ou reusada, binding divergente).
+- **A voz nunca responde a uma permissão**, seja o que for dito ou o que um modelo entendeu. Nenhum
+  caminho de voz chega a `Decide` ou `DecideAlways`. Texto ditado nunca é digitado, colado ou
+  enviado com Enter numa sessão que espera um card, nem fica na fila para rodar depois da resposta;
+  um rascunho de pergunta ditado só é enviado por um clique à parte. Comandos de voz nunca tocam um
+  card, a configuração de um agente, um merge, o fechamento de um app ou uma operação destrutiva.
 
 <a id="consequences"></a>
 
@@ -92,13 +97,15 @@ Acima de tudo isso:
 
 ## Histórico
 
-- 0014, 2026-10-10: políticas aceitas podem responder; um deny
+- antiga 0014, 2026-10-10: políticas aceitas podem responder; um deny
   vence um allow, o destrutivo sempre pergunta, o log de auditoria, o hard stop do orçamento.
-- 0017, 2026-10-10: a resposta assinada de um celular
+- antiga 0017, 2026-10-10: a resposta assinada de um celular
   pareado vale como clique; Kotlin e o Android como a única exceção.
-- 0025, 2026-10-12: nenhuma regra *Always* responde a uma
+- antiga 0025, 2026-10-12: nenhuma regra *Always* responde a uma
   chamada destrutiva.
-- 0026, 2026-10-12: quem responde os cards do chat
+- antiga 0026, 2026-10-12: quem responde os cards do chat
   do Zeca é escolha do usuário.
 
 - 2026-10-22: A pedido do mantenedor, o seletor de acesso do Chat pode aumentar ou reduzir o acesso diretamente. Manter o destinatário explícito, salvar antes de aplicar a autoridade e preservar as regras de políticas, ações destrutivas e conteúdo externo.
+- 2026-11-15: incorporar as regras de permissão dos registros de voz e ditado (antigas 0028 e
+  antiga 0032), que foram aposentados.

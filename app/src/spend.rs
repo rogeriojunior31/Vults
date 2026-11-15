@@ -1,4 +1,4 @@
-//! What the agents cost, and the user's daily budget (`docs/dev/plan-zeca.md` W9). Costs come from
+//! What the agents cost, and the user's daily budget. Costs come from
 //! the agents themselves: continued turns (the driver), and a watched Claude Code session's
 //! statusLine. On a subscription they are what the tokens would cost at API prices.
 //!

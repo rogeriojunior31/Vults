@@ -1,8 +1,8 @@
-# 0021. Superfícies: um núcleo, quatro tamanhos, um card respondido onde você está
-<!-- source: 7dd1ee18899a -->
+# 0006. Superfícies: um núcleo, quatro tamanhos, um card respondido onde você está
+<!-- source: df23854b4007 -->
 
-**Status:** Aceita, 2026-10-11. Consolidada em 2026-10-12 a partir da 0008, da 0009, da 0022, da
-0023, da 0024 e da 0030. Alterada em 2026-10-16 pela [0031](0031-tasks-leave-vults.md): o Nest não tem aba Tasks.
+**Status:** Aceita, 2026-10-11. Consolidada em 2026-10-12 a partir da antiga 0008, da antiga 0009, da antiga 0022, da
+antiga 0023, da antiga 0024 e da antiga 0030. Alterada em 2026-10-16: o Nest não tem aba Tasks.
 Alterada em 2026-10-17 para a N3 V0.3: a área de Ditado e seu contrato de apresentação de estado.
 Essas adições chegam nas fases de seus recursos; a decisão não afirma entrega da interface em
 produção nem validação nativa.
@@ -62,7 +62,7 @@ texto dos agentes, que pode trazer palavras feitas para conduzir quem as lê.
   janela). O Nest responde os cards do bando (Allow, Deny, Always allow, as escolhas de uma
   pergunta, Reply in the terminal) no card do Flock da sessão da frente, e os cards do Chat dele no
   Chat, com os botões e as regras da ilha: uma ação destrutiva mantém o Deny em destaque e não
-  oferece Always ([0004](0004-a-human-answers-permissions.md)). O usuário está no Nest quando a
+  oferece Always ([0002](0002-permissions.md)). O usuário está no Nest quando a
   janela dele tem o foco e mostra o Nest, não as Configurações; aí um card não abre a ilha, a faixa
   de quem precisa de você e o som do Nest dizem que ele espera, e o Ctrl+Alt+Y/N responde o card na
   tela de lá. Em qualquer outro lugar um card abre a ilha, para que um agente nunca espere sem ser
@@ -70,7 +70,7 @@ texto dos agentes, que pode trazer palavras feitas para conduzir quem as lê.
   esses dois respondem: o app confere a webview por trás de cada resposta, e as Configurações, o
   widget e a paleta nunca respondem. Toda resposta continua sendo um clique (ou a tecla dele) do
   usuário, e é auditada. Um celular pareado também pode responder
-  ([0004](0004-a-human-answers-permissions.md)).
+  ([0002](0002-permissions.md)).
 - **Nenhum modo de presença deixa um card confirmado sem ser visto.** Em *Island*, *Panel* e
   *Quiet*, um card pendente abre a ilha e toca o seu som, ou, no Nest em que o usuário está, aparece na
   faixa de quem precisa de você com o seu som (o *Quiet* só silencia o que acontece em
@@ -126,9 +126,9 @@ texto dos agentes, que pode trazer palavras feitas para conduzir quem as lê.
   pedida. A configuração do Ditado usa essa mesma webview privilegiada e mantém a aba Ditado
   selecionada.
 - **Só a webview das Configurações tem os poderes**: escrever a config de um agente
-  ([0005](0005-agent-configs-backup-diff-click.md)), salvar ou apagar uma chave, criar ou retirar
-  uma política, parear, revogar ou alcançar um celular ([0004](0004-a-human-answers-permissions.md)),
-  e ligar uma requisição em nome do usuário ([0019](0019-requests-on-the-users-behalf.md)). Os
+  ([0003](0003-agent-configs.md)), salvar ou apagar uma chave, criar ou retirar
+  uma política, parear, revogar ou alcançar um celular ([0002](0002-permissions.md)),
+  e ligar uma requisição em nome do usuário ([0004](0004-network-and-secrets.md)). Os
   comandos conferem o label da webview que chamou, nunca o da janela (`settings_page`,
   `policies::from_settings`). As duas webviews dividem o armazenamento da origem, que as Configurações nunca leem. As Configurações não mostram texto de nenhum agente: a moldura delas
   tem nomes e contagens das abas, o menu de apresentação (os quatro tamanhos e os sons), e um rodapé que liga e
@@ -136,6 +136,11 @@ texto dos agentes, que pode trazer palavras feitas para conduzir quem as lê.
   As páginas são General, Agents, Chat & voice, Approvals, Projects, Activity, Connectors, Phone,
   Flock & Zeca e About. A configuração do Ditado na N3 usa essa webview sob sua própria aba,
   fora da lista global de Configurações.
+- **Uma superfície oferece só as ações que funcionam.** O app só alcança um agente enquanto um hook
+  espera e não é dono do processo de um agente observado, então um menu mostra o que funciona
+  neste desktop e diz quando não dá (*Abrir terminal*, onde não se pode trazer uma janela à
+  frente, oferece a pasta). *Parar* só para uma execução que o Vults iniciou por um driver
+  suportado. Silenciar, fixar e ocultar ficam por pasta de projeto, porque as sessões vêm e vão.
 
 <a id="consequences"></a>
 
@@ -163,23 +168,23 @@ texto dos agentes, que pode trazer palavras feitas para conduzir quem as lê.
 
 ## Histórico
 
-- 0008, 2026-10-04: um núcleo, várias superfícies; a ilha é o
+- antiga 0008, 2026-10-04: um núcleo, várias superfícies; a ilha é o
   único lugar dos cards.
-- 0009, 2026-10-04: nenhum modo de presença esconde um card
+- antiga 0009, 2026-10-04: nenhum modo de presença esconde um card
   confirmado.
-- 0022, 2026-10-12: só as Configurações têm os poderes (então
+- antiga 0022, 2026-10-12: só as Configurações têm os poderes (então
   numa janela própria).
-- 0023, 2026-10-12: as Configurações viram uma webview da
+- antiga 0023, 2026-10-12: as Configurações viram uma webview da
   janela do Nest; as verificações vão pelo label da webview.
-- 0024, 2026-10-12: a ilha sai enquanto o Nest está aberto.
-- 0030, 2026-10-12: o Nest também responde um card, enquanto o usuário está nele.
+- antiga 0024, 2026-10-12: a ilha sai enquanto o Nest está aberto.
+- antiga 0030, 2026-10-12: o Nest também responde um card, enquanto o usuário está nele.
 
 - 2026-10-15: o Chat usa uma composição Quick mais larga dentro da superfície fixa atual.
   A geometria aplica o zoom uma única vez e limita as dimensões à área disponível antes
   da medição. A configuração nativa inicial acompanha os 720 x 640 do runtime; Mini
   e as outras abas do Quick mantêm suas larguras. Larguras pareadas escolhidas pelo
   usuário continuam como trabalho futuro.
-- 2026-10-16, [0031](0031-tasks-leave-vults.md): remover Tasks do Nest; preservar D7, gastos e
+- 2026-10-16 (antiga 0031): remover Tasks do Nest; preservar D7, gastos e
   orçamento e o limite de D8 para `/continue`.
 
 - 2026-10-17: N2.2 adiciona a caixa Now do Quick, revisão pelo pedido exato e links explícitos aos
@@ -223,3 +228,5 @@ texto dos agentes, que pode trazer palavras feitas para conduzir quem as lê.
 - 2026-10-21: O primeiro runtime especializado é exclusivo do Claude Code, com briefing fixo e sem contexto automático ou MCP do companheiro. Nenhum seletor de destinatário, ação de Chat do perfil ou reabertura de conversa especializada é habilitado nesta etapa exclusiva de runtime; o Nest e o Quick existentes continuam com o responsável atual pela conversa.
 - 2026-10-21: A restauração nativa de conversas de perfil preserva o modelo, esforço, sessão e snapshot do perfil salvos, em vez das edições atuais do perfil ou configurações do companheiro. A verificação anterior ao turno rejeita destinatários e origens incompatíveis e substituições não suportadas por voz/menções/origem. A interface atual do Chat ainda recusa registros de perfil até poder apresentar e preservar esses responsáveis entre superfícies.
 - 2026-11-11: Os cabeçalhos da ilha e do Nest trocam o seletor de tamanho, o botão de tela cheia e o botão de som por um único menu de apresentação. Ele mostra o tamanho em uso e lista os quatro tamanhos, cada um com o que é, e os sons; os tamanhos e o comportamento deles não mudam.
+- 2026-11-15: incorporar *Oferecer só as ações que os agentes permitem* (antiga 0011), que foi
+  aposentada.

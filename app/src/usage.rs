@@ -1,6 +1,6 @@
 //! The subscriptions' usage on the island, each from the CLI itself. Codex is asked every few
 //! minutes, read-only, through the `codex` the user logged into, and only through the network
-//! gate (the read reaches OpenAI: ADR 0019). Claude has a separately gated native account read;
+//! gate (the read reaches OpenAI: ADR 0004). Claude has a separately gated native account read;
 //! its statusLine also relays usage when available. A failed read keeps the last answer (the island drops a window once its reset
 //! time passes).
 

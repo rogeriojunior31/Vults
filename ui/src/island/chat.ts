@@ -79,7 +79,7 @@ export interface ChatBackend {
   memory?: (text: string, folder: string | null, generation?: number) => Promise<MemorySaid | null>;
   /** `/continue` (W7): words for a stopped session in the folder, or null for any other text. */
   handoff?: (text: string, folder: string | null, generation?: number) => Promise<MemorySaid | null>;
-  /** Who answers the chat's cards (ADR 0004); the app takes only less access from here. */
+  /** Who answers the chat's cards (ADR 0002); the app takes only less access from here. */
   setAccess?: (access: ChatAccess) => Promise<void>;
   /** Settings' Chat page, where more access is given. */
   openSettings?: () => void;
@@ -155,7 +155,7 @@ export interface MemorySaid {
   detail: string | null;
 }
 
-/** Where a chat panel lives: the island or the Nest. Both answer its cards (ADR 0021). */
+/** Where a chat panel lives: the island or the Nest. Both answer its cards (ADR 0006). */
 export interface ChatPanelOptions {
   /** The window's label, to tell its own actions from the other window's. */
   window: "island" | "nest";
@@ -229,7 +229,7 @@ const EFFORTS: Record<string, string> = {
   max: tk("Max"),
 };
 
-/** Who answers the chat's cards, from the least access to the most (ADR 0004). */
+/** Who answers the chat's cards, from the least access to the most (ADR 0002). */
 const ACCESS: { id: ChatAccess; label: string; about: string }[] = [
   { id: "ask", label: tk("Asks first"), about: tk("A card before every command or edit.") },
   { id: "policies", label: tk("Your policies"), about: tk("Your accepted policies answer what they cover; the rest asks.") },
@@ -899,7 +899,7 @@ export class ChatPanel {
     this.changed();
   }
 
-  /** The island's chat: the prototype's compact form (ADR 0021). */
+  /** The island's chat: the prototype's compact form (ADR 0006). */
   private get compact(): boolean {
     return this.opts.window === "island";
   }
@@ -1320,7 +1320,7 @@ export class ChatPanel {
     );
   }
 
-  /** Zeca on or off: off, the chat closes and nothing opens it (ADR 0018). */
+  /** Zeca on or off: off, the chat closes and nothing opens it (ADR 0005). */
   setEnabled(on: boolean): void {
     this.enabled = on;
     if (!on) {

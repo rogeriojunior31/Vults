@@ -25,7 +25,7 @@ question: boolean, };
 export type ViewModel = { chat?: ChatView, sessions: Array<SessionView>, approval: ApprovalView | null,
 /**
  * Every permission card waiting, in line order (deferred ones included): a surface can show
- * the line and answer any of them, each still by a click (ADR 0004). Questions are left out:
+ * the line and answer any of them, each still by a click (ADR 0002). Questions are left out:
  * they are answered on their own card.
  */
 waiting?: Array<ApprovalView>, alerts: Array<AlertView>,
@@ -127,7 +127,7 @@ request?: string | null,
 skipped?: boolean,
 /**
  * *Open terminal* can bring it forward (`platform::jump`): its multiplexer's pane, or on KDE
- * its window. Elsewhere a quick action offers its folder instead (ADR 0011).
+ * its window. Elsewhere a quick action offers its folder instead (ADR 0006).
  */
 raise?: boolean,
 /**

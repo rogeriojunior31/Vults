@@ -1,4 +1,4 @@
-//! Shipped migrations for the retired Tasks feature (ADR 0031). SQL is unchanged.
+//! Shipped migrations for the retired Tasks feature (ADRs 0005, 0006). SQL is unchanged.
 
 /// Migration 14. Shipped: never edit it.
 pub(crate) const TABLE: &str = "

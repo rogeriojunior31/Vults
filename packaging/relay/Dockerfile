@@ -1,4 +1,4 @@
-# The phone's relay (plan-zeca L2), from the repository's root:
+# The phone's relay, from the repository's root:
 #   docker build -f packaging/relay/Dockerfile -t vults-relay .
 #   docker run -p 8787:8787 vults-relay
 # It speaks plain HTTP: put TLS in front (a reverse proxy) or reach it over a tailnet.

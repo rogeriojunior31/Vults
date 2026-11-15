@@ -1,4 +1,4 @@
-// The command palette (ADR 0021, plan-zeca K9): Ctrl+K in the island and the Nest. It jumps to a
+// The command palette (ADR 0006): Ctrl+K in the island and the Nest. It jumps to a
 // session, puts `/continue` or `/remember` in the chat to finish, and opens a
 // tab. It never answers a card (D1): a session that waits only leads to its card.
 import { el } from "./dom";

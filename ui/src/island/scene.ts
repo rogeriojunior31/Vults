@@ -68,7 +68,7 @@ function zoomed(at: SceneLayout["vults"]["at"], zoom: number): SceneLayout["vult
 /** Width of a perched bird at 1x, in CSS pixels. */
 export const BIRD_W = 24;
 
-/** Mini, the pill (ADR 0021, the prototype's): no text, only the flock. Zeca on the left, up to
+/** Mini, the pill (ADR 0006, the prototype's): no text, only the flock. Zeca on the left, up to
  *  eight vults spread along the wire after him. */
 export const COMPACT_W = 340;
 export const COMPACT_H = 38;
@@ -113,7 +113,7 @@ export const FOCUS_SCENE: SceneLayout = {
   emotes: true,
 };
 
-/** Quick's habitat (ADR 0021, the prototype's): every other session's vult at 2x on one wire across
+/** Quick's habitat (ADR 0006, the prototype's): every other session's vult at 2x on one wire across
  *  the island, its name under it; a click picks one. */
 export const HABITAT_W = 420;
 export const HABITAT_H = 84;
@@ -137,7 +137,7 @@ export const HABITAT_SCENE: SceneLayout = {
   emotes: true,
 };
 
-/** The Nest's Flock (ADR 0021, the prototype's stage): the flock at 3x on one wire across the
+/** The Nest's Flock (ADR 0006, the prototype's stage): the flock at 3x on one wire across the
  *  pane, one bird over each roost card (`Scene.resize` sets the width and the places). */
 export const NEST_HABITAT_W = 440;
 export const NEST_HABITAT_H = 126;
