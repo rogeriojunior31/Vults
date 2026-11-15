@@ -61,6 +61,8 @@ pub const VOICE_CODEX_CONSULTATION_BUDGET: usize = 20;
 /// The update notice (FF4): one look at the releases list a day; a few more for *Check now*.
 pub const UPDATE: &str = "update";
 pub const UPDATE_BUDGET: usize = 4;
+/// Settings' *Check now*: a click, so no switch, but its own budget and trace.
+pub const UPDATE_NOW: &str = "update-now";
 const DAY_MS: i64 = 24 * 3600 * 1000;
 const DAY: Duration = Duration::from_secs(24 * 3600);
 
@@ -103,7 +105,7 @@ pub fn budget(feature: &str) -> usize {
     match feature {
         USAGE | CLAUDE_USAGE => USAGE_BUDGET,
         MODEL_PRICES => 120,
-        UPDATE => UPDATE_BUDGET,
+        UPDATE | UPDATE_NOW => UPDATE_BUDGET,
         WEB => WEB_BUDGET,
         PHONE => PHONE_BUDGET,
         JOURNAL => JOURNAL_BUDGET,
@@ -139,6 +141,8 @@ pub fn switched_on(s: &crate::settings::Settings, feature: &str) -> bool {
         s.price_updates
     } else if feature == UPDATE {
         s.update_consent.allows_checks()
+    } else if feature == UPDATE_NOW {
+        cfg!(feature = "update-notice")
     } else if feature == CLAUDE_USAGE {
         s.claude_usage
     } else if feature == USAGE {
@@ -312,6 +316,7 @@ pub fn shared(app: &AppHandle) -> Arc<NetGate> {
         features.push(CLAUDE_USAGE);
         features.push(MODEL_PRICES);
         features.push(UPDATE);
+        features.push(UPDATE_NOW);
         features.push(WEB);
         features.push(PHONE);
         features.push(JOURNAL);

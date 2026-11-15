@@ -42,6 +42,7 @@ mod openai;
 mod process;
 pub mod providers;
 pub mod realtime;
+#[cfg(feature = "releases")]
 pub mod releases;
 pub mod summary;
 pub mod tools;
