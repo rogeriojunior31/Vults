@@ -1,8 +1,8 @@
 # 0018. Zeca: opcional, separado do bando, regras antes de modelos
-<!-- source: 324d0f9ee5d0 -->
+<!-- source: 96748424cd39 -->
 
 **Status:** Aceita, 2026-10-10. Consolidada em 2026-10-12 a partir da 0010 e da 0012.
-Alterada em 2026-10-16 pela [0031](0031-tasks-leave-vults.md): Tasks sai do Vults.
+Alterada em 2026-10-16: Tasks sai do Vults.
 
 <a id="context"></a>
 
@@ -107,7 +107,7 @@ que não conseguimos calibrar sem coletar dados ([0019](0019-requests-on-the-use
   handle dele não consegue construir uma decisão.
 - 0012, 2026-10-04: regras antes de modelos nas decisões do próprio
   app.
-- 2026-10-16, [0031](0031-tasks-leave-vults.md): remover Tasks e a escolha de agentes; manter
+- 2026-10-16 (antiga 0031): remover Tasks e a escolha de agentes; manter
   `/continue` e custos, e manter o bando independente do Zeca (D7).
 
 - 2026-10-21: UX8 começa com um catálogo inerte de perfis integrados na camada Connect. Os perfis descrevem papéis, instruções e aparência, sem definir acesso. A leitura independe do Zeca e de sua memória; esta etapa não oferece execução nem acesso a contexto privado.

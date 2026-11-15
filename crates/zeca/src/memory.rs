@@ -1,4 +1,4 @@
-//! Zeca's memory: a git repository of Markdown files (plan-zeca S9; M1 fills it). Every write is a
+//! Zeca's memory: a git repository of Markdown files (M1 fills it). Every write is a
 //! commit, so what he learned can be read back in history and undone by a revert. Each commit says
 //! who (S15): the author wrote the text, the committer confirmed it, and `Proposed-by` /
 //! `Accepted-by` trailers say it in words. [`Memory::log`] reads who from the identities, never

@@ -1,4 +1,4 @@
-//! Zeca's context for a chat turn (`docs/dev/plan-zeca.md` M2): the frozen part (his memory as the
+//! Zeca's context for a chat turn: the frozen part (his memory as the
 //! conversation begins) and the volatile part (`<today>`, `<flock>`) in front of each turn.
 
 use std::path::Path;

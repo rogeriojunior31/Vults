@@ -1,4 +1,4 @@
-//! The Nest's records (`docs/dev/plan-zeca.md` W11): its History, Usage, Traces and Audit tabs. Each
+//! The Nest's records: its History, Usage, Traces and Audit tabs. Each
 //! only reads what this computer already keeps (`vults.sqlite`, the plans' usage), and only for the
 //! Nest's window (Audit also for Settings, beside the rules it records).
 

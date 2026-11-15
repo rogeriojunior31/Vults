@@ -1,8 +1,8 @@
 # 0021. Superfícies: um núcleo, quatro tamanhos, um card respondido onde você está
-<!-- source: 7dd1ee18899a -->
+<!-- source: 816ae9a39f09 -->
 
 **Status:** Aceita, 2026-10-11. Consolidada em 2026-10-12 a partir da 0008, da 0009, da 0022, da
-0023, da 0024 e da 0030. Alterada em 2026-10-16 pela [0031](0031-tasks-leave-vults.md): o Nest não tem aba Tasks.
+0023, da 0024 e da 0030. Alterada em 2026-10-16: o Nest não tem aba Tasks.
 Alterada em 2026-10-17 para a N3 V0.3: a área de Ditado e seu contrato de apresentação de estado.
 Essas adições chegam nas fases de seus recursos; a decisão não afirma entrega da interface em
 produção nem validação nativa.
@@ -179,7 +179,7 @@ texto dos agentes, que pode trazer palavras feitas para conduzir quem as lê.
   da medição. A configuração nativa inicial acompanha os 720 x 640 do runtime; Mini
   e as outras abas do Quick mantêm suas larguras. Larguras pareadas escolhidas pelo
   usuário continuam como trabalho futuro.
-- 2026-10-16, [0031](0031-tasks-leave-vults.md): remover Tasks do Nest; preservar D7, gastos e
+- 2026-10-16 (antiga 0031): remover Tasks do Nest; preservar D7, gastos e
   orçamento e o limite de D8 para `/continue`.
 
 - 2026-10-17: N2.2 adiciona a caixa Now do Quick, revisão pelo pedido exato e links explícitos aos

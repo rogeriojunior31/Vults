@@ -1,4 +1,4 @@
-//! Traces (`docs/dev/plan-zeca.md` S6): one span per model call, tool and action Zeca makes, named
+//! Traces: one span per model call, tool and action Zeca makes, named
 //! after OpenTelemetry's GenAI conventions so they read like any other GenAI trace. Never a prompt
 //! or a reply: names, timings, tokens, cost, and a tool's target with secrets redacted. Kept
 //! [`KEEP_DAYS`] days.

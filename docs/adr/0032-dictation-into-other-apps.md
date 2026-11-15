@@ -120,7 +120,6 @@ The separate command key requests an action, not text insertion. The 0.1.9 catal
   owner correction above supersedes the separate text-model scope.
 
 - 2026-10-17: define N3 V0.2's target, clipboard, keyboard capability and permission boundaries.
-  Use 0032 because [0031](0031-tasks-leave-vults.md) already records Tasks removal.
 
 - 2026-10-19: reserve the global talk shortcut for independent dictation regardless of focus;
   Chat draft voice input remains an explicit microphone-button action.

@@ -61,7 +61,7 @@ pub fn chat_dir() -> PathBuf {
     data_dir().join("chat")
 }
 
-/// Zeca's memory, a git repository of Markdown (plan-zeca M1).
+/// Zeca's memory, a git repository of Markdown.
 pub fn memory_dir() -> PathBuf {
     data_dir().join("memory")
 }

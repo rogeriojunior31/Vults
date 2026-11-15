@@ -1,4 +1,4 @@
-// Settings → Phone (plan-zeca L2): answering cards from a paired phone, how it reaches this
+// Settings → Phone: answering cards from a paired phone, how it reaches this
 // computer, pairing by QR, and the phones paired.
 import { Bridge, type Pairing, type PhoneEvent, type PhoneSettings } from "../../bridge";
 import { failure } from "../../errors";

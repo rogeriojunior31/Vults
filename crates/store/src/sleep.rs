@@ -1,4 +1,4 @@
-//! Zeca's sleep (`docs/dev/plan-zeca.md` M8): one run a day at most, what it did, and the debrief
+//! Zeca's sleep: one run a day at most, what it did, and the debrief
 //! it left for the user. The debrief is a model's reading of the journal's summaries: shown to the
 //! user as such, never fed back to a model as instructions.
 

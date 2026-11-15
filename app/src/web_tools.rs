@@ -1,4 +1,4 @@
-//! Zeca's web tools for the API chat (`docs/dev/plan-zeca.md` Z7): `web_search` and `web_fetch`.
+//! Zeca's web tools for the API chat: `web_search` and `web_fetch`.
 //! Each request asks the network gate first (ADR 0019: off until the user turns it on, a daily
 //! budget, a local trace). A page is never shown to the chat's model: a separate call with no tools
 //! reads it for the question (`vults_chat::web::read_untrusted`), and only that extract comes back.

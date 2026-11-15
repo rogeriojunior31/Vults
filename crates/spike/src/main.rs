@@ -1,5 +1,5 @@
 //! `vults-spike`: the kit that records a real agent's hooks without an account
-//! (`docs/dev/plan-every-agent.md`, F2). `scripts/spike.sh` runs it end to end for each agent;
+//!. `scripts/spike.sh` runs it end to end for each agent;
 //! the commands are its parts:
 //!
 //! ```text

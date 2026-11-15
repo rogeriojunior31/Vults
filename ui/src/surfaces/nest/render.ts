@@ -4,7 +4,7 @@ import { DICTATION_WORK_PAGES } from "./dictation/navigation";
 import { createDictationArea, type DictationAreaBackend } from "./dictation/area";
 import { createDictationStatistics } from "./dictation/statistics";
 import { sidePanel } from "./panels";
-// The Nest's page takes its backend: four tabs and the gear (ADRs 0021, 0031). Chat keeps
+// The Nest's page takes its backend: four tabs and the gear (ADR 0021). Chat keeps
 // Memory beside it; Activity holds Week, By project, History, Cost, Traces and Audit.
 // Specialist recipients remain available with Zeca off.
 import type { AgentProfileState, AgentProfile, MediaAction, NowPlaying, Size, SpendToday } from "../../bridge";
@@ -124,7 +124,7 @@ type Sub = "week" | "projects" | "history" | "cost" | "traces" | "audit" | "dict
 const TABS = NEST_TABS;
 const SUBS: Sub[] = ["week", "dictation-statistics", "projects", "history", "cost", "traces", "audit"];
 
-/** Activity owns figures; only Settings edits the daily budget (ADR 0031). */
+/** Activity owns figures; only Settings edits the daily budget (ADR 0021). */
 function costPart(
   today: () => Promise<SpendToday>,
   usage: { element: HTMLElement; refresh: () => void },

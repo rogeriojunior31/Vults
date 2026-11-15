@@ -10,7 +10,7 @@ publish.workspace = true
 # even name an Intent (ADR 0018; the compile-fail test in flock.rs).
 [dependencies]
 serde.workspace = true
-# His memory is a git repository: every write a commit, undone by a revert (plan-zeca S9, M6).
+# His memory is a git repository: every write a commit, undone by a revert.
 gix = { version = "0.90", default-features = false, features = ["sha1", "index"] }
 
 [lints]

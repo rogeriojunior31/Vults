@@ -1,4 +1,4 @@
-//! Every agent Vults knows, in one table (`docs/dev/plan-every-agent.md`, F1): its id (the
+//! Every agent Vults knows, in one table: its id (the
 //! installer's id, a CLI engine, an ACP key), its name, how it travels on the wire, how Settings
 //! sets it up, how Vults runs it, and what it can do. The installer, the doctor, the chat's ACP
 //! engines and the UI (`ui/src/agents.gen.ts`, generated from here) all read

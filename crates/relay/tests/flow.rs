@@ -1,4 +1,4 @@
-//! The whole flow through a real relay on loopback (`docs/dev/plan-zeca.md` L2): the desktop shows
+//! The whole flow through a real relay on loopback: the desktop shows
 //! a QR, the phone pairs through the relay, gets a card, answers it signed, and `core`'s ledger
 //! redeems the answer. The relay sees only addresses and ciphertext, never the device's id.
 #![allow(clippy::unwrap_used)]

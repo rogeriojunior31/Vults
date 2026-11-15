@@ -1,5 +1,5 @@
 # Contabilidade realtime
-<!-- source: 2401bf42fd05 -->
+<!-- source: b86bdee4b6f7 -->
 
 A V6.3.2 fornece um contrato offline de protocolo em `chat::realtime`. Ele não abre conexão, lê
 chaves nem captura áudio. A V6.3.3 acrescenta o backend com gate descrito abaixo; voz continua desligada
@@ -740,7 +740,7 @@ no sistema de arquivos e na rede, também comprova que a verificação de status
 recusa autenticação de API sem alterá-la; a pasta pessoal/autenticação/keyring originais ficam
 ocultos, e os valores de HOME/CODEX_HOME nunca são reatribuídos. O mesmo teste caracteriza a
 exclusão de autenticação por exec forçado somente nessa montagem sintética descartável. Veja o
-[comando de reprodução no roadmap](../../dev/plan-dictation.md#v6-talk-with-zeca-k8).
+[comando de reprodução no roadmap](https://github.com/rogeriojunior31/Vults/blob/497677d34a2b2ef75590930452896ba0a7bac4e8/docs/dev/plan-dictation.md#v6-talk-with-zeca-k8).
 
 O backend nativo agora conecta esse helper por consentimento próprio, cota persistente e traces
 sem conteúdo, usando a posse compartilhada da consulta, prazo, cancelamento e aviso. Consentimento
@@ -814,4 +814,4 @@ Os testes de corrida/IME/saída das perguntas agora rodam na CI junto aos demais
 A V6.7 pode montar captura e controles visíveis sobre o backend protegido. Aceitação com fala
 física, provedor e interface nativa pertence a essa integração; K8 segue aberto até passar.
 Consentimento, ferramentas, gate e execução do helper Codex continuam indisponíveis até concluir
-sua própria qualificação. Veja o [checkpoint de publicação](../../dev/plan-dictation.md#v663-publication-checkpoint-2026-10-20).
+sua própria qualificação. Veja o [checkpoint de publicação](https://github.com/rogeriojunior31/Vults/blob/497677d34a2b2ef75590930452896ba0a7bac4e8/docs/dev/plan-dictation.md#v663-publication-checkpoint-2026-10-20).

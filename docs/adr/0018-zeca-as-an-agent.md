@@ -1,7 +1,7 @@
 # 0018. Zeca: optional, apart from the flock, rules before models
 
 **Status:** Accepted, 2026-10-10. Consolidated on 2026-10-12 from 0010 and 0012.
-Amended on 2026-10-16 by [0031](0031-tasks-leave-vults.md): Tasks leave Vults.
+Amended on 2026-10-16: Tasks leave Vults.
 
 ## Context
 
@@ -93,7 +93,7 @@ calibrate without collecting data ([0019](0019-requests-on-the-users-behalf.md))
 - 0010, 2026-10-04: Zeca is optional and kept apart from the flock;
   his handle cannot build a decision.
 - 0012, 2026-10-04: rules before models in the app's own decisions.
-- 2026-10-16, [0031](0031-tasks-leave-vults.md): remove Tasks and routing; keep `/continue` and
+- 2026-10-16 (former 0031): remove Tasks and routing; keep `/continue` and
   costs, and keep the flock independent of Zeca (D7).
 
 - 2026-10-21: UX8 starts with an inert built-in profile catalog in Connect. Profiles describe roles, instructions and appearance, not access. Reading them needs neither Zeca nor his memory; this slice provides no execution or private-context route.

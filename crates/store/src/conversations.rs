@@ -1,4 +1,4 @@
-//! Zeca's conversations (`docs/dev/plan-zeca.md` Z4): each one's engine, folder, title and what
+//! Zeca's conversations: each one's engine, folder, title and what
 //! resumes it (the CLI's session or thread, or the API's history), and what was said, so a
 //! conversation goes on after the app restarts. The CLIs keep their own copy of the context; this
 //! is what the chat shows. Kept until the user deletes them (one, or all with Clear history), the

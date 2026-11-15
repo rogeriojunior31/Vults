@@ -1,4 +1,4 @@
-//! The chat's agents behind [`AgentDriver`] (`docs/dev/plan-zeca.md` S8, S11): Claude Code, one
+//! The chat's agents behind [`AgentDriver`]: Claude Code, one
 //! process per turn, and Codex, through its app-server or, when that can't start, one read-only
 //! `codex exec` per turn. Each is made from a [`Spec`] and stops through a shared [`Stop`].
 

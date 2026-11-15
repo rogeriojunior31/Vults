@@ -1,5 +1,5 @@
 # 0032. Ditado em outros aplicativos
-<!-- source: 37d3afdb8881 -->
+<!-- source: c1e15a0e5928 -->
 
 **Status:** Aceita, 2026-10-17, sob a instrução do mantenedor para continuar a N3 com os padrões
 planejados. Este é o contrato da V0.2; captura, inserção e validação nativa chegam separadamente.
@@ -142,8 +142,7 @@ A tecla separada de comando solicita uma ação, não inserção de texto. O cat
   acima substitui o escopo de modelo de texto separado.
 
 - 2026-10-17: definir os limites da N3 V0.2 para destino, área de transferência, capacidade de
-  teclado e permissões. Usar 0032 porque a [0031](0031-tasks-leave-vults.md) já registra a remoção
-  de Tasks.
+  teclado e permissões.
 
 - 2026-10-19: reservar o atalho global de fala para o ditado independente, seja qual for o foco;
   a entrada de voz no rascunho do Chat continua sendo uma ação explícita no botão de microfone.

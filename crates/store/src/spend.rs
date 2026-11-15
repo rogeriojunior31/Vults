@@ -1,4 +1,4 @@
-//! What the agents cost (`docs/dev/plan-zeca.md` W9), by local day, by what spent it (a continuation,
+//! What the agents cost, by local day, by what spent it (a continuation,
 //! a watched session) and by roost: for the Nest's costs and the user's daily budget. Dollars are
 //! what the agent itself reported, never guessed from a price list; on a subscription they are
 //! what the tokens would cost at API prices, which the plan does not charge.

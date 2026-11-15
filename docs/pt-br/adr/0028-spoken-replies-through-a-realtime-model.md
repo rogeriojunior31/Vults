@@ -1,5 +1,5 @@
 # 0028. Voz: escuta local, respostas faladas opcionais
-<!-- source: 6271effb320a -->
+<!-- source: 40bb22a7ca43 -->
 
 **Status:** Aceita, 2026-10-12. Consolidada em 2026-10-12 a partir da 0013.
 Alterada em 2026-10-17 para ditado, escuta limitada de respostas e áudio temporário de reuniões.
@@ -51,7 +51,7 @@ usuário a tirou do plano em 2026-10-12.
 
 ## Ditado e reuniões
 
-Estas cláusulas foram aceitas na V0.1 do [plano de Ditado](../../dev/plan-dictation.md#v0-decisions-and-the-prototype).
+Estas cláusulas foram aceitas na V0.1 do [plano de Ditado](https://github.com/rogeriojunior31/Vults/blob/497677d34a2b2ef75590930452896ba0a7bac4e8/docs/dev/plan-dictation.md#v0-decisions-and-the-prototype).
 Elas definem o contrato da N3; o aceite não significa que os recursos já foram implementados:
 
 - **Palavras locais, transcrição local (R1).** Um dicionário local, substituições e trechos
@@ -132,8 +132,8 @@ por si só não adiciona controle de microfone nem instalação.
   localmente o resultado com o vínculo do pedido e o solicitante verificado, sem áudio, segredos
   nem uma cópia da transcrição. Nenhum caminho de voz alcança `Intent::Decide` ou `DecideAlways`.
   Configurar MCP em agentes externos continua exigindo backup datado, diff visível e clique pela
-  [0005](0005-agent-configs-backup-diff-click.md). A
-  [0027](0027-an-open-reply-for-any-tool.md) e seu protocolo de respostas do hook não mudam.
+  [0005](0005-agent-configs-backup-diff-click.md).
+  O protocolo de respostas do hook não muda.
 
 A V7.2 começa pelo ciclo de vida tipado de perguntas da M7, identidade verificada do cliente,
 cancelamento, resposta de uso único e teste completo de auditoria. Depois conecta o ditado local
@@ -157,7 +157,7 @@ Até essas etapas chegarem, o comportamento atual de cards e microfone permanece
 
 - 2026-10-19: a N3 V7.1 distingue o rascunho de pergunta ditado da autoridade sobre permissões.
   Somente uma confirmação humana separada pode enviá-lo; o ciclo de perguntas da M7 e as restrições
-  de V7.2/V7.3 continuam sem implementação. A ADR 0004 e a ADR 0027 não mudam.
+  de V7.2/V7.3 continuam sem implementação. A ADR 0004 não muda.
 - 2026-10-17 (aceita pelo mantenedor): a N3 V0.1 define vocabulário local, escuta opcional
   limitada para respostas, áudio temporário de reuniões e a comprovação de licença exigida
   para novos modelos.

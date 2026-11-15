@@ -1,4 +1,4 @@
-//! The Agent Client Protocol (`docs/dev/plan-zeca.md` W10): one long-lived process per agent,
+//! The Agent Client Protocol: one long-lived process per agent,
 //! JSON-RPC 2.0 over stdio, one object per line (`initialize`, `session/new` or `session/load`,
 //! `session/prompt`, `session/cancel`), for OpenCode, Qwen Code, Copilot CLI, Kimi Code and the
 //! rest of the registry. Vults offers no file system and no terminal of its own: the agent uses its

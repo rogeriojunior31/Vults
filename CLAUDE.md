@@ -73,7 +73,7 @@ vults/
 ├── design/               # sprite sources (design/mascots/zeca/zeca.py generates the sprite JSON)
 ├── docs/                 # user docs (guide/, reference/), published on each release; docs change in the same PR as the feature
 │   ├── adr/              # decision records
-│   └── dev/              # internal plans (ROADMAP.md is the roadmap), not published
+│   └── dev/              # ROADMAP.md (what is left) and releasing.md, not published
 ├── tests/                # automated checks
 ├── packaging/            # AUR PKGBUILDs (vults, vults-git), .desktop entry
 ├── scripts/              # CI checks (brand, English, layers, network, version), perf
@@ -112,8 +112,7 @@ it works, the UI, the docs; distribution after.
 Read [DESIGN.md](DESIGN.md) before changing UI or creating a prototype. Reuse the
 production theme, components, sprites and interaction owners; preserve accessible
 actions and state across layouts. The implementation order is in
-[the roadmap](docs/dev/ROADMAP.md), detailed in
-[UI implementation sequence](docs/dev/plan-ui.md): repair existing views and
+[the roadmap](docs/dev/ROADMAP.md): repair existing views and
 deliver larger UI changes with their features. Validate UI changes in the running
 application.
 
@@ -122,7 +121,7 @@ application.
 Each rule has its reason in `docs/adr/`: 0003 for rule 1; 0004 for rule 2 (clicks, rules, policies,
 destructive calls, the phone and the chat's access); 0005 for rule 3; 0019 for rule 4 (the keyring,
 no telemetry, the update check and requests on the user's behalf). Changing one starts with an edit to
-its living record, with a dated line in its *History* ([0001](docs/adr/0001-record-decisions.md)).
+its living record, with a dated line in its *History* ([how to write one](docs/adr/README.md#writing-one)).
 
 1. **Never block an agent.** The hook exits 0 with empty stdout on any failure.
 2. A permission is only answered by a human: a click (`core::Intent::Decide`, `DecideAlways`), an

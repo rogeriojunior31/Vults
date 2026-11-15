@@ -1,4 +1,4 @@
-//! Recall (`docs/dev/plan-zeca.md` M5): the journal's passages that answer a question, by
+//! Recall: the journal's passages that answer a question, by
 //! full-text search and, when a local Ollama runs, the summaries nearest it, fused. Up to three go
 //! in front of each chat turn (`<memories>`), and the API chat may ask for more with `recall`.
 //! Only while Zeca's memory is on; every passage is the journal's words, untrusted.

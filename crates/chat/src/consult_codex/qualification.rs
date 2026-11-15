@@ -1,5 +1,5 @@
 //! Installed-client qualification only; never linked into the application.
-//! Run in an empty network namespace (see docs/dev/plan-dictation.md).
+//! Run in an empty network namespace.
 #![cfg(target_os = "linux")]
 #![allow(clippy::unwrap_used)]
 

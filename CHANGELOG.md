@@ -4,6 +4,33 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ## Unreleased
 
+### Removed
+
+- **Tasks** are gone: the Tasks tab, *Open Tasks*, `/task`, `/delegate`, runs in their own clone, context-pack handoff and the review loop. Vults watches and answers your agents; the code stays their work. `/continue`, costs and the daily budget remain, and past spend from tasks still counts in Activity.
+
+### Windows
+
+- A Windows 11 preview, still being validated: sessions reach the flock from Claude Code, Codex, Antigravity, OpenCode, Qwen Code, Copilot CLI, Cursor, Factory Droid and Kimi Code, with hooks written for the shell each agent uses (cmd or PowerShell, not only Git Bash), and replaced safely while an agent runs them.
+- Native session notifications, the animated tray with the Linux menu and presets, the Panel island docked by a taskbar on any edge, surfaces placed again when monitors or the taskbar change, and *Open terminal* bringing the session's window forward.
+- Files dropped from Explorer attach on the island again.
+- Global shortcuts are configurable and never take a chord another app already holds.
+- Local dictation and voice commands: computer audio mute and volume, a player's volume through its own mixer session, opening Start Menu and Microsoft Store apps by name, and media paused during dictation and resumed after. Installers ship and verify Vulkan for GPU transcription.
+- `gh`, `git` and agent relays start without a console window; a chat CLI and every diagnostic probe end with their whole process tree.
+- Still Linux-only: meeting recording, voice conversation, agent questions over MCP, the specialists' GitHub tools, typing into terminals and most apps, and terminal tabs and panes for *Open terminal*.
+
+### New
+
+- **GitLab and Gitea connectors**, read-only, next to GitHub: GitLab.com merge requests and self-hosted Gitea pull requests with reviewers and changes asked, diff sizes, checks and pipelines of the default branch, and releases. Each has its own switch, budget and trace; the token lives in the keyring.
+- Zeca's API Chat and spoken replies can read the cached GitLab and Gitea snapshots, each off by default. A specialist reads only the repositories, host and account its grant names, and reconnecting or changing the account revokes it. No extra request is made.
+- **Five themes** in **Settings → General → Theme**: Dark (formerly Black, the default), Light and the SP Night trio, Noite Paulista, Garoa and Pico do Jaragua. Every control follows the theme, selects and focus rings included.
+- **A design pass over the island, the Nest and Settings.** An empty Flock says what brings a bird to the wire; Settings › Agents leads with the agents on this computer; removals and full access ask first; one presentation menu in the headers replaces the size switch, full-screen button and sound toggle. In the Nest, waiting permissions form a queue answered from the Flock, each request counts down on the core's deadline, and one that went back to its terminal stays on its card saying so. Approvals splits its audit log into answers, returns and setup changes, by day.
+
+### Fixes
+
+- Two instances starting together no longer fail when one is still migrating the database: start-up retries for a bounded time.
+
+### Also in this release
+
 - **Settings → Connection setup → GitHub → Check access** tells why GitHub access fails: `gh` missing, signed out, an expired or revoked login, the rate limit, single sign-on, a forbidden read or a repository this account cannot see, and for a repository whether you can push. It works with the connector off and never shows `gh`'s output or a token.
 
 - Vults can tell you when a new version is out. The island asks once whether it may look at its releases on GitHub; with your yes it looks at most once a day and shows the version with **Open release page** and **Later**. **Settings → General → Updates** has the switch and **Check now**. Nothing is downloaded or installed, and AUR packages are built without it.

@@ -42,7 +42,7 @@ built, and the user dropped it from the plan on 2026-10-12.
 
 ## Dictation and meetings
 
-These clauses were accepted in V0.1 of [the Dictation plan](../dev/plan-dictation.md#v0-decisions-and-the-prototype).
+These clauses were accepted in V0.1 of [the Dictation plan](https://github.com/rogeriojunior31/Vults/blob/497677d34a2b2ef75590930452896ba0a7bac4e8/docs/dev/plan-dictation.md#v0-decisions-and-the-prototype).
 They set N3's contract; acceptance does not mean the features are already implemented:
 
 - **Local words, local transcription (R1).** A local dictionary, replacements and snippets may
@@ -112,7 +112,7 @@ Claude Code/Codex setup. This decision adds no microphone control or installatio
   outcome with the request binding and verified requester, without audio, secrets or a duplicate
   transcript. No voice path reaches `Intent::Decide` or `DecideAlways`. External-agent MCP setup
   still needs a dated backup, a visible diff and a click under [0005](0005-agent-configs-backup-diff-click.md).
-  [0027](0027-an-open-reply-for-any-tool.md) and its hook reply protocol are unaffected.
+  The hook's reply protocol is unaffected.
 
 V7.2 starts with M7's typed question lifecycle, verified client identity, cancellation, once-only
 reply and audit round trip. Then it connects local dictation and the composer. Its regression checks
@@ -131,7 +131,7 @@ Until those steps land, existing card and microphone behavior stays as shipped.
 
 - 2026-10-19: N3 V7.1 distinguishes a dictated question draft from permission authority. Only a
   separate human confirmation may send it; M7's question lifecycle and V7.2/V7.3 enforcement remain
-  unimplemented. ADR 0004 and ADR 0027 are unchanged.
+  unimplemented. ADR 0004 is unchanged.
 - 2026-10-17 (accepted by the maintainer): N3 V0.1 defines local vocabulary, bounded opt-in
   follow-up listening, temporary meeting audio and the license evidence required for new models.
 - 0013, 2026-10-04: local speech to text, no always-on mic, no GPL in

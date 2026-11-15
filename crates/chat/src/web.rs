@@ -1,4 +1,4 @@
-//! Zeca's web (`docs/dev/plan-zeca.md` Z7): a search through the engine the user chose (Brave,
+//! Zeca's web: a search through the engine the user chose (Brave,
 //! Tavily, or their own SearXNG), and a page read for a question. A page is untrusted: it is read by
 //! a separate model call with no tools (the Q-LLM), told the page is data, and only what it extracts
 //! reaches the chat's model. Each request is one the app's network gate let out first (ADR 0019);

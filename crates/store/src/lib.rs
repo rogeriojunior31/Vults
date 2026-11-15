@@ -1,4 +1,4 @@
-//! The local database (`docs/dev/plan-zeca.md`, S1): one `vults.sqlite` in the data folder, the
+//! The local database: one `vults.sqlite` in the data folder, the
 //! user's alone, upgraded by numbered migrations. Each table arrives with the step that needs it;
 //! the history of turns ([`history`]), the audit log ([`audit`]), the user's consents
 //! ([`consents`]), traces ([`traces`]), Zeca's conversations ([`conversations`]) and the

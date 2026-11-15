@@ -1,4 +1,4 @@
-//! What Zeca remembers (plan-zeca M1): a few small Markdown files of facts, one per line, each
+//! What Zeca remembers: a few small Markdown files of facts, one per line, each
 //! with a hard limit so the part always in his context stays cheap, and every change a commit.
 //!
 //! A file is frontmatter (written by us, never trusted back: the limit is the file's kind) and

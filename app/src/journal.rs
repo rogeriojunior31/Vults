@@ -1,4 +1,4 @@
-//! Zeca's journal (`docs/dev/plan-zeca.md` M4): while the user has his memory on, each of the
+//! Zeca's journal: while the user has his memory on, each of the
 //! core's typed events (an agent's turn ended, a card answered) and each line of his chat becomes a
 //! line in `store`, secrets redacted there. With the daily summary on too, each past day is summed
 //! up by a small model through the user's Claude Code, behind the network gate (ADR 0019).

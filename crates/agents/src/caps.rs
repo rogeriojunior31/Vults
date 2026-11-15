@@ -1,9 +1,9 @@
-//! What each agent can do with Vults (`docs/dev/plan-zeca.md` W1): whether its permissions get a
+//! What each agent can do with Vults: whether its permissions get a
 //! card, where its questions go, what a diff shows, how it could be stopped, its own sandbox, and
 //! whether Vults can start it. Each agent's row is in [`crate::registry`], read by the Nest's
 //! doctor, the router (W8), which only sends work an agent can take, and the policy (W2), which
 //! only answers where a card does. Each row is what the code does today (the parsers beside this
-//! file) and the stop research (plan-zeca.md C7); a capability nobody has tried is `No`, never a
+//! file) and the stop research; a capability nobody has tried is `No`, never a
 //! guess.
 
 use serde::Serialize;

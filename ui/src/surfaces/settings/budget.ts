@@ -1,4 +1,4 @@
-// Settings alone owns the daily budget; Activity reads its figures (ADR 0031).
+// Settings alone owns the daily budget; Activity reads its figures (ADR 0021).
 import type { SpendToday } from "../../bridge";
 import { failure } from "../../errors";
 import { el } from "../../dom";

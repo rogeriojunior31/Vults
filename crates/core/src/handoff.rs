@@ -1,4 +1,4 @@
-//! Which watched session the user may hand words to (`docs/dev/plan-zeca.md` W7, `/continue`): one
+//! Which watched session the user may hand words to (`/continue`): one
 //! that stopped, in the chat's folder, at most [`EXPIRES`] ago. The core keeps the sessions that
 //! ended a little while, since an ended session is the one most often continued; whether its
 //! process is still alive is the app's to check (a session whose terminal still runs it is never

@@ -1,4 +1,4 @@
-//! Memory proposals (`docs/dev/plan-zeca.md` M6): what Zeca would remember, waiting for the user's
+//! Memory proposals: what Zeca would remember, waiting for the user's
 //! yes in the Nest. Nothing reaches his memory without it; a proposal already waiting, or one the
 //! user turned down lately, is never made again.
 

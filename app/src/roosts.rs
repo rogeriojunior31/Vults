@@ -1,4 +1,4 @@
-//! Roosts (`docs/dev/plan-zeca.md` M3): the sessions grouped by the repository they work in, each
+//! Roosts: the sessions grouped by the repository they work in, each
 //! with its branch, the GitHub card's pull requests and checks, and its project memory. A roost's
 //! key is the repository (`owner/repo` from GitHub's remote, or the folder's name): the worktrees of
 //! one repository are one roost, and its memory is `roosts/<key>.md`.

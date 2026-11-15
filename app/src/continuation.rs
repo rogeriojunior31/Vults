@@ -1,4 +1,4 @@
-//! A single watched session resumed by the user's `/continue` (ADR 0031, W7).
+//! A single watched session resumed by the user's `/continue` (ADR 0018).
 //! Only this owned driver can be interrupted; permissions still go through the core ledger.
 
 use std::path::{Path, PathBuf};

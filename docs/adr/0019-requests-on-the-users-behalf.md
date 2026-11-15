@@ -111,7 +111,7 @@ creates no exemption for other network requests and changes none of the general 
   and its safety guide when implemented; declaring identifiers here adds no network access.
 - No usage numbers steer the roadmap: we learn from issues and from using it ourselves. Anything
   that would learn from users' data has to learn on the user's machine or not at all.
-- The updater lands after 0.2.0 ([0020](0020-0.2.0-at-wave-4-then-0.2.x.md)). `release.yml` will
+- The update check only tells: it never downloads or installs. A real updater comes later; `release.yml` will
   sign the packages and publish one manifest per channel; the key is created once and backed up
   offline (losing it means users reinstall by hand). Nightly and beta builds get their own bundle
   id suffix, so they install beside stable without sharing settings or the keyring.

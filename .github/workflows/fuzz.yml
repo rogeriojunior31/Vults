@@ -1,4 +1,4 @@
-# Fuzzing (plan-zeca S5): what reaches the app from outside. The hook's own road (an agent's stdin,
+# Fuzzing: what reaches the app from outside. The hook's own road (an agent's stdin,
 # the event it builds, the line on the socket, the parser, the core), the app's reply the hook
 # reads, any agent's hook JSON in sequence, and the audit log's redactor. Weekly, ten minutes a
 # target, from a corpus seeded by the agents' recorded payloads and kept between runs. A crash

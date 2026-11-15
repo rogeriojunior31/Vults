@@ -1,5 +1,5 @@
 {
-  "about": "Recall (plan-zeca M5): ten days of a developer's journal, each buried in sixty lines of the same everyday noise (test runs, git, builds, repeated chat), today's chat repeating the questions' words (it must stay out), and thirty-three questions, three in Portuguese and Chinese, each with the day that answers it. Six share no word with their day: what only a local embedding can answer. hit@3: the day is among the first three passages, asked as a chat turn asks (strict, today's chat out).",
+  "about": "Recall: ten days of a developer's journal, each buried in sixty lines of the same everyday noise (test runs, git, builds, repeated chat), today's chat repeating the questions' words (it must stay out), and thirty-three questions, three in Portuguese and Chinese, each with the day that answers it. Six share no word with their day: what only a local embedding can answer. hit@3: the day is among the first three passages, asked as a chat turn asks (strict, today's chat out).",
   "days": [
     {
       "day": "2026-09-28",

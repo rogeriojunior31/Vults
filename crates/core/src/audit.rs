@@ -1,4 +1,4 @@
-//! What the audit log keeps (ADR 0004, `docs/dev/plan-zeca.md` S2): who answered a card, how, and
+//! What the audit log keeps (ADR 0004): who answered a card, how, and
 //! on what. `reduce` says it with [`crate::Effect::Audit`] beside every answer; the app writes it to
 //! the local database, where rows are never changed and leave only after 90 days.
 

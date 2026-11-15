@@ -1,7 +1,7 @@
 # 0021. Surfaces: one core, four sizes, a card answered where you are
 
 **Status:** Accepted, 2026-10-11. Consolidated on 2026-10-12 from 0008, 0009, 0022, 0023, 0024
-and 0030. Amended on 2026-10-16 by [0031](0031-tasks-leave-vults.md): the Nest has no Tasks tab.
+and 0030. Amended on 2026-10-16: the Nest has no Tasks tab.
 Amended on 2026-10-17 for N3 V0.3: the Dictation area and its feedback contract. These additions
 land with their feature phases; the decision does not claim production UI or native validation.
 
@@ -156,7 +156,7 @@ meant to steer whatever reads them.
   Geometry accounts for zoom once and clamps to the viewport before measurement.
   Initial native configuration matches the runtime's 720 x 640 size; Mini and the
   other Quick tabs retain their widths. User-selectable paired widths remain future work.
-- 2026-10-16, [0031](0031-tasks-leave-vults.md): remove Tasks from the Nest; preserve D7, spend and
+- 2026-10-16 (former 0031): remove Tasks from the Nest; preserve D7, spend and
   budget, and the D8 boundary for `/continue`.
 
 - 2026-10-17: N2.2 adds Quick's Now inbox, exact-request review and explicit links to the existing

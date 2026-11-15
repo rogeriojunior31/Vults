@@ -1,5 +1,5 @@
 # 0019. Rede, segredos e telemetria
-<!-- source: 6a8254a88046 -->
+<!-- source: 8a07e482091d -->
 
 **Status:** Aceita, 2026-10-10. Consolidada em 2026-10-12 a partir da 0006 e da 0016.
 Alterada em 2026-10-17 para a N3 V0.4: requisições a modelos no ditado, limites de loopback e
@@ -133,8 +133,8 @@ exceção para outras requisições de rede nem altera as regras gerais de conse
   quando implementados; declarar identificadores aqui não adiciona acesso à rede.
 - Nenhum número de uso guia o roadmap: aprendemos com as issues e usando o app nós mesmos. Tudo o
   que aprenderia com os dados dos usuários tem de aprender na máquina do usuário, ou não aprender.
-- O atualizador chega depois da 0.2.0 ([0020](0020-0.2.0-at-wave-4-then-0.2.x.md)). O
-  `release.yml` vai assinar os pacotes e publicar um manifesto por canal; a chave é criada uma vez e
+- A verificação de atualização só avisa: nunca baixa nem instala. Um atualizador de verdade vem
+  depois; o `release.yml` vai assinar os pacotes e publicar um manifesto por canal; a chave é criada uma vez e
   guardada offline (perdê-la significa que os usuários reinstalam à mão). Os builds nightly e beta
   ganham um sufixo próprio no bundle id, para instalar ao lado do stable sem dividir configurações
   nem o chaveiro.

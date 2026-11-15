@@ -1,6 +1,6 @@
 [package]
 name = "vults-evals"
-description = "Evals with cassettes: policy, redaction, the prompts sent to models, injection (plan-zeca S7)"
+description = "Evals with cassettes: policy, redaction, the prompts sent to models, injection"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

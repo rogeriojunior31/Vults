@@ -1,4 +1,4 @@
-// The Nest's records (plan-zeca W11): History (each finished turn, counts only), Usage (the plans'
+// The Nest's records: History (each finished turn, counts only), Usage (the plans'
 // windows and what the agents cost), Traces (Zeca's own turns and tools) and Audit (who answered each
 // card, and how). Each only reads what this computer keeps; nothing here changes the records.
 import type {

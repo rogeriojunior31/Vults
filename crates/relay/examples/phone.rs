@@ -1,4 +1,4 @@
-//! A phone on the command line, to try the relay before the Android app exists (plan-zeca L2).
+//! A phone on the command line, to try the relay before the Android app exists.
 //!
 //! ```text
 //! cargo run -p vults-relay --example phone -- '<the QR text from Settings>' [name]

@@ -79,8 +79,8 @@ agent lists. Copilot CLI's PR is the example.
   its row in *What each agent can do*; it leaves the recipes), [Approving](../guide/approvals.md),
   the table in [Getting started](../getting-started.md), the agent lists in the READMEs,
   `docs/README.md` and `architecture.md`.
-- A line in `CHANGELOG.md`, and its step marked done in `docs/dev/plan-every-agent.md` with what
-  the spike showed.
+- A line in `CHANGELOG.md`, and its task removed from the [roadmap](../dev/ROADMAP.md); what the
+  spike showed goes in the PR.
 
 Then the checks in [CONTRIBUTING.md](https://github.com/rogeriojunior31/Vults/blob/main/CONTRIBUTING.md#before-opening-a-pr); a new agent
 widens a select or two, so the visual tests may need new baselines on purpose.
