@@ -26,11 +26,11 @@ one; `scripts/check-layers.sh` checks it in CI (tests may reach further).
 | base | `brand`, `secrets` | The name, the keyring |
 
 Only `app` wires the layers together: Connect never calls into Experience, and Core knows neither.
-That keeps a new surface cheap (it draws `State::view` and sends intents, [ADR 0006](adr/0006-surfaces.md))
-and keeps Zeca optional ([ADR 0005](adr/0005-zeca.md)): he uses Chat, Voice and
+That keeps a new surface cheap (it draws `State::view` and sends intents, [ADR 0006](../adr/0006-surfaces.md))
+and keeps Zeca optional ([ADR 0005](../adr/0005-zeca.md)): he uses Chat, Voice and
 Connect, and none of them knows about him. His body is in Experience; his brain is the `zeca`
 crate in Connect, which reads the flock but never answers a permission
-([ADR 0005](adr/0005-zeca.md)).
+([ADR 0005](../adr/0005-zeca.md)).
 
 | Crate | Role | Must not use |
 |---|---|---|
@@ -105,7 +105,7 @@ probabilities. Shared `model_file` admission retains exact bytes, and `onnx::Run
 native owner for both diarization and semantic turns. Cancellable foreground admission, per-frame
 preprocessing deadlines and native RunOptions termination respect the policy ticket's remaining
 budget. Model/native session construction cannot promise immediate abort. No app caller, download,
-Settings switch or capture is added. See [Semantic turn model](reference/semantic-turn-model.md) for
+Settings switch or capture is added. See [Semantic turn model](../dev/internals/semantic-turn-model.md) for
 BSD-2-Clause provenance, exact pins, qualification commands and open speech/latency/platform gates.
 
 V6.3.1 adds `store::money` (migration 28): integer micro-USD holds and once-only final usage
@@ -126,7 +126,7 @@ ceilings, explicit finite session caps and effective-configuration confirmation,
 to its response ID, and once-only usage receipts. Unknown usage, stale/oversized events and changed
 configuration cannot reopen an owner or refund its hold. Cached text/audio are priced separately;
 known overruns remain visible in full. The synthetic session cassette is offline; no provider call,
-microphone or permission authority is added. See [Realtime accounting](reference/realtime-accounting.md)
+microphone or permission authority is added. See [Realtime accounting](../dev/internals/realtime-accounting.md)
 for source rates, the ceiling proof, qualification expiry and runtime acceptance still required.
 
 V6.3.3 adds a fixed-origin TLS WebSocket provider, bounded streaming PCM channels and an app-owned
@@ -149,7 +149,7 @@ with a typed local failure returns to the native caller, without provider substi
 Chat send or history writes. Cancel/revocation suppresses stale results; shared settings changes
 invalidate epochs under the Settings lock and decoder workers retain the native lease after timeout.
 The local wait is bounded but cold native loading remains cooperative. Capture/playback and UI
-continuation remain V6.4-V6.7 work. See [Realtime accounting](reference/realtime-accounting.md#native-turn-retention-and-local-text).
+continuation remain V6.4-V6.7 work. See [Realtime accounting](../dev/internals/realtime-accounting.md#native-turn-retention-and-local-text).
 
 V6.4.1 adds independent `audio::playback` output and pure `voice::turn::heard` accounting. A bounded
 CPAL worker resamples 24 kHz PCM16, distinguishes queued/submitted/estimated consumed frames and
@@ -163,7 +163,7 @@ authorized response. Terminal playback can still drain or be interrupted; histor
 acknowledgement is explicitly unsynchronized and cannot resume the owner. Detached output retains
 the native session lease. No microphone, renderer entry or persistent Chat history write is added;
 barge-in stays disabled at app entry pending V6.5. See
-[Native playback and context repair](reference/realtime-accounting.md#native-playback-and-context-repair)
+[Native playback and context repair](../dev/internals/realtime-accounting.md#native-playback-and-context-repair)
 for limits, clock assumptions, isolated ALSA null checks and the remaining physical/live acceptance.
 
 V6.5.1 adds read-only `audio::echo` inventory for explicitly configured PipeWire WebRTC module pairs.
@@ -177,7 +177,7 @@ and a separate drain acknowledgement preserve consumed-output accounting. Route 
 clears retained interruption evidence. Bounded capture returns only to the native caller; it is not
 automatically uploaded or saved. The default CPAL path remains non-interruptible. No production
 module loader, renderer entry or visible capture activation is added. Backend V6.5 is delivered;
-V6.6 tools and V6.7 capture/UI are next. See [Echo cancellation](reference/echo-cancellation.md)
+V6.6 tools and V6.7 capture/UI are next. See [Echo cancellation](../dev/internals/echo-cancellation.md)
 for the private native routing check and remaining physical/live acceptance limits.
 
 V6.6.1 routes finalized local transcripts through V8's command dispatcher before realtime upload.
@@ -190,7 +190,7 @@ and relabelled-clone replay after commit, settlement or interruption. Queued nat
 its waiter/authority/deadline and keeps the exclusive lease through exit. Linux requires a bounded same-capture
 transcript; missing text fails before provider construction and only offers reviewable recovery.
 No renderer/capture assembly, model tool or consultation is enabled. See
-[Local command admission](reference/realtime-accounting.md#local-commands-before-realtime-upload).
+[Local command admission](../dev/internals/realtime-accounting.md#local-commands-before-realtime-upload).
 
 V6.6.2 supplies the existing five cached flock reads to realtime through frozen confirmed specs.
 Serial function responses have bounded arguments, exact streamed/final identity checks and replay
@@ -198,7 +198,7 @@ sets. Settlement precedes each continuation reservation and read; inert success/
 are bounded after JSON escaping. Tool receipts release original input without completing playback;
 final speech retains its own identity/history path. Consumed calls cannot become automatic recovery
 or replay. No action/permission tool or visible activation is added. See
-[Read-only realtime tools](reference/realtime-accounting.md#read-only-tools-in-realtime).
+[Read-only realtime tools](../dev/internals/realtime-accounting.md#read-only-tools-in-realtime).
 
 
 V6.6.3 can add separately consented `consult_claude` and `consult_codex` text questions to that
@@ -214,7 +214,7 @@ loading and requires supported CLI controls; no active agent session or Chat per
 inherited. One original deadline covers preparation and child teardown, with a translated native
 notice after 1.5 seconds; busy/voice ownership survives uninterruptible work. Responses are inert
 outside data. Managed CLI policy still applies. Subscription binding, live/managed-client qualification and visible controls remain
-open. See [Text consultation](reference/realtime-accounting.md#text-consultation).
+open. See [Text consultation](../dev/internals/realtime-accounting.md#text-consultation).
 
 ## Local dictation
 
@@ -457,12 +457,12 @@ final-text rules, Chat, insertion capabilities and network gate do not change.
 
 The renderer owns History and its temporary feedback, not native insertion or settings
 mutation. Settings-only commands check the caller's webview label before saving. The
-[dictation guide](guide/dictation.md#supported-destinations) lists actual supported destinations;
-[ADR 0002](adr/0002-permissions.md) and [ADR 0002](adr/0004-network-and-secrets.md#voice-and-audio) record the permission and privacy boundaries.
+[dictation guide](../guide/dictation.md#where-the-text-goes) lists actual supported destinations;
+[ADR 0002](../adr/0002-permissions.md) and [ADR 0002](../adr/0004-network-and-secrets.md#voice-and-audio) record the permission and privacy boundaries.
 
 ## Meaning in core, look in the surface
 
-The view says what things mean, so every surface agrees ([ADR 0006](adr/0006-surfaces.md)).
+The view says what things mean, so every surface agrees ([ADR 0006](../adr/0006-surfaces.md)).
 Each session carries its `attention`, an ordered level (`quiet` < `info` < `done` < `failed` <
 `needs-you`), and the view carries the most of them; `card` marks the session whose card is first
 in line and still waits on it. The island only chooses the look: which sound a level makes, and
@@ -496,14 +496,14 @@ A permission request keeps its connection open. The server only waits for a huma
 loop has taken the request and `core` has queued its card (`Effect::AckPermission`). If the app is
 stuck or not listening, the agent gets its answer (silence, so it asks in the terminal) within
 800 ms instead of two minutes. The island opens on a queued card and stays open until it is
-answered; no presence mode may hide it once acknowledged ([ADR 0006](adr/0006-surfaces.md)).
+answered; no presence mode may hide it once acknowledged ([ADR 0006](../adr/0006-surfaces.md)).
 
 ## Why only `core` produces a decision
 
 `core::reduce` turns a `PermissionRequested` event into pending state, and only a human's click
 turns pending state into a `RespondPermission` effect: `Intent::Decide` (Allow, Deny) or
 `Intent::DecideAlways`, which also saves a rule. A saved rule answers only a request that matches
-it exactly: the same agent, folder, tool and target ([ADR 0002](adr/0002-permissions.md)). A question
+it exactly: the same agent, folder, tool and target ([ADR 0002](../adr/0002-permissions.md)). A question
 (`QuestionAsked`) waits the same way, and only an `Intent::Answer` that fits its questions turns it
 into an `AnswerQuestion` effect. A test feeds
 every other input in every order and checks none of them answers.
@@ -521,7 +521,7 @@ until the content-free audit is durable, while continuing to process revocation 
 acknowledges after flushing the MCP response; failure/lost acknowledgement never reuses consumed text.
 Permission cards take priority. Only the owning island/Nest webview can edit or confirm; lock,
 navigation, departure, expiry and disconnect invalidate pending work and late completions.
-The question-draft rule in [ADR 0002](adr/0002-permissions.md) (a dictated draft is sent only by a click)
+The question-draft rule in [ADR 0002](../adr/0002-permissions.md) (a dictated draft is sent only by a click)
 is implemented by a physical-key-only local recording bound to the live question token and recording
 id. `vults_dictate` aliases the same typed `ask_user` exchange. Capture uses the existing microphone
 and cached local transcriber, with admission/lifetime guards and no provider, download, clipboard or
@@ -561,7 +561,7 @@ agent would), a command and the end. Pass your own JSONL file (one hook JSON per
 ## Decisions
 
 Why the app is built this way (Rust only, the safety rules, one core for every surface, Zeca
-optional, rules before models) is in the [decision records](adr/README.md).
+optional, rules before models) is in the [decision records](../adr/README.md).
 
 ## Documentation
 

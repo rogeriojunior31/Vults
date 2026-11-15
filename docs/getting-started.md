@@ -3,8 +3,8 @@
 ## Install
 
 Releases ship a `.deb` and an `.rpm` (Ubuntu 22.04, Debian 12, Fedora and newer) and a preview
-installer for Windows (no global shortcuts, desktop notifications, Open terminal or tray presets
-yet). There is no AppImage for now. Get them from the
+installer for Windows (meetings, talking with Zeca, typing into terminals and a few other
+features are still Linux-only). There is no AppImage for now. Get them from the
 [latest release](https://github.com/rogeriojunior31/Vults/releases/latest) and check a download
 with `sha256sum -c SHA256SUMS --ignore-missing`. To check that it was built by this repository's
 release workflow: `gh attestation verify <file> --repo rogeriojunior31/Vults`.
@@ -35,49 +35,10 @@ Hyprland, Sway and other compositors with layer-shell, the island sits on the to
 on GNOME it is a regular always-on-top window. **Settings → General → Start with the desktop** opens
 Vults when you log in.
 
-### Windows development checkout
+### On Windows
 
-The Windows release installer remains a preview. This development checkout adds native input
-regions, keyboard focus, global navigation shortcuts, tray opening, monitor selection and the
-shared Room/Settings window. It also tracks same-user session processes, observes screen locking,
-and reads and controls Windows system media sessions. Linux retains its existing desktop integrations.
-
-Install these prerequisites together: Node.js 22 or a newer supported LTS, Rust for
-`x86_64-pc-windows-msvc`, Visual Studio **Desktop development with C++** (MSVC x64/x86,
-Windows SDK and CMake/Ninja tools), LLVM with `libclang.dll`, and Microsoft Edge WebView2 Runtime.
-Set `LIBCLANG_PATH` to LLVM's `bin` directory if it is installed elsewhere. Visual Studio Insiders
-is supported by the launcher; Ninja avoids its CMake instance-discovery issues.
-
-From the repository root:
-
-```bat
-scripts\dev-windows.cmd --check
-npm ci
-scripts\dev-windows.cmd
-```
-
-The check reports missing tools before compiling. The launcher changes only its own environment.
-If a previous build cached a different CMake generator, run `cargo clean -p whisper-rs-sys` once.
-
-The launcher enables the `voice-vulkan` build feature when Vulkan SDK headers, `glslc` and
-`vulkan-1.lib` are available through `VULKAN_SDK`, `C:\VulkanSDK`, or `target/local-tools/vulkan`.
-Use `scripts\dev-windows.cmd --gpu` to require that build, or `--cpu` for the CPU fallback.
-The SDK is a build dependency; execution uses the GPU vendor's Vulkan driver. The launcher reports
-the chosen build before starting. GPU builds temporarily map an unused drive from V through Z to
-their checkout-local build cache to avoid MSVC shader-generator path limits, then remove that mapping
-on normal launcher exit. An explicit `CARGO_TARGET_DIR` keeps its existing owner and path.
-The first GPU compilation can take several minutes; this is separate from transcription latency.
-
-Build the Windows installer with `npm run bundle:windows -- --bundles nsis`. This command always
-enables Vulkan; a missing SDK never silently produces a CPU-only installer. It prepares pinned,
-SHA-256-checked SDK tools and an x64 Vulkan loader locally, without running their installers or
-changing system drivers. The loader and its license ship with Vults, so end users do not need the SDK.
-The app uses CPU transcription when no compatible Vulkan device is available.
-Packaging extracts the NSIS payload, checks its app/hook/loader/license against the build, and probes
-the packaged executable both normally and with driver discovery disabled. The probe
-(`vults.exe --voice-backend-check`) exits before profiles, windows or microphones start.
-The verified installer is copied to `target/release/bundle/nsis`, including when the build cache is
-on another drive. Release CI uses the same command and records the verification report.
+The Windows installer is a preview. To build Vults on Windows, see
+[Windows development](contributing/windows-development.md).
 
 Windows shortcuts use non-printing keys to preserve AltGr: **Ctrl+Alt+Space** opens the island;
 **Ctrl+Alt+Left/Right** changes the session; **Ctrl+Alt+F1/F2/F3** selects Mini/Quick/Room;
@@ -94,54 +55,8 @@ Windows/typing keys, Escape, Delete and F12 are excluded. The OS can detect othe
 shortcuts; an application's private/local shortcuts cannot be detected. If a choice interferes with
 one of those, disable it or choose another combination here. Linux retains its desktop shortcut editor.
 
-Select an installed local voice model in **Settings → Chat & voice**. Hold the dictation or command
-shortcut to record, then release to transcribe. Recording starts only from your shortcut; the same
-configurable tap/double-tap gestures apply. Dictation copies text by default. Optional insertion
-supports recognized native Edit/RichEdit fields, pins the process and focus generation, and leaves
-the clipboard unchanged. Password/read-only fields, browsers, terminals and focus changes fall back
-to copying for manual paste. It never presses Enter. Windows voice commands support Vults navigation
-and selected-player play/pause/previous/next, with their existing opt-in settings. Application launch,
-computer/player volume, music ducking and the X11-only Space/Escape gestures remain unavailable.
-Voice never grants an agent permission. Locking or revoking consent cancels the recording.
-
-Windows session navigation discovers the nearest same-user ancestor that owns a visible window.
-The agent's creation time is pinned when the session is observed and checked again on activation.
-Multiple editor windows require a unique project-folder title match; ambiguous or unreadable targets
-keep the project-folder action. Minimized targets are restored, and Windows must acknowledge the
-foreground change. No keystrokes are sent. A classic console whose window owner is outside the
-agent's ancestry keeps the folder fallback. Native Windows Terminal/editor and foreground-policy
-acceptance still requires a desktop test.
-
-The native MCP question bridge, desktop notifications, meeting capture and live voice
-conversation are still Linux-only. Chat microphone capture and local
-transcription are separate from global dictation; microphone/model acceptance still requires a
-real-device test. Renderer scale emulation does not establish native per-monitor DPI acceptance.
-
-Now Playing runs only with its setting enabled. Play/pause and previous/next target the displayed
-player; duplicate application sessions are refused rather than controlling another window. Per-player
-volume uses an explicit temporary link in **Settings > Dictation > Command settings > Player audio app**.
-Enable voice commands, Media voice commands and Now playing; start playback, refresh audio apps and
-choose the matching mixer group. This affects the whole app group (including browser tabs), never the
-computer master volume. The link is not saved and must be refreshed after process/output changes. Screen locking is observed every 500 ms;
-an unreadable state never counts as an unlock. Process liveness uses the creation time to detect PID
-reuse and never closes a session whose owner was not previously observed. Hermes conversations keep
-their explicit lifecycle because a gateway worker can end while its conversation remains open.
-The Windows backends use Microsoft's [media-session API](https://learn.microsoft.com/en-us/uwp/api/windows.media.control.globalsystemmediatransportcontrolssessionmanager)
-and [session lock flags](https://learn.microsoft.com/en-us/windows/win32/api/wtsapi32/ns-wtsapi32-wtsinfoex_level1_w).
-
-The Windows roadmap and acceptance criteria are:
-
-| Order | Module | Required acceptance before calling it supported |
-| --- | --- | --- |
-| 1 | Sessions, hooks and metrics | Native exe/npm launchers, cmd/PowerShell wrappers, Unicode and spaced paths, process exit/PID reuse, native MCP question ownership, unknown versus zero, cumulative tokens versus current context, actual versus estimated cost, elapsed-time semantics and stale/reset reports. Subscription reads retain their separate network switches. |
-| 2 | Notifications | Registered application identity for installed and development builds; per-session replacement, withdrawal, Open-only activation, do not disturb, setting off, shutdown and notification-service failure. |
-| 3 | Focus, clipboard and text insertion | Native Edit/RichEdit delivery implemented with Unicode selection fixtures and protected-field refusal. Direct insertion preserves the clipboard. Broader editor/IME/elevated-target and native focus-change acceptance remains. |
-| 4 | Global dictation and voice commands | Basic native shortcuts, selected-device capture and local transcription implemented; local Turbo speech/silence fixtures pass. Vults navigation and selected-player commands reuse existing permission rules. Physical microphone, lock interruption and consent-revocation acceptance remains. |
-| 5 | Audio and meetings | WASAPI microphone and output loopback, endpoint identity/change/unplug, cancellation on lock or page loss, bounded buffers, recoverable recording and local transcription. Live conversation additionally needs echo cancellation, interruption and route-change tests. |
-| 6 | Desktop completion | Raise the exact existing terminal, installed application inventory, per-application volume and temporary music ducking/restoration; validate native multi-monitor 100/125/150/175/200% DPI, reconnect, sleep/wake, autostart and installed upgrades. |
-
-Every phase retains the Linux backend and its regression checks. Automated fixture tests and renderer
-scale tests do not replace a native device, compositor, installer or multi-monitor acceptance test.
+Meetings, talking with Zeca, agent questions over MCP, the specialists' GitHub tools, typing into
+terminals and most apps, and terminal tabs for *Open terminal* are still Linux-only.
 
 ## Connecting your agents
 

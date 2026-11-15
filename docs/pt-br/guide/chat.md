@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 56079d6ee32e -->
+<!-- source: 4c67ba2a3ed3 -->
 
 Os painéis laterais redimensionáveis seguem o ponteiro que iniciou o arraste, ignoram toques adicionais e encerram o arraste quando a janela perde o foco. O cancelamento preserva a largura atual e mantém os rascunhos. Quando o espaço limita um painel, o arraste e o redimensionamento pelo teclado partem da largura visível; reduzir apenas o espaço disponível não sobrescreve a largura salva. Os controles de redimensionar e recolher usam a mesma cor de foco de teclado que o restante do tema selecionado.
 
@@ -69,7 +69,7 @@ e a dica **Anexar um arquivo**. Os cartões de arquivos ficam numa faixa própri
 as respostas seguem na coluna da conversa.
 
 O chat é do Zeca: com ele desligado (**Settings → Flock & Zeca → Zeca**) não há Chat nem
-microfone do Chat, e arquivos soltos na ilha não são aceitos. O [ditado local independente](dictation.md#global-dictation-first-slice)
+microfone do Chat, e arquivos soltos na ilha não são aceitos. O [ditado local independente](dictation.md#dictate-into-any-app)
 continua funcionando, inclusive sua tecla de fala. Veja [Sem o Zeca](island.md#without-zeca).
 Altere as teclas globais em Configurações do Sistema → Atalhos; Settings > General mostra os
 vínculos informados pelo desktop.
@@ -250,7 +250,7 @@ tanto no Nest quanto na ilha.
   palavras, ou quando você clica de novo; as palavras caem no campo de entrada para você ler e
   corrigir, e aí **Enter** as envia. O silêncio antes de você começar nunca o interrompe; se uma
   pausa o interromper, clique de novo para continuar.
-- **Ctrl+Alt+V** sempre usa o [ditado independente](dictation.md#global-dictation-first-slice),
+- **Ctrl+Alt+V** sempre usa o [ditado independente](dictation.md#dictate-into-any-app),
   mesmo com o Chat em foco. Nunca abre o Chat nem inicia este microfone. Use o botão de microfone
   para preencher diretamente este rascunho; o ditado independente segue seu caminho normal de
   cópia/inserção.

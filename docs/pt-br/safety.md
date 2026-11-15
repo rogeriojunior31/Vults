@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: 6c53c3c00ffb -->
+<!-- source: d14f045998f1 -->
 
 O que o Vults promete:
 
@@ -50,12 +50,12 @@ O que o Vults promete:
 - **A voz do Chat grava apenas na memória.** A voz do Chat fica desligada até você baixar um
   modelo; depois o mic grava só na memória enquanto o botão dele está vermelho (no máximo um minuto), e
   o whisper.cpp transcreve neste computador. O áudio do Chat e do ditado nunca é salvo nem enviado para lugar nenhum.
-- **Perguntas de texto exigem um Enviar humano separado.** No Linux, o `ask_user` da M7 aceita apenas
+- **Perguntas de texto exigem um Enviar humano separado.** No Linux, a ferramenta `ask_user` do Zeca aceita apenas
   um solicitante ativo verificado. Clientes externos precisam do consentimento separado em Ditado > Agentes,
   desligado por padrão; o servidor exclusivo de perguntas não tem ferramentas de bando ou memória. A resposta é consumida uma vez e auditada
   sem uma segunda cópia do texto, antes da entrega. Sair, bloquear, expirar e desconectar invalidam
   rascunhos pendentes; uma resposta consumida nunca é reenviada após uma entrega incerta. Ela nunca
-  responde a uma permissão. O [ditado em perguntas de agentes](guide/dictation.md#agent-question-dictation)
+  responde a uma permissão. O [ditado em perguntas de agentes](guide/voice.md#answer-an-agents-question)
   começa somente pela tecla física e edita o rascunho por transcrição local, somente na memória.
   Desativar o acesso externo invalida perguntas pendentes; reativar não as retoma. Alterar a
   configuração de agentes exige seu próprio diff, backup e clique. Um agente não pode abrir o mic
@@ -68,7 +68,7 @@ O que o Vults promete:
   **Salvar reunião** mantém explicitamente uma cópia somente de texto da transcrição e das notas
   concluídas atuais; não há arquivo de áudio. Apagar todo o histórico também remove reuniões salvas,
   enquanto arquivos exportados permanecem como cópias independentes. Veja
-  [Reuniões salvas e exportação](guide/dictation.md#saved-meetings-and-export). O backend de resumos tem consentimento próprio,
+  [Reuniões salvas e exportação](guide/meetings.md#saved-meetings-and-export). O backend de resumos tem consentimento próprio,
   desligado por padrão, e envia apenas o texto da transcrição ao modelo escolhido do chat por API,
   sem ferramentas e com prazo de 120 segundos. Ative em Ditado > Configurações de reuniões e
   depois escolha explicitamente Gerar resumo na aba Resumo; gravar/transcrever sozinho nunca pede
@@ -79,7 +79,7 @@ O que o Vults promete:
   escreve no histórico de comandos nem envia ao Chat. A busca de aplicativos exige a opção já
   existente. Reconhecimento não verifica disponibilidade nativa. Silenciar notificações do projeto,
   áudio do reprodutor selecionado e saída padrão do computador são escopos separados
-  ([Comandos de voz](guide/dictation.md#voice-commands-development-status)).
+  ([Comandos de voz](guide/voice.md#voice-commands)).
 - **O Now playing fica desligado até você ligar.** Aí o app lê seus players de mídia pelo
   session bus (MPRIS no Linux) para mostrar a música; isso nunca é guardado nem enviado para lugar nenhum.
 - **O que o app pede por conta própria passa por um portão só.** Uma requisição feita sem um

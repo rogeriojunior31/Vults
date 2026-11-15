@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 7ecafa61a501 -->
+<!-- source: d8357290327d -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -35,7 +35,7 @@ As aves encenam o que as sessões fazem: leem, bicam o fio enquanto editam, leva
 abrem as asas quando uma permissão espera (com uma marca sobre a cabeça; ao amanhecer as aves
 em descanso abrem as delas ao sol, sem marca). Sessões novas chegam voando; as que terminam vão embora.
 Com movimento reduzido, elas ficam nos poleiros. **Settings → Flock & Zeca** escolhe o conjunto de espécies,
-a espécie do Zeca e os visitantes raros. [Animações](../ANIMATIONS.md) lista cada clipe.
+a espécie do Zeca e os visitantes raros. [Animações](../contributing/animations.md) lista cada clipe.
 
 <a id="zecas-seasonal-looks"></a>
 
@@ -59,7 +59,7 @@ fio, cards de permissão e de pergunta, os atalhos de Allow / Deny, notificaçõ
 predefinições. O que vai com ele:
 
 - O chat, sua aba, os arquivos soltos na ilha, o Chat do Nest, o *Chat…* da bandeja e o microfone
-  do Chat. O [ditado independente](dictation.md#global-dictation-first-slice) e seu atalho continuam
+  do Chat. O [ditado independente](dictation.md#dictate-into-any-app) e seu atalho continuam
   disponíveis. Os medidores de uso ficam: eles leem as assinaturas dos seus agentes.
 - O olá dele na inicialização.
 - O lugar dele no fio: a sessão da frente fica ali como a própria ave, e sem ninguém rodando a pílula
@@ -363,7 +363,7 @@ A navegação de painéis do WezTerm exige `WEZTERM_PANE` e `WEZTERM_UNIX_SOCKET
 O Vults usa apenas esse socket local do mesmo usuário, ignora a configuração Lua e nunca inicia
 nem descobre outro servidor. Uma sessão antiga sem o socket ainda pode abrir sua janela nos
 desktops compatíveis; fora deles, **Abrir terminal** fica indisponível até um evento do hook trazer
-os metadados. Isso serve apenas para navegação: o [ditado](dictation.md#exact-tmux-session-delivery)
+os metadados. Isso serve apenas para navegação: o [ditado](dictation.md#where-the-text-goes)
 direto no WezTerm continua na área de transferência.
 
 Quando não há nada para trazer, o card avisa. Uma sessão iniciada no terminal do VS Code ou do Cursor
@@ -376,10 +376,10 @@ Os atalhos globais funcionam de qualquer janela:
   ([Aprovações](approvals.md)).
 - **Ctrl+Alt+J** / **Ctrl+Alt+K** põem a próxima ou a anterior sessão na frente. Um card esperando
   fica na frente; as teclas escolhem quem vem depois dele.
-- **Ctrl+Alt+V**, segurado, inicia o [ditado independente](dictation.md#global-dictation-first-slice)
+- **Ctrl+Alt+V**, segurado, inicia o [ditado independente](dictation.md#dictate-into-any-app)
   em qualquer app em foco, inclusive o Vults. Nunca abre o Chat; use seu botão de microfone para ditar no rascunho. **Ctrl+Alt+X** cancela a voz;
   **Ctrl+Alt+B** copia novamente o último ditado.
-- **Ctrl+Alt+Z**, segurado por pelo menos 300 ms, fala um [comando de voz local](dictation.md#voice-commands-development-status)
+- **Ctrl+Alt+Z**, segurado por pelo menos 300 ms, fala um [comando de voz local](voice.md#voice-commands)
   para o Vults, inclusive com o Zeca desligado. Nunca digita em outro aplicativo nem responde a cards.
 - **Ctrl+Alt+1**, **Ctrl+Alt+2** e **Ctrl+Alt+3** trocam para Mini, Quick e Room.
 - **Ctrl+K**, na ilha aberta ou no Nest, abre a [paleta](nest.md).

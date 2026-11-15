@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Fails when a crate depends on a higher layer (docs/architecture.md, "Layers"):
+# Fails when a crate depends on a higher layer (docs/contributing/architecture.md, "Layers"):
 # base < Core < Connect < Experience. Normal and build dependencies count, per target too
 # (`[target.'cfg(...)'.dependencies]`); dev-dependencies do not: tests may reach further.
 # Reads `cargo metadata` rather than the manifests, so no table form is missed.
@@ -12,7 +12,7 @@ layer() {
     protocol | peer | ipc | core | hook | agents | agent-config | store) echo 1 ;;
     connectors | chat | audio | voice | dictation | media | zeca | link | relay | evals | spike) echo 2 ;;
     platform | app) echo 3 ;;
-    *) echo "check-layers: crate '$1' has no layer: add it here and in docs/architecture.md" >&2; exit 1 ;;
+    *) echo "check-layers: crate '$1' has no layer: add it here and in docs/contributing/architecture.md" >&2; exit 1 ;;
   esac
 }
 

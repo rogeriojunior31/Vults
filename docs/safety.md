@@ -47,12 +47,12 @@ What Vults promises:
 - **Chat voice uses memory-only recording.** Chat voice is off until you download a
   model; then the mic records into memory only while its button is red (a minute at most), and
   whisper.cpp transcribes it on this computer. Chat and dictation audio are never saved or sent anywhere.
-- **Text questions require a separate human Send.** On Linux, M7's `ask_user` accepts only a
+- **Text questions require a separate human Send.** On Linux, Zeca's `ask_user` tool accepts only a
   verified live requester. External clients need their own default-off Dictation > Agents consent;
   their question-only server has no flock or memory tools. The reply is consumed once and audited without a second
   copy of its text, before delivery. Leaving, lock, expiry and disconnection revoke pending drafts;
   a consumed reply is never retried after an uncertain delivery. It never answers a permission.
-  [Agent-question dictation](guide/dictation.md#agent-question-dictation) starts only on a physical
+  [Agent-question dictation](guide/voice.md#answer-an-agents-question) starts only on a physical
   key and edits the draft through local, memory-only transcription. Turning external access off
   revokes pending questions; turning it on again cannot resume them. Agent configuration changes
   require their own diff, backup and click. An agent cannot open the mic or enable voice via MCP config.
@@ -63,7 +63,7 @@ What Vults promises:
   the screen cancels pending work and discards unsaved text. **Save meeting** explicitly keeps a
   text-only snapshot of the current transcript/completed notes; no audio archive exists. Clear all
   history removes saved meetings too, while exported files remain independent copies. See
-  [Saved meetings and export](guide/dictation.md#saved-meetings-and-export). The summary backend has independent, default-off consent and sends only
+  [Saved meetings and export](guide/meetings.md#saved-meetings-and-export). The summary backend has independent, default-off consent and sends only
   transcript text through the selected API chat model, with no tools and a 120-second deadline.
   Enable it in Dictation > Meeting settings, then explicitly choose Generate summary on the
   Summary tab; recording/transcribing alone never requests a summary. Canceling notes or a failed request leaves the local transcript intact.
@@ -71,7 +71,7 @@ What Vults promises:
   parser and name resolver as spoken commands. It does not record audio, answer cards, run actions,
   write command history or send to Chat. Application-name matching requires its existing opt-in.
   Recognition does not verify native availability. Project notification mute, selected-player audio
-  and default computer output are separate scopes ([Voice commands](guide/dictation.md#voice-commands-development-status)).
+  and default computer output are separate scopes ([Voice commands](guide/voice.md#voice-commands)).
 - **Now playing is off until you turn it on.** Then the app reads your media players over the
   session bus (MPRIS on Linux) to show the song; it is never stored or sent anywhere.
 - **What the app asks on its own goes through one gate.** A request made without a click at that

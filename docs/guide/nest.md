@@ -376,7 +376,7 @@ turns one on ([Connectors](connectors.md)).
 
 ## Dictation
 
-The fifth tab opens [dictation history](dictation.md#dictation-history), including with Zeca off.
+The fifth tab opens [dictation history](dictation.md#history), including with Zeca off.
 The shared navigation groups History, Voice commands, Dictionary and Snippets with separate
 configuration pages: Voice, Keyboard shortcuts, Command settings, Vocabulary, Styles, Paste,
 Privacy and Diagnostics. The shared transcription model/language editor lives in Voice; Chat
@@ -384,4 +384,4 @@ links there. Configuration keeps its privileged webview; transcripts stay in Nes
 Statistics opens Activity > Dictation. Narrow windows use a labeled page picker; the content
 scrolls independently. History search, disclosures, drafts and reading position survive size
 changes. Erasing transcripts keeps measured usage and Your words preferences. See
-[Your words processing](dictation.md#your-words-processing).
+[Your words processing](dictation.md#your-words).

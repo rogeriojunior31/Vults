@@ -139,7 +139,7 @@ inventory or metadata errors fail the command. `physical_acceptance` is always f
 
 ## Recorded evidence and limits
 
-The [2026-10-19 fixture](../../crates/spike/fixtures/echo-cancellation-2026-10-19.json) records three
+The [2026-10-19 fixture](../../../crates/spike/fixtures/echo-cancellation-2026-10-19.json) records three
 consecutive runs, source fingerprints and installed versions: PipeWire 1.6.9, WirePlumber 0.5.18
 and WebRTC audio processing 1.3. All three passed the fixed synthetic gate. The result supports
 continuing with the native PipeWire engine; no extra AEC crate is justified by this experiment.
@@ -168,7 +168,7 @@ It changes only private defaults/routes/modules and tests actual capture/target 
 full drain, interrupted cursor freeze, another response after stop, refusal of manual moves,
 revocation when an internal AEC connection moves, explicit headphones/speaker policy, module removal,
 stale selection refusal and native lease release. The
-[2026-10-20 fixture](../../crates/spike/fixtures/duplex-routing-2026-10-20.json) records three final
+[2026-10-20 fixture](../../../crates/spike/fixtures/duplex-routing-2026-10-20.json) records three final
 consecutive passing runs, with source fingerprints from commit `86d6b80d`. Pure and native-owner
 regressions additionally cover silence spans,
 latency/corrupt clocks, admission revocation, worker-held references and stale interruption evidence.

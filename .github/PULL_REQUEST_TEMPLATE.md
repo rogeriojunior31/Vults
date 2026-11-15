@@ -4,7 +4,7 @@
 
 ## Layer
 
-<!-- Core, Connect, Experience, docs, CI. See docs/architecture.md, "Layers". -->
+<!-- Core, Connect, Experience, docs, CI. See docs/contributing/architecture.md, "Layers". -->
 
 ## Checks
 

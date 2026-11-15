@@ -4,7 +4,7 @@
 
 import { clipLength, frameAt, frameWidth, type Clip, type Frame, type SpriteSet } from "./sprites";
 
-/** A clip plays at least this long before a non-urgent change (docs/ANIMATIONS.md). */
+/** A clip plays at least this long before a non-urgent change (docs/contributing/animations.md). */
 const MIN_MS = 600;
 /** States a human must see now. */
 const URGENT = new Set(["approval", "question", "fail"]);

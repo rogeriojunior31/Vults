@@ -20,4 +20,4 @@ same qualified native runtime/settings. An older runtime produced a different pr
 identical features; these scores are version-specific numerical oracles, not endpoint-quality labels.
 Do not weaken tolerances or replace fixtures with Rust-produced results.
 
-[Artifact pins, licenses and native qualification](../../../../../docs/reference/semantic-turn-model.md).
+[Artifact pins, licenses and native qualification](../../../../../docs/dev/internals/semantic-turn-model.md).

@@ -147,7 +147,7 @@ export function dress<T extends SpriteSet>(set: T, id: string | null): T {
   return out;
 }
 
-/** How Settings and the island's picker name and group the looks (in English, marked for `t()`) (docs/ANIMATIONS.md, Looks):
+/** How Settings and the island's picker name and group the looks (in English, marked for `t()`) (docs/contributing/animations.md, Looks):
  *  the calendar's choice and none, the four seasonal looks, the ones worn on the head only, and
  *  the ones with something hanging from the neck. Ids are `crates/core/src/looks.rs`'s `Outfit`. */
 export const LOOK_GROUPS: { title: string; looks: { value: string; label: string }[] }[] = [

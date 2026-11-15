@@ -70,7 +70,7 @@ read in the conversation column.
 
 The chat is Zeca's: with him turned off (**Settings → Flock & Zeca → Zeca**) there is no Chat
 or Chat microphone, and files dropped on the island are not taken. Independent
-[local dictation](dictation.md#global-dictation-first-slice) still works, including its talk key.
+[local dictation](dictation.md#dictate-into-any-app) still works, including its talk key.
 See [Without Zeca](island.md#without-zeca). Change the global keys in System Settings → Shortcuts;
 Settings > General shows the bindings the desktop reports.
 
@@ -223,7 +223,7 @@ and *Large v3 Turbo* understand accents and names better). A mic appears beside 
 - Click the mic and speak. It stops by itself after about 1.5 s of quiet after your words, or when
   you click again; the words land in the input for you to read and fix, then **Enter** sends them.
   Silence before you start never stops it; if a pause does, click again to go on.
-- **Ctrl+Alt+V** always uses [independent dictation](dictation.md#global-dictation-first-slice),
+- **Ctrl+Alt+V** always uses [independent dictation](dictation.md#dictate-into-any-app),
   even while Chat has focus. It never opens Chat or starts this microphone. Use the microphone
   button to fill this draft directly; independent dictation follows its normal copy/insertion path.
 - In Room or Full, the microphone's waveform and speech preview stay in that window. Leaving

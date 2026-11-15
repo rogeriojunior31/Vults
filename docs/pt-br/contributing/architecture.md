@@ -1,5 +1,5 @@
 # Arquitetura
-<!-- source: 971702c52de3 -->
+<!-- source: dd40c71a386b -->
 
 O acompanhamento de agentes flui num só sentido, por um único loop de execução:
 
@@ -29,11 +29,11 @@ mais baixa; `scripts/check-layers.sh` verifica isso na CI (os testes podem ir al
 | base | `brand`, `secrets` | O nome, o chaveiro do sistema |
 
 Só o `app` liga as camadas entre si: Connect nunca chama Experience, e Core não conhece nenhuma das duas.
-Isso mantém barata uma superfície nova (ela desenha `State::view` e envia intents, [ADR 0006](adr/0006-surfaces.md))
-e mantém o Zeca opcional ([ADR 0005](adr/0005-zeca.md)): ele usa Chat, Voice e
+Isso mantém barata uma superfície nova (ela desenha `State::view` e envia intents, [ADR 0006](../adr/0006-surfaces.md))
+e mantém o Zeca opcional ([ADR 0005](../adr/0005-zeca.md)): ele usa Chat, Voice e
 Connect, e nenhum deles sabe que ele existe. O corpo dele fica em Experience; o cérebro é o
 crate `zeca` em Connect, que lê o bando mas nunca responde a uma permissão
-([ADR 0005](adr/0005-zeca.md)).
+([ADR 0005](../adr/0005-zeca.md)).
 
 | Crate | Papel | Não pode usar |
 |---|---|---|
@@ -113,7 +113,7 @@ A admissão compartilhada `model_file` mantém os bytes exatos, e `onnx::Runtime
 responsável nativo por diarização e turnos semânticos. Admissão interativa cancelável, prazos por
 quadro no pré-processamento e encerramento via RunOptions respeitam o orçamento restante do token
 da política. A construção do modelo/sessão nativa não promete aborto imediato. Não há chamada no app,
-download, opção em Configurações ou captura nova. Veja [Modelo semântico de fim de turno](reference/semantic-turn-model.md)
+download, opção em Configurações ou captura nova. Veja [Modelo semântico de fim de turno](../../dev/internals/semantic-turn-model.md)
 para origem BSD-2-Clause, pins exatos, comandos de qualificação e critérios pendentes de fala/latência/plataforma.
 
 A V6.3.1 acrescenta `store::money` (migração 28): reservas em micro-USD inteiros e conciliação única
@@ -136,7 +136,7 @@ efetiva, uma tentativa vinculada ao identificador da resposta e recibos únicos 
 desconhecido, eventos antigos/grandes demais e configuração alterada não reabrem um responsável nem
 reembolsam sua reserva. Texto/áudio em cache têm preços separados; excessos conhecidos ficam visíveis
 integralmente. A cassette sintética é offline; não adiciona chamada ao provedor, microfone nem
-autoridade de permissão. Veja [Contabilidade realtime](reference/realtime-accounting.md) para fontes
+autoridade de permissão. Veja [Contabilidade realtime](../../dev/internals/realtime-accounting.md) para fontes
 das tarifas, demonstração do teto, expiração da qualificação e validação em execução ainda obrigatória.
 
 A V6.3.3 acrescenta provedor WebSocket TLS de origem fixa, canais limitados de PCM em streaming e gate
@@ -162,7 +162,7 @@ envio automático ao Chat ou gravação de histórico. Cancelamento/revogação 
 mudanças compartilhadas revogam gerações sob a trava das Configurações e workers de decodificação
 mantêm a concessão nativa após o prazo. A espera local é limitada, mas a carga fria nativa continua
 cooperativa. Captura/reprodução e continuação visual ficam na V6.4-V6.7. Veja
-[Contabilidade realtime](reference/realtime-accounting.md#native-turn-retention-and-local-text).
+[Contabilidade realtime](../../dev/internals/realtime-accounting.md#native-turn-retention-and-local-text).
 
 A V6.4.1 acrescenta a saída independente `audio::playback` e a contabilidade pura
 `voice::turn::heard`. Um worker CPAL limitado reamostra PCM16 a 24 kHz, distingue frames na fila,
@@ -178,7 +178,7 @@ interrompida; histórico sem confirmação do servidor é explicitamente não si
 retomar o proprietário. A saída nativa desacoplada mantém a concessão da sessão. Não há microfone,
 entrada do renderer nem gravação persistente de histórico do Chat; interrupção por fala continua
 desligada na entrada do app até a V6.5. Veja
-[Reprodução nativa e reparo de contexto](reference/realtime-accounting.md#native-playback-and-context-repair)
+[Reprodução nativa e reparo de contexto](../../dev/internals/realtime-accounting.md#native-playback-and-context-repair)
 para limites, premissas de relógio, testes ALSA nulos isolados e a aceitação física/real pendente.
 
 A V6.5.1 acrescenta o inventário somente de leitura `audio::echo` para pares de módulos WebRTC do
@@ -194,7 +194,7 @@ a rota também limpa evidências retidas de interrupção. A captura limitada re
 chamador nativo; não é enviada nem salva automaticamente. O caminho CPAL padrão continua sem
 interrupção. Não há carregador de módulos de produção, entrada do renderer nem ativação visível
 de captura. O backend da V6.5 está entregue; ferramentas na V6.6 e captura/interface na V6.7 vêm
-a seguir. Veja [Cancelamento de eco](reference/echo-cancellation.md) para o teste privado de
+a seguir. Veja [Cancelamento de eco](../../dev/internals/echo-cancellation.md) para o teste privado de
 roteamento nativo e os limites restantes de aceitação física/real.
 
 A V6.6.1 encaminha transcrições locais finalizadas ao dispatcher de comandos da V8 antes do envio
@@ -209,7 +209,7 @@ enfileirado verifica novamente chamador/autoridade/prazo e mantém a concessão 
 exige transcrição limitada da mesma captura; texto ausente falha antes de construir o provedor e
 oferece apenas recuperação revisável. Não há ativação de renderer/montagem de captura, ferramenta
 do modelo nem consulta. Veja
-[Admissão de comandos locais](reference/realtime-accounting.md#local-commands-before-realtime-upload).
+[Admissão de comandos locais](../../dev/internals/realtime-accounting.md#local-commands-before-realtime-upload).
 
 A V6.6.2 fornece ao realtime as cinco leituras existentes do bando em cache por especificações
 congeladas e confirmadas. Respostas de função em sequência têm argumentos limitados, verificação
@@ -218,7 +218,7 @@ de cada continuação e leitura; envelopes inertes de sucesso/erro têm limite a
 Recibos de ferramentas liberam a entrada original sem concluir a reprodução; a fala final mantém
 sua própria identidade/histórico. Chamadas consumidas não viram recuperação nem repetição automática.
 Não há ferramenta de ação/permissão nem ativação visível. Veja
-[Ferramentas realtime somente de leitura](reference/realtime-accounting.md#read-only-tools-in-realtime).
+[Ferramentas realtime somente de leitura](../../dev/internals/realtime-accounting.md#read-only-tools-in-realtime).
 
 A V6.6.3 pode acrescentar perguntas textuais `consult_claude` e `consult_codex`, com consentimentos
 separados, a esse registro nativo. Cada provedor tem opção própria desligada por padrão e cota
@@ -234,7 +234,7 @@ pela CLI; não herda sessão ativa de agente nem permissões do Chat. Um prazo o
 preparação e saída do processo, com aviso nativo traduzido após 1,5 segundo; a posse da vaga/voz
 sobrevive a trabalho que não pode ser interrompido. Respostas são dados externos inertes. Políticas
 gerenciadas da CLI continuam valendo. Vínculo com a assinatura, qualificação de cliente real/gerenciado e controles visíveis seguem em aberto.
-Veja [Consulta textual](reference/realtime-accounting.md#text-consultation).
+Veja [Consulta textual](../../dev/internals/realtime-accounting.md#text-consultation).
 
 <a id="local-dictation"></a>
 
@@ -507,15 +507,15 @@ final, Chat, capacidades de inserção e passagem de rede não mudam.
 
 O renderizador cuida do Histórico e das indicações temporárias, não da inserção nativa nem da
 alteração de configurações. Comandos exclusivos de Configurações verificam o label do webview
-chamador antes de salvar. O [guia de ditado](guide/dictation.md#supported-destinations) lista os
-destinos realmente compatíveis; a [ADR 0002](adr/0002-permissions.md) e a [ADR 0002](adr/0004-network-and-secrets.md#voice-and-audio)
+chamador antes de salvar. O [guia de ditado](../guide/dictation.md#where-the-text-goes) lista os
+destinos realmente compatíveis; a [ADR 0002](../adr/0002-permissions.md) e a [ADR 0002](../adr/0004-network-and-secrets.md#voice-and-audio)
 registram os limites de permissão e privacidade.
 
 <a id="meaning-in-core-look-in-the-surface"></a>
 
 ## Significado no core, aparência na superfície
 
-A view diz o que as coisas significam, para que todas as superfícies concordem ([ADR 0006](adr/0006-surfaces.md)).
+A view diz o que as coisas significam, para que todas as superfícies concordem ([ADR 0006](../adr/0006-surfaces.md)).
 Cada sessão carrega a sua `attention`, um nível ordenado (`quiet` < `info` < `done` < `failed` <
 `needs-you`), e a view carrega o maior deles; `card` marca a sessão cujo card é o primeiro
 da fila e ainda espera por ele. A ilha só escolhe a aparência: que som cada nível faz, e
@@ -551,7 +551,7 @@ Um pedido de permissão mantém a conexão aberta. O servidor só espera por um 
 do app pegou o pedido e o `core` enfileirou o card dele (`Effect::AckPermission`). Se o app estiver
 travado ou não estiver escutando, o agente recebe a resposta (silêncio, então ele pergunta no terminal) em
 800 ms em vez de dois minutos. A ilha abre num card enfileirado e fica aberta até ele ser
-respondido; nenhum modo de presença pode escondê-lo depois de confirmado ([ADR 0006](adr/0006-surfaces.md)).
+respondido; nenhum modo de presença pode escondê-lo depois de confirmado ([ADR 0006](../adr/0006-surfaces.md)).
 
 <a id="why-only-core-produces-a-decision"></a>
 
@@ -560,7 +560,7 @@ respondido; nenhum modo de presença pode escondê-lo depois de confirmado ([ADR
 `core::reduce` transforma um evento `PermissionRequested` em estado pendente, e só o clique de um humano
 transforma estado pendente num effect `RespondPermission`: `Intent::Decide` (Allow, Deny) ou
 `Intent::DecideAlways`, que também salva uma regra. Uma regra salva só responde a um pedido que bate com
-ela exatamente: o mesmo agente, pasta, ferramenta e alvo ([ADR 0002](adr/0002-permissions.md)). Uma pergunta
+ela exatamente: o mesmo agente, pasta, ferramenta e alvo ([ADR 0002](../adr/0002-permissions.md)). Uma pergunta
 (`QuestionAsked`) espera do mesmo jeito, e só um `Intent::Answer` que se encaixe nas perguntas dela a transforma
 num effect `AnswerQuestion`. Um teste alimenta
 todas as outras entradas em todas as ordens e verifica que nenhuma delas responde.
@@ -580,7 +580,7 @@ sem conteúdo ser persistida, enquanto continua processando invalidações. O re
 descarregar a resposta MCP no fluxo; falha/perda de confirmação nunca reutiliza o texto consumido.
 Cards de permissão têm prioridade. Só o webview dono da ilha/Nest pode editar ou confirmar; bloquear,
 navegar, sair, expirar e desconectar invalidam o trabalho pendente e conclusões tardias.
-A regra do rascunho de pergunta da [ADR 0002](adr/0002-permissions.md) (um rascunho ditado só é enviado por um clique) também
+A regra do rascunho de pergunta da [ADR 0002](../adr/0002-permissions.md) (um rascunho ditado só é enviado por um clique) também
 é implementada por uma gravação local iniciada somente pela tecla física, vinculada ao token da
 pergunta ativa e ao identificador da gravação. `vults_dictate` é um alias da mesma troca tipada de
 `ask_user`. A captura usa o microfone e o transcritor local em cache existentes, com verificações de
@@ -629,7 +629,7 @@ agente faria), um comando e o fim. Passe o seu próprio arquivo JSONL (um JSON d
 ## Decisões
 
 Por que o app é construído assim (só Rust, as regras de segurança, um core para todas as superfícies, Zeca
-opcional, regras antes de modelos) está nos [registros de decisão](adr/README.md).
+opcional, regras antes de modelos) está nos [registros de decisão](../adr/README.md).
 
 <a id="documentation"></a>
 

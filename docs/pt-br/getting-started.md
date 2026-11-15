@@ -1,13 +1,13 @@
 # Primeiros passos
-<!-- source: 08bae6392664 -->
+<!-- source: 772c9aaeb353 -->
 
 <a id="install"></a>
 
 ## Instalação
 
 As releases trazem um `.deb` e um `.rpm` (Ubuntu 22.04, Debian 12, Fedora e mais novos) e um
-instalador de prévia para Windows (ainda sem atalhos globais, notificações do desktop, Open terminal
-nem os presets da bandeja). Por enquanto não há AppImage. Baixe-os da
+instalador de prévia para Windows (reuniões, a conversa com o Zeca, digitar em terminais e alguns
+outros recursos ainda são só do Linux). Por enquanto não há AppImage. Baixe-os da
 [release mais recente](https://github.com/rogeriojunior31/Vults/releases/latest) e confira um download
 com `sha256sum -c SHA256SUMS --ignore-missing`. Para conferir que ele foi gerado pelo workflow de release
 deste repositório: `gh attestation verify <arquivo> --repo rogeriojunior31/Vults`.
@@ -38,54 +38,12 @@ e outros compositores com layer-shell, a ilha fica na borda de cima como um pain
 uma janela comum, sempre por cima. **Settings → General → Start with the desktop** abre o Vults
 quando você entra na sessão.
 
-<a id="windows-development-checkout"></a>
-### Checkout de desenvolvimento no Windows
+<a id="on-windows"></a>
 
-O instalador publicado para Windows continua sendo uma prévia. Este checkout de desenvolvimento
-acrescenta regiões de entrada nativas, foco do teclado, atalhos globais de navegação, abertura pela
-bandeja, seleção de monitor e a janela compartilhada entre Sala e Configurações. Ele também acompanha
-processos de sessão do mesmo usuário, observa o bloqueio da tela e lê/controla sessões de mídia do
-Windows. O Linux mantém suas integrações existentes com o desktop.
+### No Windows
 
-Instale estes pré-requisitos juntos: Node.js 22 ou uma LTS compatível mais nova, Rust para
-`x86_64-pc-windows-msvc`, Visual Studio com **Desenvolvimento para desktop com C++** (MSVC x64/x86,
-SDK do Windows e ferramentas CMake/Ninja), LLVM com `libclang.dll` e Microsoft Edge WebView2 Runtime.
-Defina `LIBCLANG_PATH` para a pasta `bin` do LLVM se ele estiver instalado em outro lugar. O
-inicializador aceita Visual Studio Insiders; o Ninja evita seus problemas de descoberta de
-instância no CMake.
-
-Na raiz do repositório:
-
-```bat
-scripts\dev-windows.cmd --check
-npm ci
-scripts\dev-windows.cmd
-```
-
-A checagem informa as ferramentas ausentes antes de compilar. O inicializador muda apenas seu
-próprio ambiente. Se uma compilação anterior guardou outro gerador CMake no cache, execute
-`cargo clean -p whisper-rs-sys` uma vez.
-
-O inicializador ativa o recurso de compilação `voice-vulkan` quando os cabeçalhos do Vulkan SDK,
-`glslc` e `vulkan-1.lib` estão disponíveis por `VULKAN_SDK`, `C:\VulkanSDK` ou
-`target/local-tools/vulkan`. Use `scripts\dev-windows.cmd --gpu` para exigir essa compilação,
-ou `--cpu` como alternativa pela CPU. O SDK é uma dependência de compilação; a execução usa o
-driver Vulkan do fabricante da GPU. O inicializador informa a compilação escolhida antes de abrir.
-Compilações com GPU mapeiam temporariamente uma unidade livre de V a Z para seu cache local no
-checkout, evitando o limite de caminhos do gerador de shaders do MSVC, e removem esse mapeamento
-ao encerrar normalmente o inicializador. Um `CARGO_TARGET_DIR` explícito mantém seu dono e caminho existentes.
-A primeira compilação com GPU pode levar vários minutos; isso é separado da latência de transcrição.
-
-Compile o instalador do Windows com `npm run bundle:windows -- --bundles nsis`. Esse comando sempre
-ativa Vulkan; a ausência do SDK nunca produz silenciosamente um instalador exclusivo de CPU. Ele
-prepara ferramentas do SDK e um loader Vulkan x64 com versões fixas e SHA-256 verificado, sem executar
-seus instaladores nem alterar drivers do sistema. O loader e sua licença acompanham o Vults, portanto
-os usuários finais não precisam do SDK. O app usa transcrição pela CPU quando não há dispositivo
-Vulkan compatível. O empacotamento extrai o conteúdo do NSIS, confere app/hook/loader/licença com a
-compilação e verifica o executável empacotado normalmente e com a descoberta de drivers desativada.
-A verificação (`vults.exe --voice-backend-check`) termina antes de abrir perfis, janelas ou microfones.
-O instalador verificado é copiado para `target/release/bundle/nsis`, inclusive quando o cache está
-em outra unidade. O CI de releases usa o mesmo comando e registra o relatório de verificação.
+O instalador do Windows é uma prévia. Para compilar o Vults no Windows, veja
+[Desenvolvimento no Windows](contributing/windows-development.md).
 
 Os atalhos do Windows usam teclas que não escrevem caracteres para preservar o AltGr:
 **Ctrl+Alt+Space** abre a ilha; **Ctrl+Alt+Left/Right** muda a sessão; **Ctrl+Alt+F1/F2/F3** seleciona
@@ -103,58 +61,9 @@ detecta outros atalhos globais registrados; atalhos internos/locais de um aplica
 detectados. Se uma escolha interferir em um deles, desative-a ou escolha outra combinação aqui.
 O Linux mantém seu editor de atalhos do desktop.
 
-Selecione um modelo local instalado em **Configurações → Chat e voz**. Segure o atalho de ditado ou
-comando para gravar e solte para transcrever. A gravação começa apenas pelo seu atalho; os mesmos
-gestos configuráveis de toque/toque duplo se aplicam. O ditado copia o texto por padrão. A inserção
-opcional aceita campos nativos Edit/RichEdit reconhecidos, fixa o processo e a geração do foco e
-preserva a área de transferência. Campos de senha/somente leitura, navegadores, terminais e mudanças
-de foco usam a cópia para colagem manual. Nunca pressiona Enter. Os comandos de voz no Windows
-permitem navegar no Vults e reproduzir/pausar/voltar/avançar no player selecionado, com as opções
-de consentimento existentes. Abrir aplicativos, volume do computador/player, redução da música e os
-gestos de Espaço/Escape exclusivos do X11 continuam indisponíveis. A voz nunca concede permissões
-a um agente. Bloquear a tela ou revogar o consentimento cancela a gravação.
-
-A navegação de sessões no Windows descobre o ancestral mais próximo do mesmo usuário que possui
-uma janela visível. O horário de criação do agente é fixado quando a sessão é observada e conferido
-novamente na ativação. Várias janelas de um editor exigem uma correspondência única com o nome da
-pasta do projeto no título; destinos ambíguos ou ilegíveis mantêm a ação de abrir a pasta. Destinos
-minimizados são restaurados, e o Windows precisa confirmar a mudança do primeiro plano. Nenhuma
-tecla é enviada. Um console clássico cujo dono da janela está fora da ancestralidade do agente
-mantém a alternativa da pasta. A aceitação com Windows Terminal/editores e a política de primeiro
-plano ainda exige teste no desktop.
-
-A ponte nativa de perguntas MCP, notificações do desktop, captura de reuniões e conversa de voz
-ao vivo ainda são exclusivas do Linux. A captura de microfone e a transcrição local do Chat são separadas do ditado
-global; a aceitação de microfone/modelo ainda exige teste com um dispositivo real. A emulação
-de escala do renderizador não comprova a aceitação de DPI nativo por monitor.
-
-A opção de mídia só consulta o sistema quando está ativada. Reproduzir/pausar e faixa anterior/próxima
-usam o player exibido; sessões duplicadas do aplicativo são recusadas para não controlar outra janela.
-O volume por player usa uma associação temporária explícita em **Configurações > Ditado > Configurações dos comandos > Aplicativo de áudio do player**.
-Ative comandos de voz, comandos de mídia por voz e Em reprodução; inicie a mídia, atualize os
-aplicativos de áudio e escolha o grupo correspondente no mixer. Isso afeta todo o grupo do aplicativo
-(incluindo abas do navegador), sem alterar o volume geral do computador. A associação não é salva;
-atualize e escolha novamente após mudanças no processo ou na saída. O bloqueio da tela é consultado
-a cada 500 ms; um estado ilegível nunca conta como desbloqueio. A presença do processo usa seu horário
-de criação para detectar reutilização de PID e nunca encerra uma sessão cujo dono não tenha sido
-observado antes. As conversas do Hermes mantêm seu ciclo de vida explícito, porque um worker do
-gateway pode terminar enquanto a conversa continua aberta.
-Os backends do Windows usam a [API de sessões de mídia](https://learn.microsoft.com/en-us/uwp/api/windows.media.control.globalsystemmediatransportcontrolssessionmanager)
-e os [indicadores de bloqueio da sessão](https://learn.microsoft.com/en-us/windows/win32/api/wtsapi32/ns-wtsapi32-wtsinfoex_level1_w) da Microsoft.
-
-O roteiro do Windows e os critérios de aceitação são:
-
-| Ordem | Módulo | Aceitação necessária antes de declarar suporte |
-| --- | --- | --- |
-| 1 | Sessões, hooks e métricas | Inicializadores exe/npm, wrappers cmd/PowerShell, caminhos com Unicode e espaços, saída do processo/reutilização de PID, identidade do dono de perguntas MCP nativas, desconhecido versus zero, tokens acumulados versus contexto atual, custo real versus estimado, semântica de tempo e relatórios antigos/reiniciados. Consultas de assinatura mantêm seus interruptores de rede separados. |
-| 2 | Notificações | Identidade registrada do aplicativo nas instalações e no desenvolvimento; substituição por sessão, retirada, ativação apenas para abrir, não perturbe, opção desligada, encerramento e falha do serviço de notificações. |
-| 3 | Foco, clipboard e inserção de texto | Entrega nativa em Edit/RichEdit implementada com testes de seleção Unicode e recusa de campos protegidos. A inserção direta preserva o clipboard. A aceitação mais ampla de editores/IME/destinos elevados e mudanças nativas de foco continua pendente. |
-| 4 | Ditado global e comandos de voz | Atalhos nativos básicos, captura no dispositivo selecionado e transcrição local implementados; os testes locais de fala/silêncio com Turbo passam. Navegação no Vults e comandos do player selecionado reutilizam as regras existentes de permissão. A aceitação de microfone físico, interrupção por bloqueio e revogação de consentimento continua pendente. |
-| 5 | Áudio e reuniões | Microfone WASAPI e loopback de saída, identidade/troca/desconexão do dispositivo, cancelamento por bloqueio ou saída da página, buffers limitados, gravação recuperável e transcrição local. Conversa ao vivo também exige testes de cancelamento de eco, interrupção e mudança de rota. |
-| 6 | Conclusão do desktop | Trazer o terminal existente exato, inventário de aplicativos instalados, volume por aplicativo e redução/restauração temporária da música; validar DPI nativo em vários monitores a 100/125/150/175/200%, reconexão, suspensão/retorno, início automático e atualizações instaladas. |
-
-Cada fase preserva o backend Linux e suas verificações de regressão. Testes automáticos com fixtures e
-emulação de escala não substituem a aceitação nativa com dispositivo, compositor, instalador ou vários monitores.
+Reuniões, a conversa com o Zeca, perguntas de agentes por MCP, as ferramentas de GitHub dos
+especialistas, digitar em terminais e na maioria dos apps, e abas de terminal no *Abrir terminal*
+ainda são só do Linux.
 
 <a id="connecting-your-agents"></a>
 

@@ -25,7 +25,7 @@ application to validate island states and clips.
 
 ## Where things go
 
-Read [docs/architecture.md](docs/architecture.md) first. In short: the domain is a pure
+Read [docs/contributing/architecture.md](docs/contributing/architecture.md) first. In short: the domain is a pure
 `reduce` in `crates/core`, every agent's specifics live in `crates/agents`, and a crate only
 depends on its own layer or a lower one (Core, Connect, Experience). A new agent follows
 [Adding an agent](docs/contributing/agents.md); a new connector,

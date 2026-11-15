@@ -156,7 +156,7 @@ CHANGELOG line. Every config write follows rule 3.
 
 ## How to work a task
 
-1. Read `CLAUDE.md`, `docs/architecture.md` and the ADRs the task touches.
+1. Read `CLAUDE.md`, `docs/contributing/architecture.md` and the ADRs the task touches.
 2. One branch, one PR per task; tests first; docs, UI strings in four languages and pt-BR docs in
    the same PR.
 3. Run *Before every commit* from `CLAUDE.md`, then a review pass.
