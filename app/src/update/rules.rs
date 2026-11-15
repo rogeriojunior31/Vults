@@ -94,7 +94,7 @@ pub fn should_check(now_ms: i64, last_check_ms: Option<i64>) -> bool {
 
 /// Whether the user let Vults look at its releases. Nothing is requested before `Yes`.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", tag = "state")]
+#[serde(rename_all = "camelCase", rename_all_fields = "camelCase", tag = "state")]
 pub enum Consent {
     #[default]
     Unasked,

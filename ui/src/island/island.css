@@ -267,6 +267,45 @@ body.still .compact.needs::after {
   flex: 1;
   min-width: 0;
 }
+/* The update question and notice: a title, one line of why, then their two chips. */
+.update-ask .digest-text,
+.update-notice .digest-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.update-ask strong,
+.update-notice strong {
+  font-weight: 600;
+}
+/* Release notes keep two lines; the question's privacy sentence always reads whole. */
+.update-line {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  color: var(--fg-dim);
+  font-size: var(--text-s);
+}
+.update-ask .update-line {
+  display: block;
+}
+.update-ask .look-chip,
+.update-notice .look-chip {
+  flex: none;
+  min-height: 28px;
+}
+.look-chip.primary {
+  background: var(--accent);
+  color: var(--bg);
+}
+.look-chip.primary:hover,
+.look-chip.primary:focus-visible {
+  background: color-mix(in srgb, var(--accent) 85%, var(--bg));
+}
+.look-chip:focus-visible {
+  box-shadow: 0 0 0 2px var(--focus);
+}
 /* A quiet bird: grey after 5 minutes without news, amber with a ring after 15. */
 .badge.silent {
   background: var(--fg-muted);

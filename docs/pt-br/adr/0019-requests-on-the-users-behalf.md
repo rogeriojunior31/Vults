@@ -1,5 +1,5 @@
 # 0019. Rede, segredos e telemetria
-<!-- source: 4aaed2ce3dd3 -->
+<!-- source: 6a8254a88046 -->
 
 **Status:** Aceita, 2026-10-10. Consolidada em 2026-10-12 a partir da 0006 e da 0016.
 Alterada em 2026-10-17 para a N3 V0.4: requisições a modelos no ditado, limites de loopback e
@@ -142,6 +142,12 @@ exceção para outras requisições de rede nem altera as regras gerais de conse
 <a id="history"></a>
 
 ## Histórico
+
+- 2026-11-15: o FF4 entrega o aviso de atualização antes de qualquer instalador: uma pergunta na
+  ilha, um interruptor e *Check now* nas Configurações, uma olhada por dia na lista pública de versões
+  pelo gate (`update`, 4 por dia; `update-now` para o clique), um aviso com *Open release page* e
+  *Later*. Os builds do AUR o deixam de fora (`--no-default-features`). Instalações assinadas
+  continuam para depois da 0.2.0.
 
 - 2026-10-26: correção do responsável retira a proposta de rede para intenção antes da ativação;
   transcrição de voz existente e reconhecimento local não precisam de provedor de texto separado.

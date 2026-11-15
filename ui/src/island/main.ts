@@ -37,6 +37,10 @@ const island = createIsland(document.getElementById("island")!, {
   endDnd: () => void Bridge.setDnd(null),
   dismissDigest: () => void Bridge.digestDismiss(),
   dismissRecap: () => void Bridge.recapDismiss(),
+  updateChecks: (on) => void Bridge.setUpdateChecks(on).then(island.setUpdate, () => {}),
+  updateQuestionShown: () => void Bridge.updateQuestionShown().catch(() => {}),
+  updateLater: () => void Bridge.updateLater().catch(() => {}),
+  openUpdatePage: () => void Bridge.openUpdatePage().catch(() => {}),
   openActivity: () => {
     void changeView(() => Bridge.openNest("week"));
     void Bridge.recapDismiss();
@@ -183,6 +187,8 @@ Bridge.onVoiceSilence(() => island.chat.voiceSilence());
 Bridge.onVoicePartial((text) => island.chat.voicePartial(text));
 void Bridge.voiceStatus().then((v) => island.chat.setVoiceReady(v.ready));
 Bridge.onUsage(island.setUsage);
+Bridge.onUpdateNotice(island.setUpdate);
+void Bridge.updateStatus().then(island.setUpdate, () => {});
 Bridge.onShortcutKeys((keys) => island.setKeys(keys));
 void Bridge.shortcutKeys().then((keys) => island.setKeys(keys));
 void settings.then((s) => {

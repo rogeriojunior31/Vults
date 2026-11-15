@@ -64,6 +64,9 @@ webview2-com = "0.39"
 windows-core = "0.62"
 
 [features]
+# The update notice (FF4, ADR 0019). Distro packages (AUR) build with --no-default-features.
+default = ["update-notice"]
+update-notice = ["vults-chat/releases"]
 voice-vulkan = ["vults-voice/vulkan"]
 # Developer preview only; normal builds retain the diarization quality gate.
 meeting-speakers = ["vults-voice/diarization"]
