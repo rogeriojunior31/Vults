@@ -4,6 +4,8 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ## Unreleased
 
+- Clear history keeps the receipt of a GitHub merge, Actions rerun or cancel, or branch deletion that GitHub may have carried out, so the same write can no longer be sent a second time after clearing.
+
 - Improve compact Chat navigation, accessible turn announcements, Recent keyboard focus, recipient and Memory recovery, scoped Flock permission disclosure and folder-copy feedback.
 
 - Keep idle and completed-response sessions in Flock instead of expiring them after 10/30 minutes. Confirm local owner exits separately from activity, preserve pending cards, and distinguish Hermes Desktop runtime cleanup/reset from durable conversation closure.

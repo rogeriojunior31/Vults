@@ -127,8 +127,9 @@ and is asked through `gh` once when the tab opens, then kept an hour in memory, 
   server, in one go, leaving one line in the audit log: that you cleared it, and when.
   What stays: what Zeca remembers (his memory files, **Settings → Chat & voice → Memory**), the
   policies you accepted, your paired phones, recorded agent costs, measured dictation totals and
-  the user-maintained dictionary, replacements, snippets and per-app styles, and content-free clean-up quota admissions
-  ([Safety](../safety.md)). Tables from retired features stay untouched; their old cost rows
+  the user-maintained dictionary, replacements, snippets and per-app styles, content-free clean-up quota admissions, and
+  the receipt of a GitHub merge, rerun, cancel or branch deletion GitHub may have carried out, so
+  it is never sent twice ([Safety](../safety.md)). Tables from retired features stay untouched; their old cost rows
   remain readable in **Cost**.
 - The history lives in one local database, `vults.sqlite` (each turn for 12 weeks, each day's
   totals for a year), in `~/.local/share/vults/` (`%LOCALAPPDATA%\Vults\` on Windows). See

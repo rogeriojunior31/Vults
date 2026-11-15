@@ -108,7 +108,9 @@ What it keeps stays on this computer, is never sent anywhere, and is listed in
   the exact command or path, with tokens and `NAME=secret` values redacted first. An answer given in
   the agent's own terminal is not in it. Each agent config the installer writes is kept too. A line
   is never changed and none leaves before 90 days, except through **Clear history**, which leaves
-  one line: that you cleared it, and when. It is always on.
+  one line: that you cleared it, and when. It also keeps the last receipt of a GitHub merge, rerun,
+  cancel or branch deletion that GitHub may have carried out, so the same write is never sent
+  twice. It is always on.
 - **What you agree to is kept for good.** Each policy you accept is a row in `vults.sqlite`'s
   consents: when, what it is about, the words you accepted and a SHA-256 of the diff you saw. A row
   is never changed or deleted, and **Clear history** does not touch it: a policy must never lose the

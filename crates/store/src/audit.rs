@@ -70,14 +70,19 @@ pub(crate) fn insert_audit(conn: &rusqlite::Connection, at: i64, a: &Audit) -> R
     Ok(())
 }
 
+/// The audit lines that are GitHub control receipts (`reserve_github_control`).
+const RECEIPTS: &str = "act='external-write' AND tool IN ('github_actions_rerun_failed','github_actions_rerun_run','github_actions_rerun_job','github_actions_cancel','github_pull_request_merge','github_pull_request_delete_branch')
+        AND json_extract(CASE WHEN json_valid(target) THEN target ELSE '{}' END,'$.receipt')=1";
+
 fn last_github_control_outcome(conn: &rusqlite::Connection, key: &str) -> Result<Option<String>, Error> {
     Ok(conn
         .query_row(
-            "SELECT json_extract(target,'$.outcome') FROM audit
-        WHERE act='external-write' AND tool IN ('github_actions_rerun_failed','github_actions_rerun_run','github_actions_rerun_job','github_actions_cancel','github_pull_request_merge','github_pull_request_delete_branch')
-        AND json_extract(CASE WHEN json_valid(target) THEN target ELSE '{}' END,'$.controlKey')=?1
-        AND json_extract(CASE WHEN json_valid(target) THEN target ELSE '{}' END,'$.receipt')=1
-        ORDER BY id DESC LIMIT 1",
+            &format!(
+                "SELECT json_extract(target,'$.outcome') FROM audit
+        WHERE {RECEIPTS}
+        AND json_extract(CASE WHEN json_valid(target) THEN target ELSE '{{}}' END,'$.controlKey')=?1
+        ORDER BY id DESC LIMIT 1"
+            ),
             params![key],
             |row| row.get(0),
         )
@@ -183,7 +188,18 @@ pub(crate) fn clear_audit_in(tx: &rusqlite::Transaction) -> Result<(), Error> {
         for (name, _) in &guards {
             tx.execute_batch(&format!("DROP TRIGGER \"{}\";", name.replace('"', "\"\"")))?;
         }
-        tx.execute("DELETE FROM audit", [])?;
+        // A receipt whose write may have happened stays: without it, a merge or rerun GitHub
+        // already accepted could be sent again (the same as the gate's quota admissions).
+        tx.execute(
+            &format!(
+                "DELETE FROM audit WHERE id NOT IN (
+                    SELECT a.id FROM audit a WHERE {RECEIPTS}
+                    AND json_extract(a.target,'$.outcome') IS NOT 'rejected'
+                    AND a.id = (SELECT MAX(b.id) FROM audit b WHERE {RECEIPTS}
+                        AND json_extract(b.target,'$.controlKey') = json_extract(a.target,'$.controlKey')))"
+            ),
+            [],
+        )?;
         for (_, sql) in &guards {
             tx.execute_batch(sql)?;
         }
@@ -394,6 +410,43 @@ mod actions_receipts_tests {
             &serde_json::json!({"controlKey":key,"receipt":receipt,"outcome":outcome}).to_string(),
         )
     }
+    #[test]
+    fn clear_history_keeps_only_the_receipts_that_still_block_a_write() {
+        let dir = crate::temp("receipts-clear");
+        let mut store = Store::open(&dir).unwrap();
+        let (pending, refused, done) = ("github.com/20/12/1", "github.com/20/12/2", "github.com/20/12/3");
+        for key in [pending, refused, done] {
+            assert!(
+                store
+                    .reserve_github_control(1, &record(key, "reserved", true))
+                    .unwrap()
+            );
+        }
+        store
+            .append_audit(2, &record(pending, "uncertain", true))
+            .unwrap();
+        store.append_audit(2, &record(refused, "rejected", true)).unwrap();
+        store.append_audit(2, &record(done, "verified", true)).unwrap();
+        store
+            .append_audit(3, &record(pending, "preflight_failed", false))
+            .unwrap();
+        store.clear_audit().unwrap();
+        // GitHub may have accepted these: a second merge or rerun must still be refused.
+        assert!(store.github_control_blocked(pending).unwrap());
+        assert!(store.github_control_blocked(done).unwrap());
+        assert!(!store.github_control_blocked(refused).unwrap());
+        assert!(
+            store
+                .reserve_github_control(4, &record(refused, "reserved", true))
+                .unwrap()
+        );
+        // Only the newest receipt of each blocking key stays, plus the line saying it was cleared.
+        let lines = store.audit(100).unwrap();
+        assert_eq!(lines.len(), 4, "{lines:?}");
+        store.clear_all(&dir).unwrap();
+        assert!(store.github_control_blocked(pending).unwrap());
+    }
+
     #[test]
     fn actions_reservations_survive_restart_and_only_definite_rejection_allows_a_retry() {
         let dir = crate::temp("actions-receipt");

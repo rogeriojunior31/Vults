@@ -1,5 +1,5 @@
 # Segurança
-<!-- source: 2b7db3533c56 -->
+<!-- source: a0fad5af35f0 -->
 
 O que o Vults promete:
 
@@ -117,7 +117,9 @@ O que ele guarda fica neste computador, nunca é enviado para lugar nenhum e est
   projeto, a ferramenta e o comando ou caminho exato, com tokens e valores `NOME=segredo` redigidos
   antes. Uma resposta dada no próprio terminal do agente não entra. Cada configuração de agente que
   o instalador escreve também fica. Uma linha nunca é alterada e nenhuma sai antes de 90 dias,
-  exceto pelo **Clear history**, que deixa uma linha: que você o limpou, e quando. Fica sempre
+  exceto pelo **Clear history**, que deixa uma linha: que você o limpou, e quando. Ele também
+  mantém o último recibo de um merge, rerun, cancelamento ou exclusão de branch no GitHub que o
+  GitHub pode ter feito, para a mesma escrita nunca ser enviada duas vezes. Fica sempre
   ligado.
 - **O que você aceita fica guardado para sempre.** Cada política que você aceita é uma linha nos
   consentimentos do `vults.sqlite`: quando, sobre o que é, as palavras que você aceitou e um SHA-256

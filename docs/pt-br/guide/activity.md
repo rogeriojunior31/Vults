@@ -1,5 +1,5 @@
 # Atividade
-<!-- source: eb8b31f00518 -->
+<!-- source: 9bf749473a58 -->
 
 Week compara os números com a semana anterior do calendário, mostra os turnos registrados por
 agente e identifica os meses e dias da semana na grade anual. Uma base de comparação ausente ou
@@ -154,8 +154,9 @@ hora na memória, nunca em disco.
   auditoria: que você o limpou, e quando. O que fica: o que o Zeca lembra (os arquivos de memória
   dele, **Settings → Chat & voice → Memory**), as políticas que você aceitou, os seus telefones
   pareados, os custos registrados dos agentes, os totais medidos de ditado e o dicionário, as
-  substituições, os trechos e os estilos por aplicativo mantidos pelo usuário, além das admissões de cota da limpeza sem conteúdo
-  ([Segurança](../safety.md)). As tabelas de recursos
+  substituições, os trechos e os estilos por aplicativo mantidos pelo usuário, as admissões de cota da limpeza sem conteúdo e o recibo
+  de um merge, rerun, cancelamento ou exclusão de branch no GitHub que o GitHub pode ter feito, para
+  nunca ser enviado duas vezes ([Segurança](../safety.md)). As tabelas de recursos
   removidos ficam intactas; os custos antigos continuam disponíveis em **Cost**.
 - O histórico fica num banco local, `vults.sqlite` (cada turno por 12 semanas, os totais de cada
   dia por um ano), em `~/.local/share/vults/` (`%LOCALAPPDATA%\Vults\` no Windows). Veja
