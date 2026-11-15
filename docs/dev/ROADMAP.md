@@ -970,6 +970,13 @@ that acceptance passes.
 
 ### GH9 · GitHub release readiness
 `P1 · L · Needs: —` · [Spec](plan-github-luna.md#gh9--recovery-ui-documentation-and-release-readiness)
+2026-11-14, branch `feat/update-notice`: GH9-1 tests for GitHub errors (401, 403, rate limit, 404,
+405, 409, 422, 5xx, no connection) on the issue, pull request, Actions, merge and branch deletion
+writes; network loss and lost readbacks; an account switched between the write and its check.
+Fixed: Clear history deleted the merge/rerun receipts; a definite refusal on an issue or PR write
+now names GitHub's reason. Open: an app-level restart test (store-level only today); a
+reconciled outcome for uncertain merges/reruns so they can be retried (plan item 7); a
+specialist's post-write grant check can turn a done write into an error.
 - [ ] GH9-1 recovery: app restart mid-write, network loss, account switch and GitHub errors, each with
   a test.
 - [ ] GH9-2 a controlled test repository and an end-to-end run of the plan's flows.

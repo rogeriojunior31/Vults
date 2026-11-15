@@ -1048,6 +1048,174 @@ mod tests {
         api.exhausted();
     }
     #[tokio::test]
+    async fn each_github_error_on_the_merge_is_rejected_or_uncertain_never_resent() {
+        let a = action();
+        let expected = preview(&a, pr(), json!([])).await;
+        for (error, after, status) in [
+            (Error::Auth("gh isn't logged in".into()), pr(), "rejected"),
+            (
+                Error::RateLimited {
+                    retry_after: Duration::from_secs(900),
+                },
+                pr(),
+                "rejected",
+            ),
+            (Error::Other("gh: Not Found (HTTP 404)".into()), pr(), "rejected"),
+            (
+                Error::Other("gh: Pull Request is not mergeable (HTTP 405)".into()),
+                pr(),
+                "rejected",
+            ),
+            (
+                Error::Other("gh: Head branch was modified (HTTP 409)".into()),
+                pr(),
+                "uncertain",
+            ),
+            (
+                Error::Other("gh: Validation Failed (HTTP 422)".into()),
+                pr(),
+                "rejected",
+            ),
+            (
+                Error::Other("gh: Server Error (HTTP 500)".into()),
+                pr(),
+                "uncertain",
+            ),
+            (
+                Error::Other("gh: Bad Gateway (HTTP 502)".into()),
+                pr(),
+                "uncertain",
+            ),
+            (
+                Error::Other("error connecting to api.github.com".into()),
+                pr(),
+                "uncertain",
+            ),
+            // The answer was lost but GitHub merged it: the readback says so.
+            (
+                Error::Other("gh: Bad Gateway (HTTP 502)".into()),
+                merged(),
+                "merged",
+            ),
+            (
+                Error::Other("error connecting to api.github.com".into()),
+                merged(),
+                "merged",
+            ),
+        ] {
+            let label = error.to_string();
+            let mut steps = inspection(pr(), json!([]), false);
+            steps.push(merge_post(Err(error)));
+            steps.extend(context(after));
+            let api = Fake::new(steps);
+            let result = execute_using(&gate(), &api, &a, &expected, &a.request_hash(), || async {
+                Ok(())
+            })
+            .await
+            .unwrap();
+            assert_eq!(result["status"], status, "{label}");
+            assert_eq!(
+                api.writes.lock().unwrap().len(),
+                1,
+                "{label}: one PUT, never repeated"
+            );
+            api.exhausted();
+        }
+    }
+    #[tokio::test]
+    async fn an_account_switched_during_the_write_never_reports_it_done() {
+        for (a, before, after, deleting) in [
+            (action(), pr(), merged(), false),
+            (delete(), merged(), merged(), true),
+        ] {
+            let expected = preview(&a, before.clone(), json!([])).await;
+            let mut steps = inspection(before, json!([]), deleting);
+            steps.push(if deleting {
+                (
+                    "DELETE",
+                    "repos/org/repo/git/refs/heads/feature".into(),
+                    Ok(Value::Null),
+                )
+            } else {
+                merge_post(Ok(Value::Null))
+            });
+            let mut readback = context(after);
+            // `gh auth switch` between the write and its check: another login reads the result.
+            readback[0].2 =
+                Ok(json!({"id":2,"login":"someone-else","html_url":"https://github.com/someone-else"}));
+            let api = Fake::new(readback.into_iter().fold(steps, |mut s, x| {
+                s.push(x);
+                s
+            }));
+            let result = execute_using(&gate(), &api, &a, &expected, &a.request_hash(), || async {
+                Ok(())
+            })
+            .await
+            .unwrap();
+            assert_eq!(result["status"], "uncertain", "{a:?}");
+            assert_eq!(result["verified"], false);
+            assert_eq!(api.writes.lock().unwrap().len(), 1);
+            api.exhausted();
+        }
+    }
+    #[tokio::test]
+    async fn a_branch_deletion_lost_or_unreadable_is_uncertain_never_resent() {
+        let a = delete();
+        let expected = preview(&a, merged(), json!([])).await;
+        let still_there = Ok(json!([{"ref":"refs/heads/feature"}]));
+        for (error, refs, status) in [
+            (
+                Some("error connecting to api.github.com"),
+                still_there.clone(),
+                "uncertain",
+            ),
+            (
+                Some("gh: Server Error (HTTP 500)"),
+                still_there.clone(),
+                "uncertain",
+            ),
+            (
+                Some("gh: Resource not accessible by integration (HTTP 403)"),
+                still_there.clone(),
+                "rejected",
+            ),
+            // GitHub removed it but the answer was lost: absent is what counts.
+            (
+                Some("error connecting to api.github.com"),
+                Ok(json!([])),
+                "branch_deleted",
+            ),
+            (None, Err(Error::Other("offline".into())), "uncertain"),
+            (
+                Some("gh: Server Error (HTTP 500)"),
+                Err(Error::Other("offline".into())),
+                "uncertain",
+            ),
+        ] {
+            let mut steps = inspection(merged(), json!([]), true);
+            steps.push((
+                "DELETE",
+                "repos/org/repo/git/refs/heads/feature".into(),
+                error.map_or(Ok(Value::Null), |e| Err(Error::Other(e.into()))),
+            ));
+            steps.extend(context(merged()));
+            steps.push((
+                "GET",
+                "repos/org/repo/git/matching-refs/heads/feature".into(),
+                refs,
+            ));
+            let api = Fake::new(steps);
+            let result = execute_using(&gate(), &api, &a, &expected, &a.request_hash(), || async {
+                Ok(())
+            })
+            .await
+            .unwrap();
+            assert_eq!(result["status"], status, "{error:?}");
+            assert_eq!(api.writes.lock().unwrap().len(), 1);
+            api.exhausted();
+        }
+    }
+    #[tokio::test]
     async fn duplicate_admission_revocation_and_unavailable_readback_never_repeat_a_write() {
         let a = action();
         let expected = preview(&a, pr(), json!([])).await;

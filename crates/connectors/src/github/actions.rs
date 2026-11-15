@@ -906,6 +906,93 @@ mod tests {
         assert_eq!(result["observedRun"]["phase"], "completed");
         api.exhausted();
     }
+    #[test]
+    fn only_a_definite_refusal_from_gh_lets_a_control_be_tried_again() {
+        // What `gh api` prints on stderr, through the same classifier a real write uses.
+        let refused = [
+            "gh: Bad credentials (HTTP 401)",
+            "To get started with GitHub CLI, please run:  gh auth login",
+            "gh: Resource not accessible by integration (HTTP 403)",
+            "gh: API rate limit exceeded for user ID 1. (HTTP 403)",
+            "gh: You have exceeded a secondary rate limit (HTTP 403)",
+            "gh: Not Found (HTTP 404)",
+            "gh: Validation Failed (HTTP 422)",
+        ];
+        for said in refused {
+            assert!(
+                definitely_rejected(&super::super::gh_error(false, said.as_bytes())),
+                "{said}"
+            );
+        }
+        // The request may have reached GitHub: the receipt keeps blocking a second POST.
+        let unknown = [
+            "gh: Request Timeout (HTTP 408)",
+            "gh: Conflict (HTTP 409)",
+            "gh: Server Error (HTTP 500)",
+            "gh: Bad Gateway (HTTP 502)",
+            "gh: Service Unavailable (HTTP 503)",
+            "Post \"https://api.github.com/x\": dial tcp: lookup api.github.com: no such host",
+            "error connecting to api.github.com",
+            "GitHub took too long to answer",
+        ];
+        for said in unknown {
+            assert!(
+                !definitely_rejected(&super::super::gh_error(false, said.as_bytes())),
+                "{said}"
+            );
+        }
+        assert!(definitely_rejected(&Error::Unavailable(
+            "gh is not installed".into()
+        )));
+        assert!(!definitely_rejected(&Error::Partial("partial".into())));
+        assert!(!definitely_rejected(&Error::Budget));
+    }
+    #[tokio::test]
+    async fn each_github_error_on_the_post_is_rejected_or_uncertain_never_resent() {
+        let action = action("rerun_run");
+        let initial = run(1, "completed", json!("failure"));
+        let expected = preview(&action, initial.clone()).await;
+        for (error, status) in [
+            (Error::Auth("gh isn't logged in".into()), "rejected"),
+            (
+                Error::RateLimited {
+                    retry_after: std::time::Duration::from_secs(900),
+                },
+                "rejected",
+            ),
+            (Error::Other("gh: Not Found (HTTP 404)".into()), "rejected"),
+            (
+                Error::Other("gh: Validation Failed (HTTP 422)".into()),
+                "rejected",
+            ),
+            (Error::Other("gh: Conflict (HTTP 409)".into()), "uncertain"),
+            (Error::Other("gh: Server Error (HTTP 500)".into()), "uncertain"),
+            (Error::Other("gh: Bad Gateway (HTTP 502)".into()), "uncertain"),
+            (
+                Error::Other("error connecting to api.github.com".into()),
+                "uncertain",
+            ),
+        ] {
+            let label = error.to_string();
+            let mut steps = inspection(&action, initial.clone(), false);
+            steps.push(post(&action, Err(error)));
+            steps.extend(context(run(1, "completed", json!("failure")), false));
+            let api = Fake::new(steps);
+            let result = execute_using(
+                &gate(),
+                &action,
+                &expected,
+                &action.request_hash(),
+                &api,
+                || async { Ok(()) },
+            )
+            .await
+            .unwrap();
+            assert_eq!(result["status"], status, "{label}");
+            assert_eq!(result["verified"], false, "{label}");
+            api.exhausted();
+        }
+    }
     #[tokio::test]
     async fn timeout_rejection_and_unavailable_verification_never_repeat_a_post() {
         let action = action("rerun_run");

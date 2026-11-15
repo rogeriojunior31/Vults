@@ -943,6 +943,15 @@ async fn execute_issue_write_using(
         return Err(Error::Other("The GitHub account or repository changed during the write. Its outcome is uncertain; inspect the target before retrying.".into()));
     }
     if !write_is_present(action, &after) {
+        // A definite refusal, and the reread shows nothing landed: say why, not "uncertain".
+        if let Err(error) = &mutation
+            && actions::definitely_rejected(error)
+        {
+            return Err(Error::Other(format!(
+                "GitHub refused the change ({}). The target was reread and is unchanged.",
+                vults_core::redact::secrets(&error.to_string())
+            )));
+        }
         return Err(Error::Other("The complete GitHub change could not be verified. The target was reread; inspect it before proposing a retry.".into()));
     }
     let issue = if matches!(action, IssueWrite::Create { .. }) {
@@ -3922,6 +3931,108 @@ mod issue_write_tests {
             }
             api.exhausted();
         }
+    }
+
+    #[tokio::test]
+    async fn each_github_error_on_an_issue_write_is_named_or_uncertain_never_resent() {
+        let action = close();
+        let expected = preview(&action, issue()).await;
+        for (error, landed, says) in [
+            (
+                Error::Auth("gh isn't logged in".into()),
+                false,
+                "GitHub refused the change",
+            ),
+            (
+                Error::RateLimited {
+                    retry_after: Duration::from_secs(900),
+                },
+                false,
+                "GitHub refused the change",
+            ),
+            (
+                Error::Other("gh: Not Found (HTTP 404)".into()),
+                false,
+                "Not Found (HTTP 404)",
+            ),
+            (
+                Error::Other("gh: Validation Failed (HTTP 422)".into()),
+                false,
+                "Validation Failed",
+            ),
+            (
+                Error::Other("gh: Conflict (HTTP 409)".into()),
+                false,
+                "could not be verified",
+            ),
+            (
+                Error::Other("gh: Server Error (HTTP 500)".into()),
+                false,
+                "could not be verified",
+            ),
+            (
+                Error::Other("error connecting to api.github.com".into()),
+                false,
+                "could not be verified",
+            ),
+            (Error::Other("gh: Bad Gateway (HTTP 502)".into()), true, ""),
+        ] {
+            let label = error.to_string();
+            let mut steps = inspection(issue(), false);
+            steps.push(mutation(
+                "PATCH",
+                "repos/org/repo/issues/7",
+                Some(json!({"state":"closed"})),
+                Err(error),
+            ));
+            let mut after = issue();
+            if landed {
+                after["state"] = json!("closed");
+            }
+            steps.extend(inspection(after, false));
+            let api = FakeApi::new(steps);
+            let result =
+                execute_issue_write_using(&gate(), &action, &expected, &action.request_hash(), &api).await;
+            if landed {
+                assert_eq!(result.unwrap()["status"], "verified_after_error", "{label}");
+            } else {
+                let message = result.unwrap_err().to_string();
+                assert!(message.contains(says), "{label}: {message}");
+            }
+            api.exhausted();
+        }
+    }
+
+    #[tokio::test]
+    async fn an_account_switched_during_an_issue_write_is_uncertain() {
+        let action = close();
+        let expected = preview(&action, issue()).await;
+        let mut steps = inspection(issue(), false);
+        steps.push(mutation(
+            "PATCH",
+            "repos/org/repo/issues/7",
+            Some(json!({"state":"closed"})),
+            Ok(json!({})),
+        ));
+        let mut after = issue();
+        after["state"] = json!("closed");
+        let mut readback = inspection(after, false);
+        let user = readback
+            .iter_mut()
+            .find(|s| s.path == "user")
+            .expect("the account read");
+        user.result = Ok(json!({"id":2,"login":"someone-else","html_url":"https://github.com/someone-else"}));
+        steps.extend(readback);
+        let api = FakeApi::new(steps);
+        let error = execute_issue_write_using(&gate(), &action, &expected, &action.request_hash(), &api)
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(
+            error.contains("account or repository changed during the write"),
+            "{error}"
+        );
+        api.exhausted();
     }
 
     #[tokio::test]
