@@ -19,7 +19,7 @@ wl-clipboard-rs = "0.9.4"
 wayland-client = "0.31"
 wayland-protocols = { version = "0.32", features = ["client", "staging"] }
 rustix = { version = "1", features = ["event", "fs"] }
-ashpd = { version = "0.13", default-features = false, features = ["tokio", "global_shortcuts", "file_chooser", "remote_desktop", "screencast"] }
+ashpd = { version = "0.14", default-features = false, features = ["tokio", "global_shortcuts", "file_chooser", "remote_desktop", "screencast"] }
 futures-util = { version = "0.3", default-features = false }
 gtk = "0.18"
 gtk-layer-shell = { version = "0.8", features = ["v0_6"] }
