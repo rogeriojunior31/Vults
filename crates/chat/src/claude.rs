@@ -364,13 +364,25 @@ async fn run(
         crate::dies_with_app(&mut cmd)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            // Never read: a full pipe would stall the CLI mid-turn.
-            .stderr(Stdio::null()),
+            // Read to the end (a full pipe would stall the CLI), its last line kept.
+            .stderr(Stdio::piped()),
     )
     .map_err(|e| match e.kind() {
         std::io::ErrorKind::NotFound => "The Claude CLI isn't installed.".to_string(),
         _ => format!("Can't start Claude: {e}"),
     })?;
+    let last_error = child.stderr.take().map(|stderr| {
+        tokio::spawn(async move {
+            let mut lines = BufReader::new(stderr).lines();
+            let mut last = String::new();
+            while let Ok(Some(line)) = lines.next_line().await {
+                if !line.trim().is_empty() {
+                    last = line.trim().chars().take(300).collect();
+                }
+            }
+            last
+        })
+    });
     let mut stdin = child.stdin.take().ok_or("no stdin")?;
     let message = json!({ "type": "user", "message": { "role": "user", "content": prompt(turn, None) } });
     write(&mut stdin, &message).await?;
@@ -474,6 +486,15 @@ async fn run(
     drop(stdin);
     if tokio::time::timeout(EXIT_GRACE, child.wait()).await.is_err() {
         let _ = child.kill().await;
+    }
+    // No session means Claude Code never started the turn: what it said is the reason (a missing
+    // Git Bash on Windows, a command line too long, a bad flag), not a login hint.
+    if id.is_none()
+        && let Some(task) = last_error
+        && let Ok(Ok(said)) = tokio::time::timeout(EXIT_GRACE, task).await
+        && !said.is_empty()
+    {
+        return Err(format!("Claude stopped: {said}"));
     }
     Ok(end)
 }

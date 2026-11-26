@@ -27,6 +27,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Fixes
 
+- When Claude Code can't start a chat turn, Chat shows what it said (a missing Git Bash on Windows, say) instead of asking whether it is logged in.
 - Unplugging a microphone as dictation starts no longer crashes the recorder, and Settings still lists the others.
 - On Windows, voice commands open Start Menu apps whose shortcut names `%windir%` or `%ProgramFiles%` (PowerShell, Remote Desktop and about half of Windows' own).
 - On Windows, dictation types straight into Windows 11 Notepad instead of only copying.
