@@ -69,7 +69,11 @@ impl Target {
             let mut class = [0u16; 128];
             let length = GetClassNameW(hwnd, &mut class);
             let class = String::from_utf16_lossy(&class[..length as usize]).to_ascii_lowercase();
-            if !matches!(class.as_str(), "edit" | "richedit20w" | "richedit50w") {
+            // `RichEditD2DPT` is Windows 11 Notepad's; the password check below still holds for it.
+            if !matches!(
+                class.as_str(),
+                "edit" | "richedit20w" | "richedit50w" | "richeditd2dpt"
+            ) {
                 return false;
             }
             if GetWindowLongPtrW(hwnd, GWL_STYLE) & (0x20 | 0x800) != 0 {
