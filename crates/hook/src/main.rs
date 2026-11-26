@@ -35,7 +35,7 @@ fn main() {
     let previous = (args.event.as_deref() == Some(protocol::STATUS_LINE_EVENT))
         .then(|| chain::previous_file(args.agent_name.as_deref()))
         .flatten()
-        .and_then(|file| chain::start(&file, &raw));
+        .and_then(|file| chain::start(&file, &raw, args.agent_name.as_deref()));
     let event = read
         .then(|| {
             build_event(&args, &raw, std::env::current_dir().ok(), |var| {
