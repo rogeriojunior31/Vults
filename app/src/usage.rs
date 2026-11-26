@@ -37,18 +37,37 @@ pub fn epoch_now() -> i64 {
         .map_or(0, |d| d.as_secs() as i64)
 }
 
-/// An agent's latest windows. Every surface hears only of a change: Claude Code runs its
-/// statusLine on every redraw.
+/// An agent's latest windows; none clears them (the switch went off). Every surface hears only of
+/// a change: Claude Code runs its statusLine on every redraw.
 pub fn set(app: &AppHandle, agent: AgentKind, windows: Vec<Window>) {
     let state = app.state::<UsageState>();
     {
         let mut by_agent = state.0.lock().unwrap_or_else(|e| e.into_inner());
+        let old = by_agent.get(&agent).map(Vec::as_slice).unwrap_or_default();
+        let windows = merge(old, windows, epoch_now());
         if by_agent.get(&agent) == Some(&windows) {
             return;
         }
         by_agent.insert(agent, windows);
     }
     let _ = app.emit("usage", state.all());
+}
+
+/// Claude has two sources (the account read and each session's statusLine) and either may carry
+/// only one of its windows: replacing the whole list made the other meter vanish and come back.
+/// A read updates the windows it has; another one stays until its own reset.
+fn merge(old: &[Window], new: Vec<Window>, now: i64) -> Vec<Window> {
+    if new.is_empty() {
+        return new;
+    }
+    let mut windows: Vec<Window> = old
+        .iter()
+        .filter(|w| !new.iter().any(|n| n.minutes == w.minutes) && w.resets_at.is_some_and(|at| at > now))
+        .cloned()
+        .collect();
+    windows.extend(new);
+    windows.sort_by_key(|w| w.minutes);
+    windows
 }
 
 /// Wakes the read loop: the switch just changed, so it need not wait out its sleep.
@@ -225,5 +244,43 @@ mod tests {
         assert_eq!(after_read(&[window(Some(now - 10)), window(None)], now), EVERY);
         // Resetting this second: just the half minute.
         assert_eq!(after_read(&[window(Some(now + 1))], now), Duration::from_secs(31));
+    }
+
+    #[test]
+    fn a_read_with_one_window_keeps_the_other_until_its_reset() {
+        let now = 1_790_000_000;
+        let w = |minutes, used_percent, resets_at| Window {
+            agent: AgentKind::Claude,
+            minutes,
+            used_percent,
+            resets_at,
+        };
+        let both = merge(
+            &[],
+            vec![w(10080, 20, Some(now + 9000)), w(300, 40, Some(now + 600))],
+            now,
+        );
+        assert_eq!(
+            both,
+            [w(300, 40, Some(now + 600)), w(10080, 20, Some(now + 9000))]
+        );
+        // The statusLine only carried the 5-hour window: the week stays.
+        let five = merge(&both, vec![w(300, 45, Some(now + 600))], now);
+        assert_eq!(
+            five,
+            [w(300, 45, Some(now + 600)), w(10080, 20, Some(now + 9000))]
+        );
+        // Past its reset, or with no reset to judge, a window not reported again goes.
+        let later = now + 10_000;
+        assert_eq!(
+            merge(&five, vec![w(300, 1, Some(later + 600))], later),
+            [w(300, 1, Some(later + 600))]
+        );
+        assert_eq!(
+            merge(&[w(10080, 20, None)], vec![w(300, 1, None)], now),
+            [w(300, 1, None)]
+        );
+        // Nothing reported clears: the switch went off.
+        assert!(merge(&five, Vec::new(), now).is_empty());
     }
 }

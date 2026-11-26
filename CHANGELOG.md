@@ -28,6 +28,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 ### Fixes
 
 - On Windows, Chat no longer says Claude is not installed when its CLI is only on a shell profile's PATH (mise, for one): Vults also looks in the usual per-user CLI folders.
+- The plan usage meters no longer vanish and come back: a read that carries only one window (Claude's statusLine, say) keeps the other until its reset.
 - Two instances starting together no longer fail when one is still migrating the database: start-up retries for a bounded time.
 
 ### Also in this release
