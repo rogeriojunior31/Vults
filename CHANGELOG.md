@@ -27,6 +27,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Fixes
 
+- On Windows, Settings names your monitors as they call themselves (`DELL U2720Q`) instead of `\\.\DISPLAY1`.
 - On Windows, Zeca in the tray is drawn at the size the tray shows, so it stays sharp at 125 % and 150 % scaling.
 - On Windows, a voice command finds an app even when the Start Menu read is cut short by a slow disk or a scan: the names it missed come from the last full read.
 - On Windows, an agent's session log made again under the same name is read from the start, so its tokens and cost are not counted from the old file's offset.

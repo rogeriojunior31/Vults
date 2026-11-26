@@ -7,6 +7,66 @@ use windows::Win32::Foundation::{LPARAM, RECT};
 use windows::Win32::Graphics::Gdi::{EnumDisplayMonitors, GetMonitorInfoW, HDC, HMONITOR, MONITORINFO};
 use windows::core::BOOL;
 
+/// Each active monitor's name for people (`DELL U2720Q`), keyed by the device name Tauri gives
+/// (`\\.\DISPLAY1`); a monitor with no name of its own (an internal panel) is left out.
+pub fn friendly_names() -> std::collections::HashMap<String, String> {
+    use windows::Win32::Devices::Display::{
+        DISPLAYCONFIG_DEVICE_INFO_GET_SOURCE_NAME, DISPLAYCONFIG_DEVICE_INFO_GET_TARGET_NAME,
+        DISPLAYCONFIG_MODE_INFO, DISPLAYCONFIG_PATH_INFO, DISPLAYCONFIG_SOURCE_DEVICE_NAME,
+        DISPLAYCONFIG_TARGET_DEVICE_NAME, DisplayConfigGetDeviceInfo, GetDisplayConfigBufferSizes,
+        QDC_ONLY_ACTIVE_PATHS, QueryDisplayConfig,
+    };
+    let text = |wide: &[u16]| {
+        let len = wide.iter().position(|&c| c == 0).unwrap_or(wide.len());
+        String::from_utf16_lossy(&wide[..len]).trim().to_owned()
+    };
+    let mut names = std::collections::HashMap::new();
+    let (mut paths, mut modes) = (0u32, 0u32);
+    // SAFETY (whole body): buffers sized by GetDisplayConfigBufferSizes, packets of the documented
+    // layout with their own size in their header.
+    unsafe {
+        if GetDisplayConfigBufferSizes(QDC_ONLY_ACTIVE_PATHS, &mut paths, &mut modes).is_err() {
+            return names;
+        }
+        let mut path_info = vec![DISPLAYCONFIG_PATH_INFO::default(); paths as usize];
+        let mut mode_info = vec![DISPLAYCONFIG_MODE_INFO::default(); modes as usize];
+        if QueryDisplayConfig(
+            QDC_ONLY_ACTIVE_PATHS,
+            &mut paths,
+            path_info.as_mut_ptr(),
+            &mut modes,
+            mode_info.as_mut_ptr(),
+            None,
+        )
+        .is_err()
+        {
+            return names;
+        }
+        for path in path_info.iter().take(paths as usize) {
+            let mut source = DISPLAYCONFIG_SOURCE_DEVICE_NAME::default();
+            source.header.r#type = DISPLAYCONFIG_DEVICE_INFO_GET_SOURCE_NAME;
+            source.header.size = std::mem::size_of::<DISPLAYCONFIG_SOURCE_DEVICE_NAME>() as u32;
+            source.header.adapterId = path.sourceInfo.adapterId;
+            source.header.id = path.sourceInfo.id;
+            let mut target = DISPLAYCONFIG_TARGET_DEVICE_NAME::default();
+            target.header.r#type = DISPLAYCONFIG_DEVICE_INFO_GET_TARGET_NAME;
+            target.header.size = std::mem::size_of::<DISPLAYCONFIG_TARGET_DEVICE_NAME>() as u32;
+            target.header.adapterId = path.targetInfo.adapterId;
+            target.header.id = path.targetInfo.id;
+            if DisplayConfigGetDeviceInfo(&mut source.header) != 0
+                || DisplayConfigGetDeviceInfo(&mut target.header) != 0
+            {
+                continue;
+            }
+            let friendly = text(&target.monitorFriendlyDeviceName);
+            if !friendly.is_empty() {
+                names.insert(text(&source.viewGdiDeviceName), friendly);
+            }
+        }
+    }
+    names
+}
+
 /// Each monitor's bounds and work area, in the order Windows lists them.
 pub fn layout() -> Vec<[i32; 8]> {
     unsafe extern "system" fn each(monitor: HMONITOR, _: HDC, _: *mut RECT, data: LPARAM) -> BOOL {
@@ -61,6 +121,14 @@ pub fn on_monitors_changed(changed: impl Fn() + Send + 'static) {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn monitor_names_are_keyed_by_device_name() {
+        for (device, friendly) in super::friendly_names() {
+            assert!(device.starts_with(r"\\.\DISPLAY"), "{device}");
+            assert!(!friendly.is_empty());
+        }
+    }
+
     #[test]
     fn the_taskbar_edge_is_read() {
         // This desktop has a taskbar; which edge is the user's choice.

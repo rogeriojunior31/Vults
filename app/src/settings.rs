@@ -1795,15 +1795,30 @@ pub async fn monitors(app: AppHandle) -> Vec<Monitor> {
     }
     #[cfg(windows)]
     {
-        app.available_monitors()
+        // The saved choice stays the device name; people read the monitor's own (`DELL U2720Q`),
+        // with its number when two share one.
+        let friendly = vults_platform::windows_displays::friendly_names();
+        let names: Vec<String> = app
+            .available_monitors()
             .unwrap_or_default()
             .into_iter()
-            .filter_map(|m| {
-                let name = m.name()?.to_owned();
-                Some(Monitor {
-                    label: name.clone(),
-                    name,
-                })
+            .filter_map(|m| m.name().cloned())
+            .collect();
+        let shown = |name: &String| friendly.get(name).cloned().unwrap_or_else(|| name.clone());
+        names
+            .iter()
+            .map(|name| {
+                let label = shown(name);
+                let twins = names.iter().filter(|other| shown(other) == label).count();
+                let number = name.trim_start_matches(r"\\.\DISPLAY");
+                Monitor {
+                    label: if twins > 1 && friendly.contains_key(name) {
+                        format!("{label} ({number})")
+                    } else {
+                        label
+                    },
+                    name: name.clone(),
+                }
             })
             .collect()
     }
