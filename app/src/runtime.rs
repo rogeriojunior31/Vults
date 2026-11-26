@@ -2362,7 +2362,22 @@ pub fn surface_keyboard(app: AppHandle, window: tauri::WebviewWindow, on: bool, 
         #[cfg(not(target_os = "linux"))]
         let _ = exclusive;
         #[cfg(windows)]
-        let _ = window.set_focusable(on);
+        {
+            use std::collections::HashMap;
+            use std::sync::Mutex;
+            // Per surface: the window that had the keyboard before it took it.
+            static BEFORE: Mutex<Option<HashMap<String, isize>>> = Mutex::new(None);
+            let own = window.hwnd().map(|h| h.0 as isize).ok();
+            let mut before = BEFORE.lock().unwrap_or_else(|e| e.into_inner());
+            let before = before.get_or_insert_with(HashMap::new);
+            if on && let Some(previous) = own.and_then(vults_platform::windows_surface::foreground_before) {
+                before.insert(window.label().to_owned(), previous);
+            }
+            let _ = window.set_focusable(on);
+            if !on && let (Some(own), Some(previous)) = (own, before.remove(window.label())) {
+                vults_platform::windows_surface::give_back(own, previous);
+            }
+        }
         if on {
             let _ = window.set_focus();
         }

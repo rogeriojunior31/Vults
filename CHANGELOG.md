@@ -27,6 +27,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Fixes
 
+- On Windows, folding the island after a chat or an answer gives the keyboard back to the window you were in, so your next keys reach the terminal again.
 - On Windows, the dictation overlay moves with the island when you pick another monitor or the screens change.
 - On Windows, requests Vults makes for you (connectors, web tools, voice model downloads, the phone's relay) go through the proxy set in Windows Settings, not only one from `HTTPS_PROXY`.
 - On Windows, Vults keeps receiving hook events after an update or restart while the old run was still closing; it used to hear none until it was restarted again.

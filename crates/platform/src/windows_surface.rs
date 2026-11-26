@@ -37,6 +37,28 @@ pub fn set_region(handle: isize, rect: (i32, i32, i32, i32), scale: f64) -> bool
     true
 }
 
+/// The window in front before `own` took the keyboard: none when `own` already was.
+pub fn foreground_before(own: isize) -> Option<isize> {
+    // SAFETY: a read of the current foreground window's handle.
+    let front = unsafe { windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow() };
+    (!front.is_invalid() && front.0 as isize != own).then_some(front.0 as isize)
+}
+
+/// Gives the keyboard back to `previous` when `own` still holds it, as Linux does by dropping
+/// keyboard interactivity: without it the next keys go to an island that no longer wants them.
+/// A window closed since, or one the user moved to meanwhile, is left alone.
+pub fn give_back(own: isize, previous: isize) {
+    use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, IsWindow, SetForegroundWindow};
+    // SAFETY: handles are only compared and checked live before use; Windows refuses the call if
+    // this process is no longer in front.
+    unsafe {
+        let previous = HWND(previous as *mut _);
+        if GetForegroundWindow().0 as isize == own && IsWindow(Some(previous)).as_bool() {
+            let _ = SetForegroundWindow(previous);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
