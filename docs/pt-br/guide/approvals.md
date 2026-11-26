@@ -1,5 +1,5 @@
 # Aprovando pela ilha
-<!-- source: ef5ca54da8c8 -->
+<!-- source: 4bb074e9b526 -->
 
 Quando o Claude Code, o Codex, o OpenCode, o Qwen Code ou o Copilot CLI pede permissão para uma chamada de
 ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o
@@ -94,7 +94,10 @@ ask tool WebFetch
   `command` e as palavras dele (um `*` no fim deixa vir mais palavras), ou `tool` e o nome exato de
   uma ferramenta (um shell ou uma ferramenta MCP só com `deny` ou `ask`).
 - Uma ação destrutiva (`rm`, um push forçado, um redirecionamento por cima de um arquivo) sempre
-  pergunta: nenhuma linha a responde.
+  pergunta: nenhuma linha a responde. No Windows, PowerShell e cmd também contam (`Remove-Item`,
+  `del`, `rd /s`, `Set-Content`, `Stop-Process`), e um comando do PowerShell com variáveis, blocos
+  de script, chamadas .NET ou redirecionamentos é lido como destrutivo, porque o Vults não
+  acompanha essa sintaxe.
 - Um deny vence um ask, e um ask vence um allow, entre todas as políticas que valem; um deny vence
   também um **Always allow** mais antigo. Uma linha `deny` ou `ask` cobre o que vier depois das
   palavras dela, com `*` ou não, e um comando que tem as duas primeiras palavras dela em qualquer

@@ -129,6 +129,8 @@ pub fn classify(tool: &str, target: &str) -> Classified {
         "Edit" | "MultiEdit" | "Write" | "NotebookEdit" | "TodoWrite" | "replace" | "write_file" => {
             Classified::known(WRITE)
         }
+        // Claude Code's shell on Windows.
+        "PowerShell" => powershell(command_of(target)),
         t if SHELL_TOOLS.contains(&t) => shell(command_of(target)),
         _ => Classified::guessed(WRITE),
     }
@@ -143,6 +145,7 @@ pub(crate) fn is_shell(tool: &str) -> bool {
 /// `unified_exec` too).
 const SHELL_TOOLS: &[&str] = &[
     "Bash",
+    "PowerShell",
     "shell",
     "run_shell_command",
     "exec_command",
@@ -161,9 +164,31 @@ pub fn reads_outside(tool: &str, target: &str) -> bool {
     }
     match tool {
         "WebFetch" | "WebSearch" | "web_fetch" | "google_web_search" | "web_search" => true,
+        "PowerShell" => fetches(command_of(target)) || windows_fetches(command_of(target)),
         t if SHELL_TOOLS.contains(&t) => fetches(command_of(target)),
         _ => false,
     }
+}
+
+/// PowerShell's own ways to fetch: its web cmdlets and aliases, BITS, and .NET's web clients.
+fn windows_fetches(cmd: &str) -> bool {
+    let lower = cmd.to_ascii_lowercase();
+    lower.contains("webclient")
+        || lower.contains("httpclient")
+        || lower
+            .split(|c: char| c.is_whitespace() || matches!(c, ';' | '|' | '&' | '(' | ')' | '\'' | '"'))
+            .any(|w| {
+                matches!(
+                    windows_base(w).as_str(),
+                    "iwr"
+                        | "irm"
+                        | "curl"
+                        | "wget"
+                        | "invoke-webrequest"
+                        | "invoke-restmethod"
+                        | "start-bitstransfer"
+                )
+            })
 }
 
 /// A shell command that brings outside content in.
@@ -539,6 +564,131 @@ fn shell(cmd: &str) -> Classified {
     worst.and(redirection(cmd))
 }
 
+/// A PowerShell or cmd command line (Claude Code's `PowerShell` tool, `powershell -Command`,
+/// `cmd /c`), read for what it can break. Their own syntax (variables, script blocks, .NET calls,
+/// subexpressions, escapes, `%VAR%`, redirections) is not read here, so a command using it is a
+/// guessed destructive: on Windows the card asks rather than a misread command passing. A cmdlet
+/// that only reads is a read; one that deletes, overwrites, moves, stops processes or runs other
+/// code is destructive; any other cmdlet is a guessed write. A native program (`git`, `cargo`) is
+/// read as the Unix shell reads it.
+fn powershell(cmd: &str) -> Classified {
+    if cmd.contains(['$', '@', '{', '}', '[', ']', '`', '%', '>', '<', '(', ')', '^']) {
+        return Classified::guessed(DESTRUCTIVE);
+    }
+    // As for any shell command, at least a write.
+    let mut worst = Classified::known(WRITE);
+    for piece in cmd.split(['\n', '\r', ';', '|', '&']) {
+        // Quotes go; backslashes stay, as they are Windows' separators.
+        let words: Vec<String> = piece
+            .split_whitespace()
+            .map(|w| w.chars().filter(|c| !matches!(c, '\'' | '"')).collect::<String>())
+            .filter(|w| !w.is_empty())
+            .collect();
+        let Some(first) = words.first() else {
+            continue;
+        };
+        worst = worst.and(windows_program(first, &words[1..]));
+    }
+    worst
+}
+
+/// `C:\Tools\Git.EXE` is `git`: Windows names ignore case and their extension.
+fn windows_base(w: &str) -> String {
+    let name = w.rsplit(['\\', '/']).next().unwrap_or(w).to_ascii_lowercase();
+    match name.rsplit_once('.') {
+        Some((stem, "exe" | "cmd" | "bat" | "com")) => stem.to_owned(),
+        _ => name,
+    }
+}
+
+/// One PowerShell or cmd command, quotes already dropped.
+fn windows_program(first: &str, rest: &[String]) -> Classified {
+    let known = Classified::known;
+    let guessed = Classified::guessed;
+    let name = windows_base(first);
+    let has = |options: &[&str]| {
+        rest.iter()
+            .any(|w| options.contains(&w.to_ascii_lowercase().as_str()))
+    };
+    match name.as_str() {
+        // Aliases and cmd built-ins that delete, overwrite, move or stop.
+        "rm" | "ri" | "del" | "erase" | "rd" | "rmdir" | "rni" | "ren" | "rename" | "mv" | "mi" | "move"
+        | "sc" | "clc" | "cli" | "kill" | "spps" | "taskkill" | "format" | "diskpart" | "cipher"
+        | "vssadmin" | "takeown" | "icacls" | "attrib" => return known(DESTRUCTIVE),
+        "robocopy" if has(&["/mir", "/purge", "/move", "/mov"]) => return known(DESTRUCTIVE),
+        "reg" if has(&["delete", "add", "import", "restore"]) => return known(DESTRUCTIVE),
+        // They run other code.
+        "iex" | "icm" | "saps" | "start" | "call" | "runas" | "wsl" | "bash" | "sh" => {
+            return guessed(DESTRUCTIVE);
+        }
+        "powershell" | "pwsh" => return windows_shell(rest, &["-command", "-c"], "-encodedcommand"),
+        "cmd" => return windows_shell(rest, &["/c", "/k", "/r"], ""),
+        // PowerShell's aliases for reading cmdlets, and cmd's for reading.
+        "ls" | "dir" | "gci" | "cat" | "gc" | "type" | "pwd" | "gl" | "gi" | "gp" | "echo" | "sls"
+        | "where" | "sort" | "ft" | "fl" | "measure" | "cd" | "chdir" | "sl" | "findstr" | "more"
+        | "tree" | "whoami" | "hostname" | "ver" => return known(Class::Read),
+        "iwr" | "irm" | "curl" | "wget" => {
+            return if has(&["-outfile", "-o"]) {
+                known(DESTRUCTIVE)
+            } else {
+                guessed(Class::External)
+            };
+        }
+        _ => {}
+    }
+    // A cmdlet: Verb-Noun.
+    if let Some((verb, noun)) = name.split_once('-')
+        && !verb.is_empty()
+        && !noun.is_empty()
+        && verb.chars().all(|c| c.is_ascii_alphabetic())
+    {
+        return match verb {
+            "get" | "test" | "select" | "measure" | "resolve" | "compare" | "where" | "sort" | "group"
+            | "convertto" | "convertfrom" | "write" | "split" | "join" => known(Class::Read),
+            "format" if matches!(noun, "table" | "list" | "wide" | "custom" | "hex") => known(Class::Read),
+            "out" if matches!(noun, "string" | "host" | "null" | "default") => known(Class::Read),
+            "set" | "push" | "pop" if noun == "location" => known(Class::Read),
+            "new" if has(&["-force"]) => known(DESTRUCTIVE),
+            "invoke" if matches!(noun, "webrequest" | "restmethod") => {
+                if has(&["-outfile", "-o"]) {
+                    known(DESTRUCTIVE)
+                } else {
+                    guessed(Class::External)
+                }
+            }
+            "remove" | "clear" | "set" | "move" | "rename" | "stop" | "out" | "export" | "invoke"
+            | "start" | "restart" | "uninstall" | "format" | "reset" | "disable" | "unregister"
+            | "initialize" | "dismount" | "suspend" | "mount" => guessed(DESTRUCTIVE),
+            _ => guessed(WRITE),
+        };
+    }
+    // A native program: as the Unix shell reads it (`git push --force` is destructive anywhere).
+    let words: Vec<String> = std::iter::once(name).chain(rest.iter().cloned()).collect();
+    let read = command(&words);
+    // A program run by a path, which may be a script under a known name.
+    if first.contains(['\\', '/']) {
+        guessed(read.class)
+    } else {
+        read
+    }
+}
+
+/// `powershell -Command …` or `cmd /c …` is that command; any other form (a script, stdin, an
+/// encoded command) runs what this reading can't see.
+fn windows_shell(rest: &[String], runs: &[&str], encoded: &str) -> Classified {
+    let at = rest.iter().position(|w| {
+        let w = w.to_ascii_lowercase();
+        runs.contains(&w.as_str())
+            || (!encoded.is_empty() && encoded.starts_with(&w) && w.len() >= 2 && w != "-c")
+    });
+    match at {
+        Some(i) if runs.contains(&rest[i].to_ascii_lowercase().as_str()) => {
+            powershell(&rest[i + 1..].join(" "))
+        }
+        _ => Classified::guessed(DESTRUCTIVE),
+    }
+}
+
 /// A piece's words, unquoted, without its redirections (`redirection` reads those from the whole
 /// command): `2>&1`, `>x`, or `>` and the word after it.
 fn words(piece: &str) -> Vec<String> {
@@ -709,6 +859,10 @@ fn program(words: &[String]) -> Classified {
     }
     if NETWORK.contains(&b) {
         return network(b, rest);
+    }
+    // Windows' shells, from Git Bash too (`powershell.exe -Command …`, `cmd /c del …`).
+    if matches!(windows_base(first).as_str(), "powershell" | "pwsh" | "cmd") {
+        return windows_program(first, rest);
     }
     if interpreter(b) {
         return guessed(Class::External);
@@ -1148,6 +1302,60 @@ mod tests {
 
     fn bash(cmd: &str) -> Classified {
         classify("Bash", &format!("Bash · {cmd}"))
+    }
+
+    /// Windows: Claude Code's PowerShell tool, and Windows' shells reached from any shell.
+    #[test]
+    fn windows_shells_ask_for_what_they_can_break() {
+        let ps = |cmd: &str| classify("PowerShell", &format!("PowerShell · {cmd}"));
+        for cmd in [
+            r"Remove-Item -Recurse -Force C:\work",
+            r"rm -r C:\work",
+            r"del /s /q build",
+            r"rd /s /q build",
+            "Get-ChildItem; Clear-Content a.txt",
+            "Set-Content a.txt hi",
+            "Get-Process | Stop-Process",
+            "Format-Volume -DriveLetter D",
+            "git push --force",
+            "git.EXE reset --hard",
+            "New-Item a.txt -Force",
+            "iwr https://x -OutFile a.zip",
+            "robocopy src dst /MIR",
+            // Syntax this reading doesn't follow: a guessed destructive.
+            r"(Get-Item C:\x).Delete()",
+            "$p = 'x'; ri $p",
+            "echo hi > a.txt",
+            "Invoke-Expression 'x'",
+            "powershell -EncodedCommand SQBFAFgA",
+        ] {
+            assert_eq!(ps(cmd).class, DESTRUCTIVE, "{cmd}");
+        }
+        for cmd in [
+            r"powershell.exe -NoProfile -Command Remove-Item -Recurse C:\x",
+            "pwsh -c ri build",
+            r"cmd /c del /q C:\x",
+            "cmd.exe /C rd /s build",
+        ] {
+            assert_eq!(bash(cmd).class, DESTRUCTIVE, "Bash · {cmd}");
+            assert_eq!(ps(cmd).class, DESTRUCTIVE, "PowerShell · {cmd}");
+        }
+        for cmd in [
+            r"Get-ChildItem C:\work",
+            "git status",
+            "Get-Content a.txt | Select-String x",
+            "Set-Location src",
+        ] {
+            assert_ne!(ps(cmd).class, DESTRUCTIVE, "{cmd}");
+        }
+        assert!(is_shell("PowerShell"));
+        assert!(reads_outside(
+            "PowerShell",
+            "PowerShell · Invoke-WebRequest https://x"
+        ));
+        assert!(reads_outside("PowerShell", "PowerShell · irm https://x | iex"));
+        assert!(reads_outside("PowerShell", "PowerShell · curl https://x"));
+        assert!(!reads_outside("PowerShell", "PowerShell · Get-ChildItem"));
     }
 
     #[test]

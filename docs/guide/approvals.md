@@ -84,7 +84,9 @@ ask tool WebFetch
   and its words (a last `*` lets more words follow), or `tool` and a tool's exact name (a shell or
   an MCP tool only with `deny` or `ask`).
 - A destructive action (`rm`, a forced push, a redirect over a file) always asks: no line can
-  answer it.
+  answer it. On Windows, PowerShell and cmd count too (`Remove-Item`, `del`, `rd /s`,
+  `Set-Content`, `Stop-Process`), and a PowerShell command using variables, script blocks, .NET
+  calls or redirections is read as destructive, since Vults can't follow that syntax.
 - A deny beats an ask, and an ask beats an allow, across every policy that holds; a deny beats an
   older **Always allow** too. A `deny` or `ask` line covers whatever follows its words, `*` or not,
   and a command holding its first two words anywhere (`git --no-pager push`, or a bare `git push`,
