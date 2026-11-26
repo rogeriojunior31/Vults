@@ -103,6 +103,36 @@ pub fn taskbar_at_top() -> Option<bool> {
     (found != 0).then_some(data.uEdge == ABE_TOP)
 }
 
+/// Is a full-screen app in front (a game, a video, a presentation)? Windows' own answer, as it
+/// gives it to keep notifications quiet.
+pub fn full_screen() -> bool {
+    use windows::Win32::UI::Shell::{
+        QUNS_BUSY, QUNS_PRESENTATION_MODE, QUNS_RUNNING_D3D_FULL_SCREEN, SHQueryUserNotificationState,
+    };
+    // SAFETY: a read of the shell's state.
+    unsafe { SHQueryUserNotificationState() }.is_ok_and(|state| {
+        matches!(
+            state,
+            QUNS_BUSY | QUNS_RUNNING_D3D_FULL_SCREEN | QUNS_PRESENTATION_MODE
+        )
+    })
+}
+
+/// Calls `changed` with the new answer each time [`full_screen`] changes, from a thread of its own.
+pub fn on_full_screen_changed(changed: impl Fn(bool) + Send + 'static) {
+    std::thread::spawn(move || {
+        let mut last = false;
+        loop {
+            std::thread::sleep(Duration::from_secs(2));
+            let now = full_screen();
+            if now != last {
+                last = now;
+                changed(now);
+            }
+        }
+    });
+}
+
 /// Calls `changed` from a thread of its own each time the layout differs from the last one read.
 pub fn on_monitors_changed(changed: impl Fn() + Send + 'static) {
     std::thread::spawn(move || {

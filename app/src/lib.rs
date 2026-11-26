@@ -535,6 +535,16 @@ pub fn run() {
                     place_surfaces(&app);
                     let _ = app.emit("monitors", ());
                 });
+                // As on Linux, a video, a game or a presentation in full screen hides the corner
+                // widget; it comes back on top when they leave.
+                let app = handle.clone();
+                vults_platform::windows_displays::on_full_screen_changed(move |full| {
+                    if let Some(win) = app.get_webview_window(WIDGET) {
+                        let _ = app.run_on_main_thread(move || {
+                            let _ = win.set_always_on_top(!full);
+                        });
+                    }
+                });
             }
             #[cfg(target_os = "linux")]
             {

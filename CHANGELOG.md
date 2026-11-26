@@ -27,6 +27,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Fixes
 
+- On Windows, the corner widget steps behind a full-screen video, game or presentation, as on Linux, and comes back on top when it ends.
 - On Windows, Settings names your monitors as they call themselves (`DELL U2720Q`) instead of `\\.\DISPLAY1`.
 - On Windows, Zeca in the tray is drawn at the size the tray shows, so it stays sharp at 125 % and 150 % scaling.
 - On Windows, a voice command finds an app even when the Start Menu read is cut short by a slow disk or a scan: the names it missed come from the last full read.
