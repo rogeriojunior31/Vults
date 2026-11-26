@@ -1547,6 +1547,7 @@ export default {
   "No session in this folder stopped in the last ten minutes.": "这个文件夹里没有在最近十分钟内停止的会话。",
   "That session is still open in its terminal: tell it there.": "那个会话还在它的终端里打开着：请在那里告诉它。",
   "Vults can't tell whether that session is still open: tell it in its terminal.": "Vults 无法判断那个会话是否还开着：请在它的终端里告诉它。",
+  "On Windows, Vults can't continue a Claude Code session: it runs one only in Claude Code's sandbox, which Windows lacks. Tell it in its terminal.": "在 Windows 上，Vults 无法继续 Claude Code 会话：它只在 Claude Code 的沙盒中运行会话，而 Windows 没有该沙盒。请在它的终端中告诉它。",
   "That session can't be continued from here.": "那个会话无法从这里继续。",
   "Another session is being continued: wait for it, or /continue stop.": "另一个会话正在继续：请等它，或使用 /continue stop。",
   "Continuing this session; it shows in the flock:": "正在继续这个会话，它会出现在鸟群中：",

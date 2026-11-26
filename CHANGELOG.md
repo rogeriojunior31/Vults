@@ -27,6 +27,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Fixes
 
+- On Windows, `/continue` with a Claude Code session says it can't run there (Claude Code has no sandbox on native Windows, and a continued session runs only in one) instead of starting a session whose every command would fail. Codex sessions continue as before.
 - On Windows, the corner widget steps behind a full-screen video, game or presentation, as on Linux, and comes back on top when it ends.
 - On Windows, Settings names your monitors as they call themselves (`DELL U2720Q`) instead of `\\.\DISPLAY1`.
 - On Windows, Zeca in the tray is drawn at the size the tray shows, so it stays sharp at 125 % and 150 % scaling.

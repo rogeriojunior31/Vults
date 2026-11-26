@@ -164,7 +164,9 @@ send, start or open another conversation, or quit Vults.
 that stopped in the last ten minutes, as its next turn: Vults resumes it here, with its own
 settings, in its sandbox, and it shows in the flock again with its cards. Only a
 session whose process is gone: one still open in its terminal is refused, so you tell it there.
-One at a time; `/continue stop` ends it. It goes to no model of Zeca's.
+One at a time; `/continue stop` ends it. It goes to no model of Zeca's. On Windows only Codex
+sessions can be continued: Claude Code has no sandbox on native Windows, and Vults runs a continued
+session only in one.
 
 ## Conversations
 

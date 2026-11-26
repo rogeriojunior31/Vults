@@ -1547,6 +1547,7 @@ export default {
   "No session in this folder stopped in the last ten minutes.": "Nenhuma sessão nesta pasta parou nos últimos dez minutos.",
   "That session is still open in its terminal: tell it there.": "Essa sessão ainda está aberta no terminal dela: fale com ela lá.",
   "Vults can't tell whether that session is still open: tell it in its terminal.": "O Vults não consegue saber se essa sessão ainda está aberta: fale com ela no terminal.",
+  "On Windows, Vults can't continue a Claude Code session: it runs one only in Claude Code's sandbox, which Windows lacks. Tell it in its terminal.": "No Windows, o Vults não consegue continuar uma sessão do Claude Code: ele só a executa no sandbox do Claude Code, que o Windows não tem. Fale com ela no terminal dela.",
   "That session can't be continued from here.": "Essa sessão não pode ser continuada daqui.",
   "Another session is being continued: wait for it, or /continue stop.": "Outra sessão está sendo continuada: espere por ela, ou /continue stop.",
   "Continuing this session; it shows in the flock:": "Continuando esta sessão; ela aparece no bando:",

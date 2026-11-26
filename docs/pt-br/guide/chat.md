@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 4c67ba2a3ed3 -->
+<!-- source: 8fd9be251ec1 -->
 
 Os painéis laterais redimensionáveis seguem o ponteiro que iniciou o arraste, ignoram toques adicionais e encerram o arraste quando a janela perde o foco. O cancelamento preserva a largura atual e mantém os rascunhos. Quando o espaço limita um painel, o arraste e o redimensionamento pelo teclado partem da largura visível; reduzir apenas o espaço disponível não sobrescreve a largura salva. Os controles de redimensionar e recolher usam a mesma cor de foco de teclado que o restante do tema selecionado.
 
@@ -177,7 +177,9 @@ quando o Chat está oculto, a janela está minimizada ou a tela está bloqueada.
 conversa que parou nos últimos dez minutos, como o próximo turno dela: o Vults a retoma aqui, com
 as configurações dela, no sandbox dela, e ela volta a aparecer no bando com os cards dela.
 Só uma sessão cujo processo acabou: uma que ainda está aberta no terminal é recusada, então você
-fala com ela lá. Uma por vez; `/continue stop` encerra. Não vai para nenhum modelo do Zeca.
+fala com ela lá. Uma por vez; `/continue stop` encerra. Não vai para nenhum modelo do Zeca. No
+Windows, só sessões do Codex podem ser continuadas: o Claude Code não tem sandbox no Windows nativo,
+e o Vults só executa uma sessão continuada dentro de um.
 
 <a id="conversations"></a>
 
