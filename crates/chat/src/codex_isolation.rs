@@ -18,6 +18,8 @@ pub(crate) fn auth_path() -> Result<PathBuf, String> {
     let home = value("CODEX_HOME")
         .map(PathBuf::from)
         .or_else(|| value("HOME").map(|p| PathBuf::from(p).join(".codex")))
+        // Started from the Start menu, Windows sets no HOME: Codex's folder is in the profile.
+        .or_else(|| std::env::home_dir().map(|p| p.join(".codex")))
         .ok_or(LOGIN)?;
     if !home.is_absolute() {
         return Err(LOGIN.into());
