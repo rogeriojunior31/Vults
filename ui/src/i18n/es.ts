@@ -24,6 +24,7 @@ export default {
   "Could not read Gitea. Check the connection and try again.": "No se pudo consultar Gitea. Comprueba la conexión e inténtalo de nuevo.",
   "Check the Gitea URL and token in Settings.": "Comprueba la URL y el token de Gitea en Ajustes.",
   "Could not read the Gitea connection.": "No se pudo leer la conexión de Gitea.",
+  "This Gitea token is too long for Windows Credential Manager. Use a shorter token.": "Este token de Gitea es demasiado largo para el Administrador de credenciales de Windows. Usa un token más corto.",
   "Could not save the Gitea connection.": "No se pudo guardar la conexión de Gitea.",
   "The Gitea connection changed. Reload Settings and try again.": "La conexión de Gitea cambió. Recarga Ajustes e inténtalo de nuevo.",
   "Enter a valid HTTPS Gitea base URL without credentials, query or fragment.": "Introduce una URL base HTTPS válida de Gitea, sin credenciales, consulta ni fragmento.",

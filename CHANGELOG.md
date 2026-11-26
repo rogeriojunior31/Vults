@@ -27,6 +27,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Fixes
 
+- On Windows, a Gitea token too long for Credential Manager says so instead of "Could not save the Gitea connection."
 - On Windows, changing a screen's scale puts the island, the widget and the dictation overlay back in place instead of shifting them off-centre.
 - Connecting a headset or unplugging the microphone mid-dictation keeps what you said so far instead of throwing the recording away.
 - On Windows, when the privacy settings keep desktop apps off the microphone, dictation says where to turn it back on instead of a bare error.

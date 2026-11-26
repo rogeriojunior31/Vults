@@ -24,6 +24,7 @@ export default {
   "Could not read Gitea. Check the connection and try again.": "无法读取 Gitea。请检查连接后重试。",
   "Check the Gitea URL and token in Settings.": "请在设置中检查 Gitea 地址和令牌。",
   "Could not read the Gitea connection.": "无法读取 Gitea 连接配置。",
+  "This Gitea token is too long for Windows Credential Manager. Use a shorter token.": "此 Gitea 令牌对 Windows 凭据管理器来说太长。请使用更短的令牌。",
   "Could not save the Gitea connection.": "无法保存 Gitea 连接配置。",
   "The Gitea connection changed. Reload Settings and try again.": "Gitea 连接已更改。请重新加载设置后重试。",
   "Enter a valid HTTPS Gitea base URL without credentials, query or fragment.": "请输入有效的 Gitea HTTPS 基础地址，不含凭据、查询参数或片段。",
