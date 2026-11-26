@@ -27,6 +27,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Fixes
 
+- On Windows, Settings no longer shows Linux-only rows (X11 recording keys, System Settings shortcuts) while its shortcut editor loads or fails, and **Talk with Zeca** says voice conversation is Linux-only instead of offering its setup.
 - On Windows, Qwen Code sends its sessions when your user name has a space, and Codex hooks no longer start a PowerShell on every tool call. **Settings → Agents** offers to update Codex's hooks once (the same diff and click).
 - On Windows, the island and the corner widget stay with you on every virtual desktop, and no longer show in Alt+Tab.
 - On Windows, folding the island after a chat or an answer gives the keyboard back to the window you were in, so your next keys reach the terminal again.

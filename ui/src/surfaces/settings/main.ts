@@ -1296,7 +1296,9 @@ async function refreshMicrophones(): Promise<void> {
 }
 
 function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[] {
-  if (dictationSection === "conversation") return [el("h1", { text: t("Talk with Zeca") }), realtimeSettings.element];
+  if (dictationSection === "conversation") return [el("h1", { text: t("Talk with Zeca") }), windowsShortcuts.supported()
+    ? el("p", { class: "hint", text: t("Voice conversation is available on Linux only.") })
+    : realtimeSettings.element];
   // The questions channel (MCP) is Linux-only: Windows shows why, never an installer it lacks.
   if (dictationSection === "agents") return [el("h1", { text: t("Agents") }), windowsShortcuts.supported()
     ? el("p", { class: "hint", text: t("Spoken answers for agents are available on Linux only.") })
@@ -1428,7 +1430,7 @@ function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[]
         row(t("Cancel by voice"), t("Say a cancel phrase by itself or at the end of the final transcript, such as “cancel” or “never mind”. Discards this dictation without copying, inserting or saving it."), toggle(dictationCancelByVoice, async on => {
           await Bridge.setDictationProcessing("cancelByVoice", on);
           dictationCancelByVoice = on; dictationCancelByVoiceChanged = true;
-        }), t("English, Portuguese and Spanish; works on X11 and Wayland.")),
+        }), windowsShortcuts.supported() ? t("English, Portuguese and Spanish.") : t("English, Portuguese and Spanish; works on X11 and Wayland.")),
         el("p", { class: "hint", text: t("Independent dictation only, checked after recording stops. To dictate a sentence ending in a cancel phrase, turn this off.") }),
         // Windows holds and releases through its own hotkeys: no listener sees Space or Esc.
         el("p", { class: "hint", text: windowsShortcuts.supported()

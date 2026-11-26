@@ -1648,6 +1648,7 @@ export default {
   "A small window in a corner of the screen with up to three birds, the sessions that matter most, and how many work or need you.": "屏幕角落的小窗口，最多显示三只鸟（最重要的会话），以及有多少在工作或需要你。",
   "A click opens the island, on the card when one waits; it never answers one.": "点击会打开灵动岛，有卡片等待时直接打开卡片；它从不替你回答。",
   "Say a cancel phrase by itself or at the end of the final transcript, such as “cancel” or “never mind”. Discards this dictation without copying, inserting or saving it.": "单独说出取消短语，或在最终转写末尾加上取消短语，例如“cancel”或“never mind”。此条听写将被丢弃，不会复制、插入或保存。",
+  "English, Portuguese and Spanish.": "英语、葡萄牙语和西班牙语。",
   "English, Portuguese and Spanish; works on X11 and Wayland.": "支持英语、葡萄牙语和西班牙语；适用于 X11 和 Wayland。",
   "Sending to Zeca uses the current Chat conversation and its model, access rules and budget.": "发送给 Zeca 时使用当前聊天及其模型、访问规则和预算。",
   "Zeca must be on and Chat idle, with no unsent text or attachments. Refused commands and ambiguous names stay local.": "Zeca 必须开启，聊天须空闲且没有未发送的文字或附件。被拒绝的命令和有歧义的名称始终在本地处理。",

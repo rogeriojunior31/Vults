@@ -3,6 +3,9 @@ import { el } from "../../dom";
 import { t, tk } from "../../i18n";
 import { button, row } from "./pieces";
 
+/** WebView2 says so in its user agent; WebKitGTK never does. */
+const ON_WINDOWS = navigator.userAgent.includes("Windows");
+
 const ACTIONS = [
   ["open", tk("Open the island")], ["next", tk("Next session")], ["previous", tk("Previous session")],
   ["mini", tk("Mini")], ["quick", tk("Quick")], ["room", tk("Room")],
@@ -84,5 +87,6 @@ export function createWindowsShortcuts(port: Port, onReady: () => void = () => {
     if (message) { const note = el("p", { class: failed ? "note error shortcut-feedback" : "note shortcut-feedback", text: message }); note.setAttribute("role", failed ? "alert" : "status"); root.append(note); }
     return root;
   }
-  return { render, refresh, supported: () => !!state, desktopEditor: () => state === null, initialize: () => { void refresh(); } };
+  // The platform, known at once: a failed or pending read must not show Linux rows on Windows.
+  return { render, refresh, supported: () => ON_WINDOWS, desktopEditor: () => state === null, initialize: () => { void refresh(); } };
 }

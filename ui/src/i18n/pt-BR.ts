@@ -1648,6 +1648,7 @@ export default {
   "A small window in a corner of the screen with up to three birds, the sessions that matter most, and how many work or need you.": "Uma janelinha num canto da tela com até três pássaros, as sessões que mais importam, e quantas trabalham ou precisam de você.",
   "A click opens the island, on the card when one waits; it never answers one.": "Um clique abre a ilha, no card quando um espera; ele nunca responde um.",
   "Say a cancel phrase by itself or at the end of the final transcript, such as “cancel” or “never mind”. Discards this dictation without copying, inserting or saving it.": "Diga uma frase de cancelamento sozinha ou no final da transcrição, como “cancela” ou “deixa pra lá”. Descarta este ditado sem copiar, inserir ou salvar.",
+  "English, Portuguese and Spanish.": "Inglês, português e espanhol.",
   "English, Portuguese and Spanish; works on X11 and Wayland.": "Inglês, português e espanhol; funciona no X11 e no Wayland.",
   "Sending to Zeca uses the current Chat conversation and its model, access rules and budget.": "O envio ao Zeca usa a conversa atual do Chat e seu modelo, regras de acesso e orçamento.",
   "Zeca must be on and Chat idle, with no unsent text or attachments. Refused commands and ambiguous names stay local.": "O Zeca precisa estar ligado e o Chat livre, sem texto ou anexos por enviar. Comandos recusados e nomes ambíguos ficam locais.",
