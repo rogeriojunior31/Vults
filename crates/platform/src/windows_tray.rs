@@ -31,6 +31,13 @@ pub fn animations_enabled() -> bool {
     read.is_err() || on.as_bool()
 }
 
+/// The tray's icon size now, in pixels (16 at 100 %, 20 at 125 %, 24 at 150 %, 32 at 200 %).
+pub fn icon_size() -> i32 {
+    use windows::Win32::UI::WindowsAndMessaging::{GetSystemMetrics, SM_CXSMICON};
+    // SAFETY: a read of a system metric.
+    unsafe { GetSystemMetrics(SM_CXSMICON) }
+}
+
 #[cfg(test)]
 mod tests {
     #[test]
@@ -40,5 +47,6 @@ mod tests {
         assert_eq!((width, height, pixels.len()), (32, 32, 32 * 32 * 4));
         assert!(super::rgba(b"not a png").is_none());
         let _ = super::animations_enabled();
+        assert!(super::icon_size() >= 16);
     }
 }
