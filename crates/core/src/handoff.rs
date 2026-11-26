@@ -61,7 +61,9 @@ impl State {
                 // Where it started, or where it is now: it resumes where it started (its
                 // transcript is kept under that folder).
                 resumable(k)
-                    && (s.root.as_deref() == Some(cwd) || s.cwd.as_deref() == Some(cwd))
+                    && [&s.root, &s.cwd]
+                        .iter()
+                        .any(|c| c.as_deref().is_some_and(|c| crate::fspath::same(c, cwd)))
                     && matches!(s.status, Status::Finished | Status::Failed | Status::Idle)
                     && fresh(s.updated)
                     && !self.pending.iter().any(|p| &p.session == *k)
@@ -77,7 +79,11 @@ impl State {
         out.extend(
             self.closed
                 .iter()
-                .filter(|e| resumable(&e.key) && e.cwd.as_deref() == Some(cwd) && fresh(e.at))
+                .filter(|e| {
+                    resumable(&e.key)
+                        && e.cwd.as_deref().is_some_and(|c| crate::fspath::same(c, cwd))
+                        && fresh(e.at)
+                })
                 .filter(|e| !self.sessions.contains_key(&e.key))
                 .map(|e| Candidate {
                     key: e.key.clone(),

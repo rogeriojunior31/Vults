@@ -1228,20 +1228,22 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
                 return Vec::new();
             }
             // Another session's reported edit is that session's, not a command of this one.
-            let theirs: HashSet<&str> = state
+            let theirs: HashSet<String> = state
                 .sessions
                 .iter()
                 .filter(|(k, _)| **k != session)
                 .flat_map(|(_, s)| s.touched.iter().filter(|t| !t.outside))
-                .map(|t| t.path.as_str())
+                .filter_map(|t| fspath::key(&t.path))
                 .collect();
+            // Git names files with `/`, the agents with their OS's separator: compared keyed.
             let files: Vec<String> = files
                 .into_iter()
-                .filter(|p| is_absolute(p) && !theirs.contains(p.as_str()))
+                .filter(|p| fspath::key(p).is_some_and(|k| !theirs.contains(&k)))
+                .map(|p| fspath::tidy(&p))
                 .collect();
             if let Some(s) = state.sessions.get_mut(&session) {
                 for path in files {
-                    if s.touched.iter().any(|t| t.path == path) {
+                    if s.touched.iter().any(|t| fspath::same(&t.path, &path)) {
                         continue;
                     }
                     // Only an older outside file makes room: the agent's own edits stay.
@@ -1525,7 +1527,7 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             // Some agents name the file from the project's folder.
             let path = match cwd {
                 _ if is_absolute(&f.path) => f.path.clone(),
-                Some(cwd) if is_absolute(cwd) => format!("{}/{}", cwd.trim_end_matches(['/', '\\']), f.path),
+                Some(cwd) if is_absolute(cwd) => fspath::join(cwd, &f.path),
                 _ => return Vec::new(),
             };
             // The hunk starts with context: the first changed line is past it.
@@ -1601,6 +1603,8 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant, run_ended: boo
         event,
         received,
     } = update;
+    // One spelling per folder (Windows reports one as `c:\p`, `C:/p` or `C:\p\`): one project.
+    let cwd = cwd.map(|c| fspath::tidy(&c));
     // Never later than now, whatever the caller's clock said.
     let since = received.map_or(now, |r| r.min(now));
     let mut effects = Vec::new();
@@ -1772,7 +1776,10 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant, run_ended: boo
                 && !policies::destructive(&tool, &target, &ask)
                 && ask.workdir.as_ref().or(session.cwd.as_ref()).is_some_and(|cwd| {
                     state.rules.iter().any(|r| {
-                        r.agent == key.agent && &r.cwd == cwd && r.tool == tool && r.target == target
+                        r.agent == key.agent
+                            && fspath::same(&r.cwd, cwd)
+                            && r.tool == tool
+                            && r.target == target
                     })
                 });
             let verdict = policies::decide(
@@ -2059,10 +2066,8 @@ fn touch(touched: &mut Vec<Touched>, path: String, f: &FileDiff, step: u32) {
 /// One path per file, whether the agent named it from its folder or whole.
 pub(crate) fn full_path(cwd: Option<&str>, path: &str) -> String {
     match cwd {
-        Some(cwd) if !is_absolute(path) && is_absolute(cwd) => {
-            format!("{}/{}", cwd.trim_end_matches(['/', '\\']), path)
-        }
-        _ => path.to_string(),
+        Some(cwd) if !is_absolute(path) && is_absolute(cwd) => fspath::join(cwd, path),
+        _ => fspath::tidy(path),
     }
 }
 
@@ -2266,7 +2271,7 @@ fn answer(state: &mut State, intent: Intent, by: &By, now: Instant) -> Vec<Effec
                             && q.session.agent == rule.agent
                             && q.tool == rule.tool
                             && q.target == rule.target
-                            && cwd == Some(&rule.cwd)
+                            && cwd.is_some_and(|c| fspath::same(c, &rule.cwd))
                     })
                     .map(|q| q.request.clone())
                     .collect();
@@ -2425,7 +2430,7 @@ fn set_status(state: &mut State, key: &SessionKey, status: Status, now: Instant)
 
 /// `/home/me/p` or `C:\p`: never a path the editor would read as an option.
 fn is_absolute(path: &str) -> bool {
-    path.starts_with('/') || path.as_bytes().get(1..3) == Some(b":\\")
+    fspath::key(path).is_some()
 }
 
 fn project_name(cwd: &str) -> Option<String> {

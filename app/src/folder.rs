@@ -75,7 +75,14 @@ pub fn changed(before: &Look, after: &Look) -> Vec<String> {
         .files
         .iter()
         .filter(|(name, meta)| before.files.get(*name) != Some(meta))
-        .map(|(name, _)| after.top.join(name).to_string_lossy().into_owned())
+        // Git names files with `/`: joined with the OS's separator, as the agents name them.
+        .map(|(name, _)| {
+            after
+                .top
+                .join(name.replace('/', std::path::MAIN_SEPARATOR_STR))
+                .to_string_lossy()
+                .into_owned()
+        })
         .collect();
     out.sort();
     out

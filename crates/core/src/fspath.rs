@@ -37,6 +37,40 @@ pub fn is_windows(path: &str) -> bool {
         || path.starts_with("//")
 }
 
+/// One spelling of a Windows path, still for people to read: no `\\?\`, backslashes, the drive
+/// letter in capitals, no trailing separator (`C:\` stays). Agents and terminals report one folder
+/// as `c:\proj`, `C:/proj` or `C:\proj\`; spelled once, it is one project. A Unix path is kept.
+pub fn tidy(path: &str) -> String {
+    let path = match path.strip_prefix(r"\\?\UNC\") {
+        Some(rest) => format!(r"\\{rest}"),
+        None => path.strip_prefix(r"\\?\").unwrap_or(path).to_owned(),
+    };
+    if !is_windows(&path) {
+        return path;
+    }
+    let mut out = path.replace('/', "\\");
+    if out.as_bytes().get(1) == Some(&b':') {
+        out[..1].make_ascii_uppercase();
+    }
+    while out.ends_with('\\') && !(out.len() == 3 && out.as_bytes()[1] == b':') && out.len() > 2 {
+        out.pop();
+    }
+    out
+}
+
+/// `rel` inside the folder `dir`, with the folder's own separator.
+pub fn join(dir: &str, rel: &str) -> String {
+    if is_windows(dir) {
+        format!(
+            "{}\\{}",
+            dir.trim_end_matches(['/', '\\']),
+            rel.replace('/', "\\")
+        )
+    } else {
+        format!("{}/{rel}", dir.trim_end_matches('/'))
+    }
+}
+
 /// Is a keyed path the top of its disk (`/`, `c:`, `//server/share`): a folder no allow reaches?
 pub fn is_top(key: &str) -> bool {
     if key == "/" || (key.len() == 2 && key.ends_with(':')) {
@@ -84,6 +118,18 @@ mod tests {
         for no in ["site", r"C:proj", "", r"C:\a\..\b", "/a/../b", "~/x"] {
             assert_eq!(key(no), None, "{no}");
         }
+    }
+
+    #[test]
+    fn a_windows_folder_is_spelled_once_and_joined_with_its_separator() {
+        for spelling in [r"c:\Proj\", "C:/Proj", r"\\?\C:\Proj", r"C:\Proj"] {
+            assert_eq!(tidy(spelling), r"C:\Proj", "{spelling}");
+        }
+        assert_eq!(tidy(r"c:\"), r"C:\");
+        assert_eq!(tidy(r"\\?\UNC\srv\share\x\"), r"\\srv\share\x");
+        assert_eq!(tidy("/home/u/site/"), "/home/u/site/", "Unix is kept");
+        assert_eq!(join(r"C:\Proj\", "src/main.rs"), r"C:\Proj\src\main.rs");
+        assert_eq!(join("/home/u/site/", "src/main.rs"), "/home/u/site/src/main.rs");
     }
 
     #[test]
