@@ -27,6 +27,22 @@ persistent setting and requests no desktop grant. See [Diagnostics](../guide/dic
 | System keyring, service `io.github.rogeriojunior31.vults`, account `dictation-keyboard-restore-token` | The dictation RemoteDesktop keyboard restore token, when persistence is available; consumed once, rotated after a grant and removed when insertion is disabled. Never in a file or exposed to a webview |
 | `~/.local/state/vults/logs/` | The log: one file a day, the last five kept. It records what happened (event names, decisions, errors), never commands, paths or chat text |
 
+## Where things live (Windows)
+
+The same files, in other folders:
+
+| Path | What |
+|---|---|
+| `%APPDATA%\Vults\settings.json` | The app's settings |
+| `%LOCALAPPDATA%\Vults\` | Everything under `~/.local/share/vults/` on Linux: the hook relay (`bin\vults-hook.exe`), the database, the inbox, Zeca's memory, the voice models, the MCP files |
+| `%LOCALAPPDATA%\Vults\logs\` | The log |
+| `\\.\pipe\vults-<your SID>` | The pipe the hook talks to, open to your account only |
+| `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` | The entry **Start with the desktop** adds |
+| Windows Credential Manager, service `io.github.rogeriojunior31.vults` | The secrets (never in a file) |
+
+The app itself is in `%LOCALAPPDATA%\Programs\Vults\` (installed just for you) or
+`%ProgramFiles%\Vults\` (for everyone).
+
 Dictation's user-maintained dictionary, replacement rules and snippets share `vults.sqlite`
 (schema 22). They are preferences, separate from recorded transcripts: retention, transcript
 erasure and **Clear history** preserve them. Individual deletion removes the chosen entry.

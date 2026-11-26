@@ -27,6 +27,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Fixes
 
+- On Windows, the log is in `%LOCALAPPDATA%\Vults\logs`, beside the rest of the app's data, and Settings and files lists where everything lives on Windows.
 - On Windows, a Codex specialist finds your Codex login when Vults starts from the Start menu.
 - On Windows, a diff card is titled by the file name instead of its whole path, and the Nest's week bars add a repository's worktrees up again.
 - On Windows, Chat, Zeca's sleep and the journal work with a `claude` or `codex` installed through npm: their instructions now go in a file (or on stdin) instead of the command line, where a `.cmd` takes no line break and a long memory outgrew the limit.

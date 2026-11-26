@@ -1,5 +1,5 @@
 # Configurações e arquivos
-<!-- source: d5dfece0810a -->
+<!-- source: 7b84b85e7752 -->
 
 **Ditado > Diagnóstico** oferece um teste explícito de microfone de seis segundos,
 somente na memória, estado atual do áudio/desktop/modelos, contadores desde o início do app e tempos
@@ -30,6 +30,24 @@ retidos por etapa. Não acrescenta configuração persistente nem pede permissã
 | Chaveiro do sistema, serviço `io.github.rogeriojunior31.vults`, conta `<provider>-api-key` (`anthropic-api-key`, `openai-api-key`, …) | As chaves de API do chat, uma por provedor para o qual você deu uma (nunca em arquivo) |
 | Chaveiro do sistema, serviço `io.github.rogeriojunior31.vults`, conta `dictation-keyboard-restore-token` | O token de restauração de teclado RemoteDesktop do ditado, quando há persistência; consumido uma vez, renovado após uma autorização e removido ao desligar a inserção. Nunca fica em arquivo nem é exposto a uma webview |
 | `~/.local/state/vults/logs/` | O log: um arquivo por dia, os últimos cinco são mantidos. Ele registra o que aconteceu (nomes de eventos, decisões, erros), nunca comandos, caminhos ou texto do chat |
+
+<a id="where-things-live-windows"></a>
+
+## Onde cada coisa fica (Windows)
+
+Os mesmos arquivos, em outras pastas:
+
+| Caminho | O quê |
+|---|---|
+| `%APPDATA%\Vults\settings.json` | As configurações do app |
+| `%LOCALAPPDATA%\Vults\` | Tudo o que no Linux fica em `~/.local/share/vults/`: o relay do hook (`bin\vults-hook.exe`), o banco de dados, a caixa de entrada, a memória do Zeca, os modelos de voz, os arquivos do MCP |
+| `%LOCALAPPDATA%\Vults\logs\` | O log |
+| `\\.\pipe\vults-<seu SID>` | O pipe com que o hook fala, aberto só para a sua conta |
+| `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` | A entrada que **Start with the desktop** adiciona |
+| Gerenciador de Credenciais do Windows, serviço `io.github.rogeriojunior31.vults` | Os segredos (nunca num arquivo) |
+
+O app em si fica em `%LOCALAPPDATA%\Programs\Vults\` (instalado só para você) ou em
+`%ProgramFiles%\Vults\` (para todos).
 
 O dicionário, as regras de substituição e os trechos mantidos pelo usuário para o ditado usam
 `vults.sqlite` (esquema 22). São preferências, separadas das transcrições gravadas: o prazo,
