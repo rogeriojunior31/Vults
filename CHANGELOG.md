@@ -27,6 +27,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Fixes
 
+- On Windows, the island and the corner widget stay with you on every virtual desktop, and no longer show in Alt+Tab.
 - On Windows, folding the island after a chat or an answer gives the keyboard back to the window you were in, so your next keys reach the terminal again.
 - On Windows, the dictation overlay moves with the island when you pick another monitor or the screens change.
 - On Windows, requests Vults makes for you (connectors, web tools, voice model downloads, the phone's relay) go through the proxy set in Windows Settings, not only one from `HTTPS_PROXY`.

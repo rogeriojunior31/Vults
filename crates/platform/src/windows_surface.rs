@@ -37,6 +37,22 @@ pub fn set_region(handle: isize, rect: (i32, i32, i32, i32), scale: f64) -> bool
     true
 }
 
+/// Makes a surface a tool window: on every virtual desktop (Tauri's `visible_on_all_workspaces`
+/// does nothing on Windows, so the island stayed behind on the desktop it started on), and out
+/// of Alt+Tab and Task View. `handle` is a live HWND, on its UI thread.
+pub fn set_tool_window(handle: isize) {
+    use windows::Win32::UI::WindowsAndMessaging::{
+        GWL_EXSTYLE, GetWindowLongPtrW, SetWindowLongPtrW, WS_EX_APPWINDOW, WS_EX_TOOLWINDOW,
+    };
+    // SAFETY: style bits of a window this process owns, read then written on its thread.
+    unsafe {
+        let hwnd = HWND(handle as *mut _);
+        let style = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
+        let style = (style | WS_EX_TOOLWINDOW.0 as isize) & !(WS_EX_APPWINDOW.0 as isize);
+        SetWindowLongPtrW(hwnd, GWL_EXSTYLE, style);
+    }
+}
+
 /// The window in front before `own` took the keyboard: none when `own` already was.
 pub fn foreground_before(own: isize) -> Option<isize> {
     // SAFETY: a read of the current foreground window's handle.

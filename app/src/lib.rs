@@ -622,6 +622,10 @@ fn init_surface(app: &AppHandle, label: &str) {
     }
     #[cfg(not(target_os = "linux"))]
     {
+        #[cfg(windows)]
+        if let Ok(hwnd) = win.hwnd() {
+            vults_platform::windows_surface::set_tool_window(hwnd.0 as isize);
+        }
         runtime::place_top_center(&win);
         let _ = win.show();
     }
