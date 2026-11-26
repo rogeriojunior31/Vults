@@ -278,7 +278,30 @@ fn inventory(roots: &[PathBuf], allowed: &dyn Fn() -> bool) -> Vec<Application> 
     apps
 }
 pub fn installed() -> Vec<Application> {
-    let mut apps = worker(|allowed| Ok(inventory(&roots(), allowed))).unwrap_or_default();
+    // The last list read to the end: a slow disk or a scan can cut one at its deadline, and the
+    // names it missed would answer "unknown". Opening one checks its shortcut again anyway.
+    static LAST: std::sync::Mutex<Vec<Application>> = std::sync::Mutex::new(Vec::new());
+    let read = worker(|allowed| {
+        let apps = inventory(&roots(), allowed);
+        Ok((apps, !allowed()))
+    });
+    let mut apps = match read {
+        Ok((apps, false)) => {
+            *LAST.lock().unwrap_or_else(|e| e.into_inner()) = apps.clone();
+            apps
+        }
+        Ok((mut apps, true)) => {
+            let last = LAST.lock().unwrap_or_else(|e| e.into_inner());
+            let missing: Vec<Application> = last
+                .iter()
+                .filter(|old| !apps.iter().any(|app| app.id == old.id))
+                .cloned()
+                .collect();
+            apps.extend(missing);
+            apps
+        }
+        Err(_) => LAST.lock().unwrap_or_else(|e| e.into_inner()).clone(),
+    };
     apps.extend(packaged::installed());
     apps
 }
