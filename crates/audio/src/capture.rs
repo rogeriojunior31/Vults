@@ -245,9 +245,12 @@ fn open(
     }
     stream
         .play()
-        .map_err(|e| blocked(&e.to_string()).unwrap_or_else(|| format!("can't start the microphone: {e}")))?;
+        .map_err(|e| blocked(&e).unwrap_or_else(|| format!("can't start the microphone: {e}")))?;
     Ok((stream, converter, rx))
 }
+
+/// What the error callback leaves when the device itself went away, not the stream failing.
+const GONE: &str = "\u{0}device gone";
 
 fn stream<T>(
     device: &cpal::Device,
@@ -291,17 +294,29 @@ where
                 }
             },
             move |error| {
-                *errors.lock().unwrap_or_else(|e| e.into_inner()) = Some(format!("microphone: {error}"));
+                let gone = matches!(
+                    error.kind(),
+                    cpal::ErrorKind::DeviceNotAvailable
+                        | cpal::ErrorKind::DeviceChanged
+                        | cpal::ErrorKind::StreamInvalidated
+                );
+                *errors.lock().unwrap_or_else(|e| e.into_inner()) = Some(if gone {
+                    GONE.into()
+                } else {
+                    format!("microphone: {error}")
+                });
             },
             None,
         )
-        .map_err(|e| blocked(&e.to_string()).unwrap_or_else(|| format!("can't open the microphone: {e}")))
+        .map_err(|e| blocked(&e).unwrap_or_else(|| format!("can't open the microphone: {e}")))
 }
 
 /// Windows answers E_ACCESSDENIED (0x80070005, its text in the system's language) when its privacy
 /// settings keep desktop apps off the microphone: say where to turn it back on.
-fn blocked(error: &str) -> Option<String> {
-    (cfg!(windows) && error.to_ascii_lowercase().contains("0x80070005")).then(|| {
+fn blocked(error: &cpal::Error) -> Option<String> {
+    let denied = error.kind() == cpal::ErrorKind::PermissionDenied
+        || error.to_string().to_ascii_lowercase().contains("0x80070005");
+    (cfg!(windows) && denied).then(|| {
         "Windows is blocking the microphone. Turn on Settings → Privacy & security → Microphone → Let desktop apps access your microphone.".into()
     })
 }
@@ -360,8 +375,13 @@ fn capture(
         }
     }
     drop(stream);
-    if let Some(error) = failed.lock().unwrap_or_else(|e| e.into_inner()).take() {
-        return Err(error);
+    match failed.lock().unwrap_or_else(|e| e.into_inner()).take() {
+        // The microphone went away (unplugged, or the default changed to a headset that just
+        // connected): what was said before is kept, as if the user had stopped there.
+        Some(error) if error == GONE && !audio.0.lock().unwrap_or_else(|e| e.into_inner()).is_empty() => {}
+        Some(error) if error == GONE => return Err("the microphone went away".into()),
+        Some(error) => return Err(error),
+        None => {}
     }
     for chunk in chunks.try_iter() {
         append(&converter.push(&chunk)?, &mut meter);

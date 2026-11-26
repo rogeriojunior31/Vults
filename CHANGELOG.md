@@ -27,6 +27,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Fixes
 
+- Connecting a headset or unplugging the microphone mid-dictation keeps what you said so far instead of throwing the recording away.
 - On Windows, when the privacy settings keep desktop apps off the microphone, dictation says where to turn it back on instead of a bare error.
 - On Windows, installing hooks into an agent config you marked read-only works and keeps it read-only, and its backup path reads `C:\…` instead of `\\?\C:\…`.
 - On Windows, Settings no longer shows Linux-only rows (X11 recording keys, System Settings shortcuts) while its shortcut editor loads or fails, and **Talk with Zeca** says voice conversation is Linux-only instead of offering its setup.
