@@ -457,6 +457,11 @@ pub fn run() {
             #[cfg(windows)]
             if let tauri::WindowEvent::ScaleFactorChanged { scale_factor, .. } = event {
                 runtime::refresh_windows_region(win.app_handle(), win.label(), *scale_factor);
+                // Windows keeps the top-left corner when it rescales: a centred or docked surface
+                // is placed again (the layout poll sees rectangles, not scales).
+                if SURFACES.contains(&win.label()) {
+                    place_surfaces(win.app_handle());
+                }
             }
             if matches!(event, tauri::WindowEvent::Destroyed) && win.label() == dictation_overlay::LABEL {
                 dictation_overlay::reset(win.app_handle());
