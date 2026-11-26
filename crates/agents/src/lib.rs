@@ -169,6 +169,11 @@ pub const MARKER: &str = vults_brand::HOOK_BIN;
 /// (Git Bash on Windows, hence forward slashes there).
 pub fn hook_command(hook_exe: &Path, agent: &str, event: &str) -> String {
     if cfg!(windows) && agent == "codex" {
+        // A plain path reads the same to cmd and PowerShell, whichever the session uses, and
+        // starts no PowerShell of its own on every tool call; only another needs the wrapper.
+        if let Some(exe) = plain_exe(hook_exe).filter(|e| plain_windows_exe(e)) {
+            return format!("{exe} --agent {agent} {event}");
+        }
         return windows_hook_command(hook_exe, agent, event);
     }
     let exe = hook_exe.to_string_lossy();
@@ -209,16 +214,48 @@ pub(crate) fn windows_shell_command(
     let args = format!("--agent {agent} {event}");
     // Unquoted, such a path reads the same to cmd, PowerShell and Git Bash: the hook runs
     // whichever one the agent picks (Qwen's depends on how it was started).
-    if is_plain(&exe) {
-        return format!("{} {args}", exe.replace('\\', "/"));
+    if let Some(plain) = plain_exe(hook_exe) {
+        return format!("{plain} {args}");
     }
     match shell {
-        // A Windows path cannot hold `"`. Qwen's cmd mode still breaks here: Node escapes the
-        // quotes as `\"`, which cmd keeps.
+        // A Windows path cannot hold `"`. Only with no 8.3 name to use (they can be turned off):
+        // Qwen's cmd mode breaks here, as Node escapes the quotes as `\"`, which cmd keeps.
         WindowsShell::Cmd => format!("\"{}\" {args}", exe.replace('\\', "/")),
         // A quoted string alone is an expression there: `&` runs it.
         WindowsShell::PowerShell => format!("& '{}' {args}", exe.replace('\'', "''")),
     }
+}
+
+/// The hook's path as it can go unquoted, with forward slashes: as written, or its 8.3 short form
+/// (`C:/Users/FIRSTL~1/…`) when it holds a space or a quote, as a user name may. None when neither.
+fn plain_exe(hook_exe: &Path) -> Option<String> {
+    let exe = hook_exe.to_string_lossy();
+    if is_plain(&exe) {
+        return Some(exe.replace('\\', "/"));
+    }
+    #[cfg(windows)]
+    if let Some(short) = short_path(hook_exe).filter(|s| is_plain(s)) {
+        return Some(short.replace('\\', "/"));
+    }
+    None
+}
+
+/// Windows' 8.3 name for an existing file; none when the volume keeps no such names.
+#[cfg(windows)]
+fn short_path(path: &Path) -> Option<String> {
+    use std::os::windows::ffi::OsStrExt;
+    #[link(name = "kernel32")]
+    unsafe extern "system" {
+        fn GetShortPathNameW(long: *const u16, short: *mut u16, length: u32) -> u32;
+    }
+    let wide: Vec<u16> = path.as_os_str().encode_wide().chain(Some(0)).collect();
+    let mut buffer = vec![0u16; 1024];
+    // SAFETY: `wide` ends in a NUL and `buffer` holds `buffer.len()` characters.
+    let n = unsafe { GetShortPathNameW(wide.as_ptr(), buffer.as_mut_ptr(), buffer.len() as u32) } as usize;
+    if n == 0 || n >= buffer.len() {
+        return None;
+    }
+    String::from_utf16(&buffer[..n]).ok()
 }
 
 /// No space and nothing any of the three shells reads specially.
@@ -628,6 +665,30 @@ mod tests {
             assert!(vults_agent_config::runs_ours(&command, MARKER));
             assert!(command.starts_with("powershell.exe -NoProfile -NonInteractive -Command \""));
         }
+    }
+
+    /// A user name with a space: the 8.3 name keeps the command unquoted (Qwen's cmd mode, Codex
+    /// without a PowerShell per call), wherever the volume keeps such names.
+    #[cfg(windows)]
+    #[test]
+    fn a_spaced_hook_path_goes_unquoted_through_its_short_name() {
+        let dir = std::env::temp_dir().join(format!("vults hook First Last {}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let exe = dir.join("vults-hook.exe");
+        std::fs::write(&exe, b"").unwrap();
+        if let Some(short) = short_path(&exe).filter(|s| is_plain(s)) {
+            let plain = short.replace('\\', "/");
+            for shell in [WindowsShell::Cmd, WindowsShell::PowerShell] {
+                assert_eq!(
+                    windows_shell_command(shell, &exe, "qwen", "Stop"),
+                    format!("{plain} --agent qwen Stop")
+                );
+            }
+            let codex = hook_command(&exe, "codex", "Stop");
+            assert_eq!(codex, format!("{plain} --agent codex Stop"));
+            assert_eq!(hook_exe_of(&codex), Some(PathBuf::from(&plain)));
+        }
+        std::fs::remove_dir_all(dir).unwrap();
     }
 
     #[test]

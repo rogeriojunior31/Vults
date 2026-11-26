@@ -1,5 +1,5 @@
 # Configurações e arquivos
-<!-- source: 7b84b85e7752 -->
+<!-- source: 828ff104c459 -->
 
 **Ditado > Diagnóstico** oferece um teste explícito de microfone de seis segundos,
 somente na memória, estado atual do áudio/desktop/modelos, contadores desde o início do app e tempos
@@ -235,10 +235,12 @@ Só quando você clica em **Write the file**, depois de um backup datado e de um
 No Windows cada agente entrega os seus hooks a um shell diferente: o Claude Code ao Git Bash, o
 Codex ao cmd ou ao PowerShell da sessão, o Antigravity, o Droid, o Kimi e o Qwen ao cmd, o Cursor
 e o Copilot ao PowerShell. Cada comando é escrito para esse shell. Quando o caminho do hook não tem
-espaço, o comando o nomeia sem aspas, com barras normais, e é lido igual pelos três. As entradas do
+espaço, o comando o nomeia sem aspas, com barras normais, e é lido igual pelos três; um caminho com
+espaço (um nome de usuário como `First Last`) é nomeado pela sua forma curta 8.3 (`FIRSTL~1`). Só
+num disco que não guarda nomes 8.3 ele vai entre aspas, e aí o Qwen Code iniciado pelo cmd não
+consegue executá-lo. O comando do Codex só abre um PowerShell próprio nesse caso. As entradas do
 Copilot também ganham um comando `powershell`, o que o Copilot executa no Windows, terminando em
-`; exit 0` para que um hook que não consegue iniciar nunca negue uma ferramenta. O Qwen Code
-iniciado pelo cmd não consegue executar um hook cujo caminho tem espaço.
+`; exit 0` para que um hook que não consegue iniciar nunca negue uma ferramenta.
 
 O Vults não suporta mais o Gemini CLI. Enquanto os hooks que um Vults anterior instalou em
 `~/.gemini/settings.json` continuarem lá, eles não mandam nada, e **Settings → Agents** mostra um

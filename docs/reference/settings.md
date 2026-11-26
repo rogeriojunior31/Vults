@@ -222,10 +222,12 @@ Only when you click **Write the file**, after a dated backup and a diff you revi
 On Windows each agent hands its hooks to a different shell: Claude Code to Git Bash, Codex to the
 session's cmd or PowerShell, Antigravity, Droid, Kimi and Qwen to cmd, Cursor and Copilot to
 PowerShell. Each command is written for that shell. When the hook's path has no space, the
-command names it unquoted, with forward slashes, and reads the same to all three. Copilot's
+command names it unquoted, with forward slashes, and reads the same to all three; a path with a
+space (a user name such as `First Last`) is named by its short 8.3 form (`FIRSTL~1`) instead. Only
+on a drive that keeps no 8.3 names is it quoted, and Qwen Code started from cmd then cannot run
+it. Codex's command starts its own PowerShell only in that case. Copilot's
 entries also get a `powershell` command, the one Copilot runs on Windows, ending in `; exit 0`
-so that a hook that cannot start never denies a tool. Qwen Code started from cmd cannot run a
-hook whose path has a space.
+so that a hook that cannot start never denies a tool.
 
 Vults no longer supports Gemini CLI. While hooks an earlier Vults installed in
 `~/.gemini/settings.json` are still there, they send nothing, and **Settings → Agents** shows a
