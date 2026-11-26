@@ -85,8 +85,9 @@ pub fn agent_dirs() -> vults_agents::Dirs {
 
 /// Started from the Start menu, the app has the PATH Explorer got at sign-in: a CLI that only a
 /// shell profile adds (`mise activate`), or one installed since, is missing, and the chat said
-/// Claude was not installed. The usual per-user CLI folders that exist go at the end, so the
-/// user's own PATH still wins. Every lookup and every child the app starts then sees them.
+/// Claude was not installed. The PATH Windows saved since (winget, `setx`) and the usual per-user
+/// CLI folders that exist go at the end, so the user's own PATH still wins. Every lookup and every
+/// child the app starts then sees them; a CLI installed while the app runs needs a restart.
 ///
 /// # Safety
 /// Call first thing in `main`, before any other thread exists.
@@ -112,7 +113,15 @@ pub unsafe fn widen_cli_path() {
             .or_else(|| profile.as_ref().map(|p| p.join("scoop")))
             .map(|p| p.join("shims")),
     ];
-    let found = dirs.into_iter().flatten().filter(|d| d.is_dir());
+    // winget's links for CLIs it installs per user (`glab`, `gh` from some sources).
+    let winget = local
+        .as_ref()
+        .map(|p| p.join("Microsoft").join("WinGet").join("Links"));
+    let found = vults_platform::windows_environment::saved_path()
+        .into_iter()
+        .chain(dirs.into_iter().flatten())
+        .chain(winget)
+        .filter(|d| d.is_dir());
     if let Some(path) = with_cli_dirs(std::env::var_os("PATH"), found) {
         // SAFETY: the caller runs this before any other thread exists.
         unsafe { std::env::set_var("PATH", path) };
