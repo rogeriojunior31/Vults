@@ -1,5 +1,5 @@
 # Outros agentes
-<!-- source: 2ca88fac1a77 -->
+<!-- source: 0984655efb95 -->
 
 Claude Code, Codex, Antigravity, OpenCode, Hermes Agent, Qwen Code, Copilot CLI, Cursor, Factory Droid e Kimi Code já vêm integrados (**Settings →
 Agents**). Qualquer outra ferramenta também pode colocar suas sessões no fio, se ela rodar um
@@ -37,7 +37,11 @@ termine todo comando de hook em `|| exit 0`, ou uma ferramenta que trata um hook
 
 **Settings → Agents**, em *What each agent can do*, mostra cada agente embutido: se a CLI dele está no `PATH` e a versão, se os
 hooks estão instalados e atualizados (e, no Codex, confiáveis), e o que ele consegue fazer com o
-Vults. **Check again** pergunta de novo; a resposta fica guardada por dez minutos.
+Vults. **Check again** pergunta de novo; a resposta fica guardada por dez minutos. No Windows, o
+Vults também procura, depois do seu `PATH`, nas pastas de CLIs por usuário que existirem:
+`%USERPROFILE%\.local\bin` (o instalador do Claude Code), `%APPDATA%\npm`, `%LOCALAPPDATA%\pnpm`,
+`%USERPROFILE%\.bun\bin`, os `shims` do mise e os `shims` do Scoop. Uma CLI que só o perfil do seu
+shell adiciona (`mise activate`) passa a ser encontrada quando o Vults abre pelo menu Iniciar.
 
 | | Permissões | Perguntas | Diffs | Parar um turno | Sandbox | Iniciado pelo Vults |
 |---|---|---|---|---|---|---|

@@ -121,6 +121,16 @@ fn layer_spec(label: &str) -> Option<vults_platform::linux::LayerSpec> {
     }
 }
 
+/// See [`paths::widen_cli_path`].
+///
+/// # Safety
+/// Call first thing in `main`, before any other thread exists.
+#[cfg(windows)]
+pub unsafe fn widen_cli_path() {
+    // SAFETY: forwarded from the caller.
+    unsafe { paths::widen_cli_path() }
+}
+
 /// Runs this binary as Zeca's MCP server when asked (`vults --zeca-mcp`, M7): true when it did.
 pub fn serve_mcp_if_asked() -> bool {
     let argument = std::env::args().nth(1);
