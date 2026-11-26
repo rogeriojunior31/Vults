@@ -630,6 +630,9 @@ fn init_surface(app: &AppHandle, label: &str) {
         #[cfg(windows)]
         if let Ok(hwnd) = win.hwnd() {
             vults_platform::windows_surface::set_tool_window(hwnd.0 as isize);
+            // Nothing takes a click until the page has measured what it draws (its first layout
+            // sets the real region): a transparent window would catch them all meanwhile.
+            vults_platform::windows_surface::set_region(hwnd.0 as isize, (0, 0, 0, 0), 1.0);
         }
         runtime::place_top_center(&win);
         let _ = win.show();
