@@ -50,7 +50,11 @@ async fn run(
     let mut child = crate::spawn_owned(
         crate::dies_with_app(&mut cmd)
             .current_dir(&spec.dir)
-            .stdin(Stdio::null())
+            .stdin(if cfg!(windows) {
+                Stdio::piped()
+            } else {
+                Stdio::null()
+            })
             .stdout(Stdio::piped())
             .stderr(Stdio::null()),
     )
@@ -58,6 +62,16 @@ async fn run(
         std::io::ErrorKind::NotFound => "The Codex CLI isn't installed.".to_string(),
         _ => format!("Can't start Codex: {e}"),
     })?;
+    if let Some(mut stdin) = child.stdin.take() {
+        use tokio::io::AsyncWriteExt;
+        let text = first_prompt(spec, turn, session.as_deref());
+        stdin
+            .write_all(text.as_bytes())
+            .await
+            .map_err(|e| format!("Can't send the message to Codex: {e}"))?;
+        // Closed, so Codex reads to the end and starts.
+        drop(stdin);
+    }
     let mut lines = BufReader::new(child.stdout.take().ok_or("no stdout")?).lines();
     let mut said = false;
     loop {
@@ -119,9 +133,20 @@ pub(crate) fn command(spec: &Spec, turn: &Turn, session: Option<&str>) -> Comman
     }
     // `codex exec` takes no instructions of their own: the first turn carries the same system text
     // the app-server would get (persona and frozen context, M2).
-    let system = session.is_none().then(|| crate::instructions(spec));
-    cmd.arg("--").arg(prompt(turn, system.as_deref()));
+    // On Windows the prompt goes on stdin (`-`): a `codex.cmd` from npm takes no argument with a
+    // line break, and a command line holds 32 767 characters.
+    if cfg!(windows) {
+        cmd.args(["--", "-"]);
+    } else {
+        cmd.arg("--").arg(first_prompt(spec, turn, session));
+    }
     cmd
+}
+
+/// The turn's text; the first turn carries the system text too.
+fn first_prompt(spec: &Spec, turn: &Turn, session: Option<&str>) -> String {
+    let system = session.is_none().then(|| crate::instructions(spec));
+    prompt(turn, system.as_deref())
 }
 
 pub(crate) fn parse(raw: &str) -> Line {
@@ -207,8 +232,14 @@ mod tests {
                 .map(|a| a.to_string_lossy().into_owned())
                 .unwrap_or_default()
         };
-        assert!(last(None).contains("\n\n# Your memory"));
-        assert!(!last(Some("t1")).contains("# Your memory"));
+        assert!(first_prompt(&spec, &Turn::default(), None).contains("\n\n# Your memory"));
+        assert!(!first_prompt(&spec, &Turn::default(), Some("t1")).contains("# Your memory"));
+        if cfg!(windows) {
+            // On stdin: no line break reaches a `codex.cmd`.
+            assert_eq!(last(None), "-");
+        } else {
+            assert_eq!(last(None), first_prompt(&spec, &Turn::default(), None));
+        }
     }
 
     #[test]

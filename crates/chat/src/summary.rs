@@ -33,7 +33,8 @@ pub(crate) fn on_path(program: &str) -> bool {
     })
 }
 
-fn command(system: &str, dir: &Path) -> Command {
+/// `prompt`: the file holding `system`, where it can't be an argument (see [`crate::PromptFile`]).
+fn command(system: &str, dir: &Path, prompt: Option<&Path>) -> Command {
     let mut cmd = crate::process::command("claude");
     cmd.envs(vults_agents::shell_env());
     cmd.args(["-p", "--output-format", "text", "--model", MODEL])
@@ -44,7 +45,6 @@ fn command(system: &str, dir: &Path) -> Command {
         .args(["--disallowedTools", "mcp__*"])
         .arg("--strict-mcp-config")
         .arg("--no-session-persistence")
-        .args(["--system-prompt", system])
         .env(vults_protocol::ZECA_ENV, "1")
         .env("CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC", "1")
         .env("CLAUDE_CODE_DISABLE_FILE_MENTIONS", "1")
@@ -54,6 +54,10 @@ fn command(system: &str, dir: &Path) -> Command {
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::null());
+    match prompt {
+        Some(file) => cmd.arg("--system-prompt-file").arg(file),
+        None => cmd.args(["--system-prompt", system]),
+    };
     crate::dies_with_app(&mut cmd);
     cmd
 }
@@ -85,7 +89,13 @@ pub async fn question(
             "Tool-free text questions require Claude Code 2.1.299 or later in the 2.1 series.".into(),
         );
     }
-    run(command(system, dir), text, cancel).await
+    #[cfg(windows)]
+    let file = crate::PromptFile::write(system)?;
+    #[cfg(windows)]
+    let prompt = Some(file.0.as_path());
+    #[cfg(not(windows))]
+    let prompt = None;
+    run(command(system, dir, prompt), text, cancel).await
 }
 fn supported(version: &str) -> bool {
     let Some(version) = version.split_whitespace().next() else {
@@ -155,7 +165,7 @@ mod tests {
 
     #[test]
     fn no_tools_no_settings_no_session() {
-        let cmd = command("Sum up.", Path::new("/w"));
+        let cmd = command("Sum up.", Path::new("/w"), None);
         let args: Vec<String> = cmd
             .as_std()
             .get_args()

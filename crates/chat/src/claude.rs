@@ -42,7 +42,19 @@ pub(crate) enum Line {
     Other,
 }
 
+/// `prompt`: the file holding the instructions, where they can't be an argument (see
+/// [`crate::PromptFile`]); none puts them on the command line.
+#[cfg_attr(all(windows, not(test)), allow(dead_code))]
 pub(crate) fn command(spec: &Spec, turn: &Turn, session: Option<&str>) -> Command {
+    command_with(spec, turn, session, None)
+}
+
+fn command_with(
+    spec: &Spec,
+    turn: &Turn,
+    session: Option<&str>,
+    prompt: Option<&std::path::Path>,
+) -> Command {
     let mut cmd = crate::process::command("claude");
     // The folders the user's terminal gives it (`CODEX_HOME`…), when the app was started without.
     cmd.envs(vults_agents::shell_env());
@@ -98,7 +110,14 @@ pub(crate) fn command(spec: &Spec, turn: &Turn, session: Option<&str>) -> Comman
     if let Some(mcp) = &spec.mcp_config {
         cmd.arg("--mcp-config").arg(mcp);
     }
-    cmd.args(["--append-system-prompt", &crate::instructions(spec)]);
+    match prompt {
+        Some(file) => {
+            cmd.arg("--append-system-prompt-file").arg(file);
+        }
+        None => {
+            cmd.args(["--append-system-prompt", &crate::instructions(spec)]);
+        }
+    }
     if let Some(model) = &spec.model {
         cmd.args(["--model", model]);
     }
@@ -335,6 +354,11 @@ async fn run(
 ) -> Result<EndReason, String> {
     // A new session counts from zero: its first totals are its first turn's.
     let fresh = id.is_none();
+    #[cfg(windows)]
+    let instructions = crate::PromptFile::write(&crate::instructions(spec))?;
+    #[cfg(windows)]
+    let mut cmd = command_with(spec, turn, id.as_deref(), Some(&instructions.0));
+    #[cfg(not(windows))]
     let mut cmd = command(spec, turn, id.as_deref());
     let mut child = crate::spawn_owned(
         crate::dies_with_app(&mut cmd)
@@ -573,6 +597,35 @@ mod tests {
         };
         assert_eq!(env(&Spec::in_dir("/w".into())).as_deref(), Some("1"));
         assert_eq!(env(&spec).as_deref(), Some("spec"));
+    }
+
+    /// A line break in an argument can't reach `claude.cmd`: the instructions go in a file.
+    #[cfg(windows)]
+    #[test]
+    fn windows_instructions_go_in_a_file_that_goes_with_the_turn() {
+        let text = "line one\nline two";
+        let prompt = crate::PromptFile::write(text).unwrap();
+        assert_eq!(std::fs::read_to_string(&prompt.0).unwrap(), text);
+        let args: Vec<String> = command_with(
+            &Spec::in_dir("/w".into()),
+            &Turn::default(),
+            None,
+            Some(&prompt.0),
+        )
+        .as_std()
+        .get_args()
+        .map(|a| a.to_string_lossy().into_owned())
+        .collect();
+        assert!(args.iter().all(|a| !a.contains('\n')), "{args:?}");
+        let at = args
+            .iter()
+            .position(|a| a == "--append-system-prompt-file")
+            .unwrap();
+        assert_eq!(args[at + 1], prompt.0.to_string_lossy());
+        assert!(!args.iter().any(|a| a == "--append-system-prompt"));
+        let path = prompt.0.clone();
+        drop(prompt);
+        assert!(!path.exists());
     }
 
     #[test]

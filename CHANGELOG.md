@@ -27,6 +27,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Fixes
 
+- On Windows, Chat, Zeca's sleep and the journal work with a `claude` or `codex` installed through npm: their instructions now go in a file (or on stdin) instead of the command line, where a `.cmd` takes no line break and a long memory outgrew the limit.
 - On Windows, destructive commands always ask again: Claude Code's PowerShell tool, `powershell -Command` and `cmd /c` were not read, so `Remove-Item -Recurse` could pass under Zeca's **Full access**. PowerShell syntax Vults can't follow now reads as destructive.
 - On Windows, your policies now hold: their folders (`C:\…`, any case or slash) were never matched, so a deny or ask did nothing and Zeca's chat with **Full access** went past them. A policy for a project now also denies or asks when a session's folder can't be read.
 - On Windows, Chat no longer says Claude is not installed when its CLI is only on a shell profile's PATH (mise, for one): Vults also looks in the usual per-user CLI folders.
