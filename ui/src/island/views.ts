@@ -234,7 +234,7 @@ export function diffCard(s: SessionView, step: string, diff: Diff | null | undef
     : null;
   // The file says it shorter than the step ("Editing ticker.ts"), and leaves room for the project.
   const files = diff?.files ?? [];
-  const label = files.length > 1 ? t("{n} files", { n: files.length }) : files.length ? files[0].path.split("/").pop()! : step;
+  const label = files.length > 1 ? t("{n} files", { n: files.length }) : files.length ? files[0].path.split(/[\\/]/).pop()! : step;
   const body: HTMLElement[] = [el("div", { class: "card-head" }, who(s, label, totals), back)];
   if (diff === undefined) body.push(el("div", { class: "sub", text: t("Loading the changes…") }));
   else if (diff === null) body.push(el("div", { class: "sub", text: t("This change is no longer kept: the session has moved on.") }));
