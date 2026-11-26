@@ -222,7 +222,12 @@ fn connect() -> Option<std::fs::File> {
     };
     let deadline = std::time::Instant::now() + limits::CONNECT_TIMEOUT;
     loop {
-        match std::fs::OpenOptions::new().read(true).write(true).open(&name) {
+        let mut options = std::fs::OpenOptions::new();
+        options.read(true).write(true);
+        // SECURITY_IDENTIFICATION: a server that took the name first can learn who we are, never
+        // act as us (the same-user check comes only after the open).
+        std::os::windows::fs::OpenOptionsExt::security_qos_flags(&mut options, 0x0001_0000);
+        match options.open(&name) {
             Ok(file) => return vults_peer::pipe_server_is_same_user(&file).then_some(file),
             Err(err)
                 if err.raw_os_error() == Some(ERROR_PIPE_BUSY) && std::time::Instant::now() < deadline =>
