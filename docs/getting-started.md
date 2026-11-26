@@ -40,6 +40,15 @@ Vults when you log in.
 The Windows installer is a preview. To build Vults on Windows, see
 [Windows development](contributing/windows-development.md).
 
+The installer asks whether to install Vults for you only or for every user of the computer.
+**Install just for me** goes to `%LOCALAPPDATA%\Programs\Vults` and never needs an administrator;
+a standard account always installs this way. **Install for anyone using this computer** goes to
+`%ProgramFiles%\Vults` and needs an administrator. On an administrator account, Windows asks for
+approval (UAC) when the installer opens, whichever you choose. Either way each user keeps their own
+settings, hooks and history in `%LOCALAPPDATA%\Vults`, and Vults installs that user's hooks on its
+first run. An update keeps the earlier choice and folder. For a silent install, run the installer
+with `/S` and `/CURRENTUSER` or `/ALLUSERS` (the latter from an elevated prompt).
+
 Windows shortcuts use non-printing keys to preserve AltGr: **Ctrl+Alt+Space** opens the island;
 **Ctrl+Alt+Left/Right** changes the session; **Ctrl+Alt+F1/F2/F3** selects Mini/Quick/Room;
 **Ctrl+Alt+F4** records dictation; **Ctrl+Alt+F5** records a voice command; **Ctrl+Alt+F6** copies

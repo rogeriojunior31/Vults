@@ -1,5 +1,5 @@
 # Primeiros passos
-<!-- source: 772c9aaeb353 -->
+<!-- source: 522e3c8c4d69 -->
 
 <a id="install"></a>
 
@@ -44,6 +44,16 @@ quando você entra na sessão.
 
 O instalador do Windows é uma prévia. Para compilar o Vults no Windows, veja
 [Desenvolvimento no Windows](contributing/windows-development.md).
+
+O instalador pergunta se o Vults é só para você ou para todos os usuários do computador.
+**Instalar apenas pra mim** instala em `%LOCALAPPDATA%\Programs\Vults` e nunca precisa de
+administrador; uma conta padrão sempre instala assim. **Instalar pra qualquer um usando este
+computador** instala em `%ProgramFiles%\Vults` e precisa de administrador. Numa conta de
+administrador, o Windows pede aprovação (UAC) quando o instalador abre, seja qual for a escolha. Nos
+dois casos, cada usuário guarda suas configurações, hooks e histórico em `%LOCALAPPDATA%\Vults`, e o
+Vults instala os hooks desse usuário na primeira vez que abre. Uma atualização mantém a escolha e a
+pasta anteriores. Para uma instalação silenciosa, rode o instalador com `/S` e `/CURRENTUSER` ou
+`/ALLUSERS` (este num prompt elevado).
 
 Os atalhos do Windows usam teclas que não escrevem caracteres para preservar o AltGr:
 **Ctrl+Alt+Space** abre a ilha; **Ctrl+Alt+Left/Right** muda a sessão; **Ctrl+Alt+F1/F2/F3** seleciona
