@@ -27,6 +27,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Fixes
 
+- On Windows, requests Vults makes for you (connectors, web tools, voice model downloads, the phone's relay) go through the proxy set in Windows Settings, not only one from `HTTPS_PROXY`.
 - On Windows, Vults keeps receiving hook events after an update or restart while the old run was still closing; it used to hear none until it was restarted again.
 - On Windows, your own Antigravity status line keeps showing behind Vults: it runs in cmd, as it was written.
 - When Claude Code can't start a chat turn, Chat shows what it said (a missing Git Bash on Windows, say) instead of asking whether it is logged in.

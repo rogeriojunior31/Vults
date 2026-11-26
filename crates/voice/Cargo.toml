@@ -9,7 +9,7 @@ publish.workspace = true
 [dependencies]
 vults-audio.workspace = true
 hound = "3.5"
-reqwest = { version = "0.13", default-features = false, features = ["native-tls", "stream"] }
+reqwest = { version = "0.13", default-features = false, features = ["native-tls", "stream", "system-proxy"] }
 futures-util = { version = "0.3", default-features = false }
 serde.workspace = true
 sha2 = "0.10"
