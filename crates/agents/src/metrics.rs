@@ -4,7 +4,7 @@
 mod other;
 use crate::prices::{Catalog, Tokens};
 use std::collections::{BTreeMap, HashMap, HashSet};
-use std::fs::{File, Metadata};
+use std::fs::File;
 use std::io::{self, BufRead, BufReader, Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -458,13 +458,18 @@ struct Stamp {
     identity: (u64, u64),
     #[cfg(unix)]
     changed: (i64, i64),
+    /// The volume and the file's index on it: NTFS gives a file made again under the same name,
+    /// within seconds, the old one's creation time.
+    #[cfg(windows)]
+    identity: Option<(u32, u64)>,
 }
 
 impl Stamp {
-    fn of(meta: &Metadata) -> Self {
+    fn of(file: &File) -> io::Result<Self> {
         #[cfg(unix)]
         use std::os::unix::fs::MetadataExt;
-        Self {
+        let meta = file.metadata()?;
+        Ok(Self {
             len: meta.len(),
             modified: meta.modified().ok(),
             created: meta.created().ok(),
@@ -472,16 +477,50 @@ impl Stamp {
             identity: (meta.dev(), meta.ino()),
             #[cfg(unix)]
             changed: (meta.ctime(), meta.ctime_nsec()),
-        }
+            #[cfg(windows)]
+            identity: windows_identity(file),
+        })
     }
 
     fn same_file(&self, other: &Self) -> bool {
-        #[cfg(unix)]
+        #[cfg(any(unix, windows))]
         if self.identity != other.identity {
             return false;
         }
         self.created == other.created
     }
+}
+
+#[cfg(windows)]
+fn windows_identity(file: &File) -> Option<(u32, u64)> {
+    use std::os::windows::io::AsRawHandle;
+    #[repr(C)]
+    #[derive(Default)]
+    struct Information {
+        attributes: u32,
+        created: [u32; 2],
+        accessed: [u32; 2],
+        written: [u32; 2],
+        volume: u32,
+        size_high: u32,
+        size_low: u32,
+        links: u32,
+        index_high: u32,
+        index_low: u32,
+    }
+    #[link(name = "kernel32")]
+    unsafe extern "system" {
+        fn GetFileInformationByHandle(file: *mut std::ffi::c_void, information: *mut Information) -> i32;
+    }
+    let mut information = Information::default();
+    // SAFETY: an open file's handle, borrowed for the call, and a struct of the documented layout.
+    let ok = unsafe { GetFileInformationByHandle(file.as_raw_handle(), &mut information) } != 0;
+    ok.then(|| {
+        (
+            information.volume,
+            (u64::from(information.index_high) << 32) | u64::from(information.index_low),
+        )
+    })
 }
 
 #[derive(Debug)]
@@ -515,7 +554,7 @@ impl Cached {
     }
 
     fn read(&mut self, file: &mut File, agent: AgentKind, prices: Option<&Catalog>) -> io::Result<()> {
-        let stamp = Stamp::of(&file.metadata()?);
+        let stamp = Stamp::of(file)?;
         let rewritten = self.stamp.as_ref().is_some_and(|old| {
             !old.same_file(&stamp) || stamp.len < old.len || (stamp.len == old.len && *old != stamp)
         });
@@ -650,7 +689,7 @@ impl Reader {
                 .or_insert_with(|| Cached::new(path.clone()));
             cache.session_id = key.session_id.clone();
             let mut file = File::open(path).ok()?;
-            if cache.stamp.as_ref() != Some(&Stamp::of(&file.metadata().ok()?)) {
+            if cache.stamp.as_ref() != Some(&Stamp::of(&file).ok()?) {
                 cache
                     .read(&mut file, AgentKind::Qwen, self.prices.as_deref())
                     .ok()?;
@@ -722,7 +761,7 @@ impl Reader {
                         let cache = self.logs.entry(key.clone()).or_insert_with(|| Cached::new(path.clone()));
                         if cache.path != path { *cache = Cached::new(path.clone()); }
                         let mut file = File::open(&path).ok()?;
-                        if cache.stamp.as_ref() != Some(&Stamp::of(&file.metadata().ok()?)) { cache.read(&mut file,key.agent,self.prices.as_deref()).ok()?; }
+                        if cache.stamp.as_ref() != Some(&Stamp::of(&file).ok()?) { cache.read(&mut file,key.agent,self.prices.as_deref()).ok()?; }
                         if key.agent == AgentKind::Other { cache.qwen.snapshot(self.prices.as_deref(),epoch()) }
                         else { cache.snapshot.clone().unwrap_or_default() }
                     }
@@ -752,8 +791,8 @@ impl Reader {
                         *cached = Cached::new(canonical.clone());
                     }
                     cached.session_id = key.session_id.clone();
-                    if cached.stamp.as_ref() != Some(&Stamp::of(&meta)) {
-                        let mut file = File::open(&canonical).ok()?;
+                    let mut file = File::open(&canonical).ok()?;
+                    if cached.stamp.as_ref() != Some(&Stamp::of(&file).ok()?) {
                         cached.read(&mut file, key.agent, self.prices.as_deref()).ok()?;
                     }
                     // An existing file with no usage yet (or a rewritten/cleared one) reports
@@ -981,6 +1020,31 @@ fn codex_snapshot(record: &Value) -> Option<Snapshot> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// NTFS hands a file made again under the same name its old creation time: only its index
+    /// on the volume tells the two apart.
+    #[cfg(windows)]
+    #[test]
+    fn a_log_made_again_under_its_name_is_another_file() {
+        let path = std::env::temp_dir().join(format!("vults-stamp-{}.jsonl", std::process::id()));
+        std::fs::write(
+            &path, b"{}
+",
+        )
+        .unwrap();
+        let first = Stamp::of(&File::open(&path).unwrap()).unwrap();
+        std::fs::remove_file(&path).unwrap();
+        std::fs::write(
+            &path, b"{}
+",
+        )
+        .unwrap();
+        let second = Stamp::of(&File::open(&path).unwrap()).unwrap();
+        assert!(first.identity.is_some());
+        assert!(!first.same_file(&second));
+        assert!(second.same_file(&Stamp::of(&File::open(&path).unwrap()).unwrap()));
+        std::fs::remove_file(&path).unwrap();
+    }
     use serde_json::json;
 
     fn key(agent: AgentKind, id: &str) -> SessionKey {

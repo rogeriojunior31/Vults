@@ -27,6 +27,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Fixes
 
+- On Windows, an agent's session log made again under the same name is read from the start, so its tokens and cost are not counted from the old file's offset.
 - On Windows, media controls and voice media commands work with a player that holds several sessions (two windows, browser tabs): the one playing, or the one Windows shows, is used.
 - On Windows, the island's empty transparent window no longer catches clicks at the top of the screen while it starts.
 - On Windows, a Gitea token too long for Credential Manager says so instead of "Could not save the Gitea connection."
