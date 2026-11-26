@@ -19,6 +19,15 @@ fn main() {
         }
         return;
     }
+    // Servers this build doesn't have: an MCP client that starts one gets a quiet exit, never a
+    // second app (the single-instance hand-off would open Settings in the running one).
+    #[cfg(not(target_os = "linux"))]
+    if matches!(
+        std::env::args().nth(1).as_deref(),
+        Some("--specialist-mcp" | "--questions-mcp")
+    ) {
+        return;
+    }
 
     // Disable native telemetry before any runtime can create an uploader or persistent ID.
     // SAFETY: process entry, before the MCP server, Tauri, GTK or application worker threads.
