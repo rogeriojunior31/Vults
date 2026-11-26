@@ -8,6 +8,21 @@ pub fn home() -> PathBuf {
 }
 
 /// A path to show: under $HOME it starts with `~`.
+/// A canonical path as the CLIs and people read it: on Windows `canonicalize` gives `\\?\C:\…`,
+/// which cmd can't start in and Claude Code doesn't match its folders against. Only a drive path
+/// loses the prefix (a `\\?\UNC\…` one keeps it: its plain form means something else).
+pub fn simplified(path: PathBuf) -> PathBuf {
+    let Some(text) = path.to_str() else {
+        return path;
+    };
+    match text.strip_prefix(r"\\?\") {
+        Some(rest) if rest.as_bytes().get(1) == Some(&b':') && rest.as_bytes().get(2) == Some(&b'\\') => {
+            PathBuf::from(rest)
+        }
+        _ => path,
+    }
+}
+
 pub fn shown(path: &std::path::Path) -> String {
     tilde(path, &home())
 }
@@ -154,6 +169,19 @@ fn with_cli_dirs(
 #[cfg(all(test, windows))]
 mod cli_path_tests {
     use super::*;
+
+    #[test]
+    fn a_canonical_drive_path_loses_its_verbatim_prefix() {
+        assert_eq!(
+            simplified(r"\\?\C:\Users\me".into()),
+            PathBuf::from(r"C:\Users\me")
+        );
+        assert_eq!(
+            simplified(r"\\?\UNC\srv\share".into()),
+            PathBuf::from(r"\\?\UNC\srv\share")
+        );
+        assert_eq!(simplified(r"C:\x".into()), PathBuf::from(r"C:\x"));
+    }
 
     #[test]
     fn missing_cli_folders_join_the_end_once_and_the_users_path_wins() {

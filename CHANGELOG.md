@@ -27,6 +27,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Fixes
 
+- On Windows, Chat reads a trusted project's Claude Code settings again, and attachments and specialist projects reach the CLI as plain `C:\…` paths.
 - On Windows, one folder is one project whatever its spelling (`c:` or `C:`, either slash, a trailing one): it no longer splits into two flocks, an **Always** rule answers it again, `/continue` finds its session, and a file a command wrote no longer shows twice.
 - On Windows, the log is in `%LOCALAPPDATA%\Vults\logs`, beside the rest of the app's data, and Settings and files lists where everything lives on Windows.
 - On Windows, a Codex specialist finds your Codex login when Vults starts from the Start menu.

@@ -1921,12 +1921,13 @@ fn specialist_project(
     }
     let selected = match folder {
         Some(folder) if Path::new(folder).is_absolute() && Path::new(folder).is_dir() => {
-            std::fs::canonicalize(folder).map_err(|_| "That project is unavailable.")?
+            paths::simplified(std::fs::canonicalize(folder).map_err(|_| "That project is unavailable.")?)
         }
         Some(_) => return Err("That project is unavailable.".into()),
         None => paths::chat_dir(),
     };
-    if bound && selected != current {
+    // A conversation bound before paths were simplified keeps its `\\?\` spelling.
+    if bound && selected != paths::simplified(current.to_path_buf()) {
         return Err(
             "The conversation project changed. Start a new conversation to choose another project.".into(),
         );
@@ -3312,6 +3313,8 @@ fn inbox_files(inbox: &Path, files: &[String]) -> Result<Vec<PathBuf>, String> {
         if total > MAX_FILE {
             return Err("Attach at most 16 files and 20 MB in total.".into());
         }
+        // Checked canonical above; handed on as the CLI and the prompt read it.
+        let canonical = paths::simplified(canonical);
         if selected.contains(&canonical) {
             return Err("Choose each attachment only once.".into());
         }
@@ -3516,7 +3519,7 @@ mod tests {
             )
             .is_err()
         );
-        let canonical = std::fs::canonicalize(&dir).unwrap();
+        let canonical = paths::simplified(std::fs::canonicalize(&dir).unwrap());
         assert_eq!(
             specialist_project(dir.to_str(), &ExecutionDefaults::default(), false, &dir).unwrap(),
             canonical
@@ -3651,7 +3654,7 @@ mod tests {
         assert_eq!(std::fs::read_to_string(&copied).unwrap(), "USER_FILE");
         assert_eq!(
             inbox_files(&inbox, std::slice::from_ref(&copied)).unwrap(),
-            vec![std::fs::canonicalize(&copied).unwrap()]
+            vec![paths::simplified(std::fs::canonicalize(&copied).unwrap())]
         );
         assert!(inbox_files(&inbox, &[copied.clone(), copied.clone()]).is_err());
         assert!(inbox_files(&inbox, &vec![copied.clone(); MAX_ATTACHMENTS + 1]).is_err());
