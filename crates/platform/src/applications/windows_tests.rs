@@ -178,3 +178,19 @@ fn owned_launch_child() {
     );
     fs::write(cwd.join("launched.txt"), "requested").unwrap();
 }
+
+#[test]
+fn a_shortcut_target_s_variables_are_expanded_or_it_is_skipped() {
+    let var = |name: &str| (name == "windir").then(|| r"C:\Windows".to_string());
+    assert_eq!(
+        expand_with(r"%windir%\System32\cmd.exe", var).as_deref(),
+        Some(r"C:\Windows\System32\cmd.exe")
+    );
+    assert_eq!(
+        expand_with(r"C:\plain\a.exe", var).as_deref(),
+        Some(r"C:\plain\a.exe")
+    );
+    assert_eq!(expand_with(r"%unset%\a.exe", var), None);
+    assert_eq!(expand_with(r"50%\a.exe", var), None, "an open %");
+    assert_eq!(expand_with("", var).as_deref(), Some(""));
+}

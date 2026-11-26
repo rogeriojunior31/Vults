@@ -27,6 +27,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Fixes
 
+- On Windows, voice commands open Start Menu apps whose shortcut names `%windir%` or `%ProgramFiles%` (PowerShell, Remote Desktop and about half of Windows' own).
 - On Windows, dictation types straight into Windows 11 Notepad instead of only copying.
 - On Windows, Chat reads a trusted project's Claude Code settings again, and attachments and specialist projects reach the CLI as plain `C:\…` paths.
 - On Windows, one folder is one project whatever its spelling (`c:` or `C:`, either slash, a trailing one): it no longer splits into two flocks, an **Always** rule answers it again, `/continue` finds its session, and a file a command wrote no longer shows twice.
