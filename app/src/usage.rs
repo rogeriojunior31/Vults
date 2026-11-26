@@ -55,14 +55,15 @@ pub fn set(app: &AppHandle, agent: AgentKind, windows: Vec<Window>) {
 
 /// Claude has two sources (the account read and each session's statusLine) and either may carry
 /// only one of its windows: replacing the whole list made the other meter vanish and come back.
-/// A read updates the windows it has; another one stays until its own reset.
+/// A read updates the windows it has; another one stays until its own reset, and one with no reset
+/// time (an unused window: 0 %) until a read of its length replaces it.
 fn merge(old: &[Window], new: Vec<Window>, now: i64) -> Vec<Window> {
     if new.is_empty() {
         return new;
     }
     let mut windows: Vec<Window> = old
         .iter()
-        .filter(|w| !new.iter().any(|n| n.minutes == w.minutes) && w.resets_at.is_some_and(|at| at > now))
+        .filter(|w| !new.iter().any(|n| n.minutes == w.minutes) && w.resets_at.is_none_or(|at| at > now))
         .cloned()
         .collect();
     windows.extend(new);
@@ -270,7 +271,7 @@ mod tests {
             five,
             [w(300, 45, Some(now + 600)), w(10080, 20, Some(now + 9000))]
         );
-        // Past its reset, or with no reset to judge, a window not reported again goes.
+        // Past its reset, a window not reported again goes; with no reset time, it stays.
         let later = now + 10_000;
         assert_eq!(
             merge(&five, vec![w(300, 1, Some(later + 600))], later),
@@ -278,7 +279,7 @@ mod tests {
         );
         assert_eq!(
             merge(&[w(10080, 20, None)], vec![w(300, 1, None)], now),
-            [w(300, 1, None)]
+            [w(300, 1, None), w(10080, 20, None)]
         );
         // Nothing reported clears: the switch went off.
         assert!(merge(&five, Vec::new(), now).is_empty());
