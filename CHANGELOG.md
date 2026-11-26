@@ -12,6 +12,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 - A Windows 11 preview, still being validated: sessions reach the flock from Claude Code, Codex, Antigravity, OpenCode, Qwen Code, Copilot CLI, Cursor, Factory Droid and Kimi Code, with hooks written for the shell each agent uses (cmd or PowerShell, not only Git Bash), and replaced safely while an agent runs them.
 - Native session notifications, the animated tray with the Linux menu and presets, the Panel island docked by a taskbar on any edge, surfaces placed again when monitors or the taskbar change, and *Open terminal* bringing the session's window forward.
+- The installer installs for you only (no administrator needed) or for every user of the computer (in Program Files, as administrator); `/CURRENTUSER` and `/ALLUSERS` choose it in a silent install.
 - Files dropped from Explorer attach on the island again.
 - Global shortcuts are configurable and never take a chord another app already holds.
 - Local dictation and voice commands: computer audio mute and volume, a player's volume through its own mixer session, opening Start Menu and Microsoft Store apps by name, and media paused during dictation and resumed after. Installers ship and verify Vulkan for GPU transcription.
