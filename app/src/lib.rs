@@ -633,6 +633,10 @@ pub fn place_surfaces(app: &AppHandle) {
     {
         panel::apply(app);
         widget::apply(app);
+        // It follows the island's monitor; queued after the island's own placement.
+        if let Some(win) = app.get_webview_window(dictation_overlay::LABEL) {
+            let _ = app.run_on_main_thread(move || dictation_overlay::place(&win));
+        }
     }
     #[cfg(target_os = "linux")]
     for label in SURFACES {
