@@ -1,5 +1,5 @@
 # Aprovando pela ilha
-<!-- source: 9ea02621358c -->
+<!-- source: ef5ca54da8c8 -->
 
 Quando o Claude Code, o Codex, o OpenCode, o Qwen Code ou o Copilot CLI pede permissão para uma chamada de
 ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o
@@ -87,7 +87,8 @@ deny external
 ask tool WebFetch
 ```
 
-- `project` define a pasta em que ela vale (e abaixo dela); sem ele, vale em todo lugar. `agents`
+- `project` define a pasta em que ela vale (e abaixo dela); sem ele, vale em todo lugar. No Windows,
+  escreva `C:\Users\eu\site`, `C:/Users/eu/site` ou `~/site`: maiúsculas e barras não importam. `agents`
   limita a alguns agentes; sem ele, todo agente embutido.
 - `allow`, `deny` ou `ask`, depois uma classe (`read`, `read-external`, `write`, `external`),
   `command` e as palavras dele (um `*` no fim deixa vir mais palavras), ou `tool` e o nome exato de
@@ -107,7 +108,7 @@ ask tool WebFetch
   `clone`). Também perguntam um comando com símbolo do shell, aspas, glob ou tab, um comando
   longo ou de várias linhas, e um card cujo alvo foi cortado. O **Always allow** continua cobrindo
   um comando exato.
-- Um allow só alcança a pasta da sessão: aquela em que o Vults a viu começar, nunca `/` nem a sua
+- Um allow só alcança a pasta da sessão: aquela em que o Vults a viu começar, nunca `/`, a raiz de um disco (`C:\`) nem a sua
   pasta pessoal, e nada depois que o agente saiu dela (uma sessão que o Vults viu pela primeira vez
   depois, após um reinício, não ganha allow). Um caminho fora dela, um que sobe (`..`), vários
   caminhos num alvo só ou uma escrita dentro de `.git` pergunta. As palavras de um comando permitido

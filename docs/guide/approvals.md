@@ -77,7 +77,8 @@ deny external
 ask tool WebFetch
 ```
 
-- `project` sets the folder it holds in (and below); without it, it holds everywhere. `agents`
+- `project` sets the folder it holds in (and below); without it, it holds everywhere. On Windows
+  write it as `C:\Users\me\site`, `C:/Users/me/site` or `~/site`: case and slashes do not matter. `agents`
   limits it to some agents; without it, every built-in agent.
 - `allow`, `deny` or `ask`, then a class (`read`, `read-external`, `write`, `external`), `command`
   and its words (a last `*` lets more words follow), or `tool` and a tool's exact name (a shell or
@@ -95,7 +96,7 @@ ask tool WebFetch
   `checkout`, `switch`, `cherry-pick`, `revert`, `am`, `worktree`, `clone`). So does a
   command with a shell symbol, quote, glob or tab, a long or multi-line command, and a card whose
   target is cut. **Always allow** still covers one exact command.
-- An allow reaches only the session's folder: the one Vults saw it start in, never `/` or your
+- An allow reaches only the session's folder: the one Vults saw it start in, never `/`, the top of a drive (`C:\`) or your
   home folder, and nothing once the agent moved out of it (a session Vults first saw later, after a
   restart, gets no allow). A path outside it, one that climbs (`..`), several paths in one target,
   or a write under `.git` asks. An allowed command's words name no absolute path, URL, `@file`,

@@ -24,6 +24,7 @@ use serde::Serialize;
 use vults_protocol::AgentKind;
 
 use crate::Ask;
+use crate::fspath;
 use crate::policy::{self, Class, Confidence};
 
 /// What a line answers.
@@ -252,18 +253,20 @@ pub fn parse(text: &str, home: Option<&str>) -> Result<Policy, ParseError> {
     Ok(policy)
 }
 
-/// An absolute folder, `~/…` expanded, without a trailing slash; none for a relative one or one
-/// that climbs (`..`).
+/// An absolute folder (a Windows one too), `~/…` expanded, without a trailing slash, spelled as
+/// written; none for a relative one or one that climbs (`..`).
 fn folder(path: &str, home: Option<&str>) -> Option<String> {
-    let path = match path.strip_prefix("~/") {
-        Some(rest) => format!("{}/{rest}", home?.trim_end_matches('/')),
+    let path = match path.strip_prefix("~/").or_else(|| path.strip_prefix("~\\")) {
+        Some(rest) => {
+            let home = home?.trim_end_matches(['/', '\\']);
+            let sep = if fspath::is_windows(home) { '\\' } else { '/' };
+            format!("{home}{sep}{rest}")
+        }
         None if path == "~" => home?.to_owned(),
         None => path.to_owned(),
     };
-    if !path.starts_with('/') || path.split('/').any(|c| c == "..") {
-        return None;
-    }
-    let trimmed = path.trim_end_matches('/');
+    fspath::key(&path)?;
+    let trimmed = path.trim_end_matches(['/', '\\']);
     Some(if trimmed.is_empty() {
         "/".into()
     } else {
@@ -306,22 +309,14 @@ const SEARCH_HERE: &[&str] = &["Glob", "Grep"];
 /// What the user asks of a call, from every policy that holds for it. Read by [`decide`] and by
 /// the reducer, which lets a deny beat even an *Always* rule.
 pub fn decide(policies: &[Active], call: &Call) -> Verdict {
-    // Denies and asks hold wherever the session is; an allow needs the folder it started in.
-    let root = call
-        .root
-        .filter(|r| r.starts_with('/'))
-        .map(|r| r.trim_end_matches('/'));
-    let Some(scope) = root.or(call
-        .cwd
-        .filter(|c| c.starts_with('/'))
-        .map(|c| c.trim_end_matches('/')))
-    else {
-        return Verdict::Ask;
-    };
+    // Denies and asks hold wherever the session is; an allow needs the folder it started in. With
+    // no folder to read, a policy for a project can't be judged, but one for everywhere still holds.
+    let root = call.root.and_then(fspath::key);
+    let scope = root.clone().or_else(|| call.cwd.and_then(fspath::key));
     let mine: Vec<&Active> = policies
         .iter()
         .filter(|a| a.policy.agents.is_empty() || a.policy.agents.contains(&call.agent))
-        .filter(|a| a.policy.project.as_deref().is_none_or(|p| inside(scope, p)))
+        .filter(|a| in_scope(a, scope.as_deref()))
         .collect();
     if mine.is_empty() || call.agent == AgentKind::Other {
         return Verdict::Ask;
@@ -380,12 +375,10 @@ pub fn decide(policies: &[Active], call: &Call) -> Verdict {
         && !call.ask.cut
         && call.ask.full.is_none()
         && classified.confidence == Confidence::Known
-        // A session started in `/` or the home folder has no folder worth the name.
-        && root != "/"
-        && !root.is_empty()
-        && !homes.iter().any(|h| h.trim_end_matches('/') == root)
-        && call.cwd.is_some_and(|c| c.starts_with('/') && !c.split('/').any(|part| part == "..")
-            && inside(c.trim_end_matches('/'), root))
+        // A session started at the top of a disk or in the home folder has no folder worth the name.
+        && !fspath::is_top(&root)
+        && !homes.iter().any(|h| fspath::key(h).as_deref() == Some(root.as_str()))
+        && call.cwd.is_some_and(|c| fspath::inside(c, &root))
         && match command {
             // Plain spaces only: a tab, a carriage return or a wide space reads otherwise.
             Some(c) => {
@@ -395,7 +388,7 @@ pub fn decide(policies: &[Active], call: &Call) -> Verdict {
                     && !raw.unwrap_or_default().chars().any(|ch| ch.is_whitespace() && ch != ' ')
                     && c.split_whitespace().all(plain_word)
             }
-            None => in_reach(call, root, classified.class),
+            None => in_reach(call, &root, classified.class),
         };
     if !may_allow {
         return Verdict::Ask;
@@ -446,9 +439,8 @@ pub fn why_ask(policies: &[Active], call: &Call) -> Option<AskWhy> {
     }
     let scope = call
         .root
-        .or(call.cwd)
-        .filter(|r| r.starts_with('/'))
-        .map(|r| r.trim_end_matches('/'))?;
+        .and_then(fspath::key)
+        .or_else(|| call.cwd.and_then(fspath::key));
     let command = policy::is_shell(call.tool).then(|| policy::command_of(&whole).trim());
     let named: Vec<&str> = command
         .map(|c| c.split_whitespace().collect())
@@ -456,7 +448,7 @@ pub fn why_ask(policies: &[Active], call: &Call) -> Option<AskWhy> {
     policies
         .iter()
         .filter(|a| a.policy.agents.is_empty() || a.policy.agents.contains(&call.agent))
-        .filter(|a| a.policy.project.as_deref().is_none_or(|p| inside(scope, p)))
+        .filter(|a| in_scope(a, scope.as_deref()))
         .flat_map(|a| a.policy.lines.iter())
         .filter(|l| l.verb == Verb::Ask)
         .any(|l| {
@@ -528,19 +520,24 @@ fn in_reach(call: &Call, root: &str, class: Class) -> bool {
     let Some(path) = value else {
         return SEARCH_HERE.contains(&call.tool);
     };
+    // A backslash is a Windows separator; elsewhere it is an escape the card may not show.
+    let windows = fspath::is_windows(root);
     // One path, as written: several joined (`a b`, `a, b`), braces, a home or a variable ask.
-    if path.contains(|c: char| c.is_whitespace() || matches!(c, ',' | '{' | '}' | '~' | '$' | '`' | '\\')) {
+    if path.contains(|c: char| {
+        c.is_whitespace() || matches!(c, ',' | '{' | '}' | '~' | '$' | '`') || (c == '\\' && !windows)
+    }) {
         return false;
     }
-    let base = call.cwd.unwrap_or(root).trim_end_matches('/');
-    let path = if path.starts_with('/') {
-        path.to_owned()
-    } else {
-        format!("{base}/{path}")
+    // `root` is keyed (`fspath::key`), and so is every path compared with it.
+    let base = call.cwd.and_then(fspath::key).unwrap_or_else(|| root.to_owned());
+    let path = match fspath::key(path) {
+        Some(absolute) => absolute,
+        None if windows => format!("{base}/{}", path.replace('\\', "/").to_lowercase()),
+        None => format!("{base}/{path}"),
     };
     let climbs = path.split('/').any(|c| c == "..");
     let in_git = path.split('/').any(|c| c.eq_ignore_ascii_case(".git"));
-    !climbs && inside(&path, root) && !(in_git && matches!(class, Class::Write { .. }))
+    !climbs && fspath::inside(&path, root) && !(in_git && matches!(class, Class::Write { .. }))
 }
 
 /// A word an allowed command may carry: letters, digits and `._+=,-`, and `/` only in a plain
@@ -598,10 +595,15 @@ fn runs_hooks(command: &str) -> bool {
     words.next() == Some("git") && words.any(|w| GIT_HOOKED.contains(&w))
 }
 
-/// `path` is `dir` or below it.
-fn inside(path: &str, dir: &str) -> bool {
-    let dir = dir.trim_end_matches('/');
-    dir.is_empty() || path == dir || path.strip_prefix(dir).is_some_and(|r| r.starts_with('/'))
+/// Does a policy hold where the session is? One for a project holds inside it, and also when the
+/// folder can't be read (`scope` none): its denies and asks then still hold, and an allow needs
+/// the folder anyway.
+fn in_scope(active: &Active, scope: Option<&str>) -> bool {
+    active
+        .policy
+        .project
+        .as_deref()
+        .is_none_or(|project| scope.is_none_or(|scope| fspath::inside(scope, project)))
 }
 
 #[cfg(test)]
@@ -654,6 +656,72 @@ mod tests {
         // A policy for another project says nothing here.
         let elsewhere = active("project ~/other\nask command git push *");
         assert_eq!(why(&elsewhere, "git push origin main"), None);
+    }
+
+    /// A session on Windows: its folders are `C:\…`, in any case or slash.
+    #[test]
+    fn policies_hold_in_windows_folders() {
+        const WIN_HOME: &str = r"C:\Users\U";
+        let parsed = |text: &str| {
+            vec![Active {
+                consent: 7,
+                policy: parse(text, Some(WIN_HOME)).unwrap_or_else(|e| panic!("{e:?}")),
+            }]
+        };
+        let ask = whole();
+        let on = |p: &[Active], root: Option<&str>, tool: &str, value: &str| {
+            let target = format!("{tool} · {value}");
+            let call = Call {
+                agent: AgentKind::Claude,
+                root,
+                cwd: root,
+                tool,
+                target: &target,
+                ask: &ask,
+            };
+            (decide(p, &call), why_ask(p, &call))
+        };
+        let site = Some(r"c:\users\u\Site\");
+        let p = parsed("project ~/site\ndeny command curl *\nask command git push *\nallow read");
+        assert_eq!(p[0].policy.project.as_deref(), Some(r"C:\Users\U\site"));
+        assert_eq!(on(&p, site, "Bash", "curl https://x").0, DENY);
+        assert_eq!(
+            on(&p, site, "Bash", "git push origin main"),
+            (ASK, Some(AskWhy::Policy))
+        );
+        assert_eq!(on(&p, site, "Read", r"C:\Users\U\site\src\main.rs").0, ALLOW);
+        assert_eq!(
+            on(&p, site, "Read", r"src\main.rs").0,
+            ALLOW,
+            "relative, either slash"
+        );
+        assert_eq!(on(&p, site, "Read", r"C:\Users\U\site-old\x").0, ASK);
+        assert_eq!(on(&p, site, "Read", r"..\..\secret").0, ASK);
+        assert_eq!(
+            on(&p, Some(r"C:\Users\U\other"), "Bash", "curl https://x").0,
+            ASK,
+            "another project"
+        );
+        // No folder to read: a project's deny and ask still hold, and nothing is allowed.
+        assert_eq!(on(&p, None, "Bash", "curl https://x").0, DENY);
+        assert_eq!(
+            on(&p, None, "Bash", "git push origin main").1,
+            Some(AskWhy::Policy)
+        );
+        assert_eq!(on(&p, None, "Read", r"C:\Users\U\site\a").0, ASK);
+        // The home folder and the top of a disk allow nothing.
+        let everywhere = parsed("allow read");
+        assert_eq!(
+            on(&everywhere, Some(r"C:\Users\U"), "Read", r"C:\Users\U\a").0,
+            ASK
+        );
+        assert_eq!(on(&everywhere, Some(r"C:\"), "Read", r"C:\a").0, ASK);
+        let project = |text: &str| parse(text, Some(WIN_HOME)).map(|p| p.project).map_err(|e| e.kind);
+        assert_eq!(
+            project("project C:/work/x/\nallow read"),
+            Ok(Some("C:/work/x".into()))
+        );
+        assert_eq!(project(r"project C:\a\..\b"), Err(ErrorKind::NotAbsolute));
     }
 
     fn at(p: &[Active], tool: &str, value: &str) -> Verdict {

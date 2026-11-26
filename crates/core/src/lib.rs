@@ -14,6 +14,7 @@ pub mod board;
 pub mod calendar;
 pub mod chat;
 pub mod flock;
+pub mod fspath;
 pub mod handoff;
 pub mod i18n;
 pub mod ledger;
