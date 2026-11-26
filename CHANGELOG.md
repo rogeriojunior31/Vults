@@ -27,6 +27,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Fixes
 
+- On Windows, when the privacy settings keep desktop apps off the microphone, dictation says where to turn it back on instead of a bare error.
 - On Windows, installing hooks into an agent config you marked read-only works and keeps it read-only, and its backup path reads `C:\…` instead of `\\?\C:\…`.
 - On Windows, Settings no longer shows Linux-only rows (X11 recording keys, System Settings shortcuts) while its shortcut editor loads or fails, and **Talk with Zeca** says voice conversation is Linux-only instead of offering its setup.
 - On Windows, Qwen Code sends its sessions when your user name has a space, and Codex hooks no longer start a PowerShell on every tool call. **Settings → Agents** offers to update Codex's hooks once (the same diff and click).

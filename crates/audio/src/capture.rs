@@ -245,7 +245,7 @@ fn open(
     }
     stream
         .play()
-        .map_err(|e| format!("can't start the microphone: {e}"))?;
+        .map_err(|e| blocked(&e.to_string()).unwrap_or_else(|| format!("can't start the microphone: {e}")))?;
     Ok((stream, converter, rx))
 }
 
@@ -295,7 +295,15 @@ where
             },
             None,
         )
-        .map_err(|e| format!("can't open the microphone: {e}"))
+        .map_err(|e| blocked(&e.to_string()).unwrap_or_else(|| format!("can't open the microphone: {e}")))
+}
+
+/// Windows answers E_ACCESSDENIED (0x80070005, its text in the system's language) when its privacy
+/// settings keep desktop apps off the microphone: say where to turn it back on.
+fn blocked(error: &str) -> Option<String> {
+    (cfg!(windows) && error.to_ascii_lowercase().contains("0x80070005")).then(|| {
+        "Windows is blocking the microphone. Turn on Settings → Privacy & security → Microphone → Let desktop apps access your microphone.".into()
+    })
 }
 
 fn capture(
