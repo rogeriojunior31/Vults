@@ -109,6 +109,14 @@ pub enum Decision {
     Deny,
 }
 
+/// What an allow also asks of the agent, from one human click (ADR 0002): only on a Claude Code
+/// plan, the session's edits accepted without asking, as its own terminal offers.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum Then {
+    AcceptEdits,
+}
+
 /// The user's reply to one of the agent's questions: one option's label, the labels picked from a
 /// multi-select, or their own words.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -168,6 +176,9 @@ pub enum Reply {
         decision: Decision,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         reason: Option<String>,
+        /// A hook that predates it reads a plain decision.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        then: Option<Then>,
     },
     /// The user's replies to an `AskUserQuestion`, in the order of its questions. By position, not
     /// by text: the hook keys them with the questions it read, which the app only saw capped.
@@ -359,11 +370,20 @@ mod tests {
             id: "abc".into(),
             decision: Decision::Deny,
             reason: None,
+            then: None,
         };
         assert_eq!(
             serde_json::to_value(&r).unwrap(),
             json!({ "kind": "decision", "v": 1, "id": "abc", "decision": "deny" })
         );
+        let plan = Reply::Decision {
+            v: 1,
+            id: "abc".into(),
+            decision: Decision::Allow,
+            reason: None,
+            then: Some(Then::AcceptEdits),
+        };
+        assert_eq!(serde_json::to_value(&plan).unwrap()["then"], "acceptEdits");
         let a = Reply::Answer {
             v: 1,
             id: "abc".into(),

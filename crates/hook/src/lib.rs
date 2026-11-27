@@ -177,6 +177,77 @@ pub fn status_line_payload(payload: &Map<String, Value>) -> Option<Map<String, V
     Some(kept)
 }
 
+/// Claude Code's events after which its session may have a new title.
+pub const TITLE_EVENTS: &[&str] = &["SessionStart", "UserPromptSubmit", "Stop"];
+/// How much of a transcript's end is read for its title: Claude Code writes it again only every
+/// 40 to 80 KB.
+pub const TITLE_TAIL: u64 = 256 * 1024;
+/// The longest title kept, in characters.
+const MAX_TITLE: usize = 120;
+
+/// A Claude Code session's title in the end of its transcript: the last `/rename` (`custom-title`)
+/// wins, else the last title Claude Code gave it (`ai-title`, all a VS Code session has). Only
+/// entries of that type count, never a line that merely mentions one.
+pub fn session_title(tail: &[u8]) -> Option<String> {
+    let mentions = |line: &[u8], word: &[u8]| line.windows(word.len()).any(|w| w == word);
+    let (mut custom, mut ai) = (None, None);
+    for line in tail.split(|b| *b == b'\n') {
+        if !mentions(line, b"custom-title") && !mentions(line, b"ai-title") {
+            continue;
+        }
+        let Ok(entry) = serde_json::from_slice::<Value>(line) else {
+            continue;
+        };
+        let text = |key: &str| {
+            let title: String = entry
+                .get(key)?
+                .as_str()?
+                .chars()
+                .filter(|c| !c.is_control())
+                .collect();
+            let title = title.trim();
+            (!title.is_empty()).then(|| title.chars().take(MAX_TITLE).collect::<String>())
+        };
+        match entry.get("type").and_then(Value::as_str) {
+            Some("custom-title") => custom = text("customTitle").or(custom),
+            Some("ai-title") => ai = text("aiTitle").or(ai),
+            _ => {}
+        }
+    }
+    custom.or(ai)
+}
+
+/// How much of a Codex rollout's end is read for the turn's reviewer.
+pub const ROLLOUT_TAIL: u64 = 1024 * 1024;
+
+/// Whether this Codex turn's approvals go to Codex's own automatic reviewer (`approvals_reviewer`
+/// `auto_review` or `strict_auto_review` in the rollout's `turn_context`): Codex then decides the
+/// request itself, and a card would hold it for a human it never asked. Only a proof counts: no
+/// context, another turn's, or an unknown reviewer leaves the card.
+pub fn codex_auto_review(tail: &[u8], turn: Option<&str>) -> bool {
+    let mut reviewer = None;
+    for line in tail.split(|b| *b == b'\n') {
+        if !line.windows(12).any(|w| w == b"turn_context") {
+            continue;
+        }
+        let Ok(record) = serde_json::from_slice::<Value>(line) else {
+            continue;
+        };
+        if record.get("type").and_then(Value::as_str) != Some("turn_context") {
+            continue;
+        }
+        let context = &record["payload"];
+        if turn.is_some_and(|turn| context.get("turn_id").and_then(Value::as_str) != Some(turn)) {
+            continue;
+        }
+        reviewer = context
+            .get("approvals_reviewer")
+            .and_then(Value::as_str)
+            .map(str::to_owned);
+    }
+    matches!(reviewer.as_deref(), Some("auto_review" | "strict_auto_review"))
+}
+
 /// The tool's input exactly as the agent sent it.
 pub fn original_input(raw: &[u8]) -> Option<Value> {
     let raw = raw.strip_prefix(&[0xEF, 0xBB, 0xBF]).unwrap_or(raw);
@@ -296,7 +367,16 @@ pub fn build_event(
     let zeca = env(protocol::ZECA_ENV).as_deref() == Some("1");
     // Only the agents in `output::replies` take an answer; any other tool's own terminal asks.
     let tool = payload.get("tool_name").and_then(Value::as_str);
-    let wants_reply = !zeca && output::waits(args.agent, &event, args.ask, tool);
+    // Antigravity takes a decision from its PreToolUse: its shell commands wait for the app, which
+    // answers at once unless the user turned approvals on and agy has no rule for the command.
+    let agy_command = args.agent == AgentKind::Other
+        && args.agent_name.as_deref() == Some("antigravity")
+        && event == "PreToolUse"
+        && payload
+            .pointer("/toolCall/name")
+            .and_then(Value::as_str)
+            .is_some_and(|t| t == "run_command" || t.ends_with(":run_command"));
+    let wants_reply = !zeca && (output::waits(args.agent, &event, args.ask, tool) || agy_command);
     // A session Vults runs asks on its driver's channel, where the app makes the card: its hook
     // asking too would show two. Nothing is relayed, and the agent asks on that channel. Anyone
     // may set the variable, but all it buys is the agent's own question instead of the hook's.
@@ -412,6 +492,73 @@ pub fn cap_patch(hunks: &[Value]) -> (Vec<Value>, bool) {
 mod tests {
     #![allow(clippy::unwrap_used)]
     use super::*;
+
+    #[test]
+    fn only_a_proven_automatic_reviewer_skips_the_card() {
+        let context = |turn: &str, reviewer: &str| {
+            format!(
+                "{}\n",
+                serde_json::json!({"type":"turn_context","payload":{"turn_id":turn,"approval_policy":"on-request","approvals_reviewer":reviewer}})
+            )
+        };
+        let auto = |parts: &[String], turn| codex_auto_review(parts.concat().as_bytes(), turn);
+        assert!(auto(&[context("t1", "auto_review")], None));
+        assert!(auto(&[context("t1", "strict_auto_review")], Some("t1")));
+        // The user reviews, a reviewer this check does not know, or nothing said: the card shows.
+        assert!(!auto(&[context("t1", "user")], None));
+        assert!(!auto(&[context("t1", "future_reviewer")], None));
+        assert!(!auto(&[], None));
+        // The latest context of the turn counts; another turn's proves nothing.
+        assert!(!auto(
+            &[context("t1", "auto_review"), context("t1", "user")],
+            Some("t1")
+        ));
+        assert!(!auto(&[context("t0", "auto_review")], Some("t1")));
+        assert!(auto(
+            &[context("t1", "auto_review"), context("t2", "user")],
+            Some("t1")
+        ));
+        // A line that only mentions it, of another type, is not a context.
+        let mention = format!(
+            "{}\n",
+            serde_json::json!({"type":"response_item","payload":{"text":"turn_context approvals_reviewer auto_review"}})
+        );
+        assert!(!auto(&[mention], None));
+    }
+
+    #[test]
+    fn a_session_is_named_by_its_last_rename_else_its_own_title() {
+        let line = |value: serde_json::Value| format!("{value}\n");
+        let custom =
+            |t: &str| line(serde_json::json!({"type":"custom-title","customTitle":t,"sessionId":"s"}));
+        let ai = |t: &str| line(serde_json::json!({"type":"ai-title","aiTitle":t,"sessionId":"s"}));
+        let user = |t: &str| line(serde_json::json!({"type":"user","message":{"content":t}}));
+        let title = |parts: &[String]| session_title(parts.concat().as_bytes());
+        assert_eq!(
+            title(&[ai("Fix login"), user("hi")]).as_deref(),
+            Some("Fix login")
+        );
+        assert_eq!(title(&[ai("Old"), ai("Fix login")]).as_deref(), Some("Fix login"));
+        // A rename wins over a later title Claude Code gave, and the last rename wins.
+        assert_eq!(
+            title(&[custom("First"), ai("Fix login"), custom("Billing"), ai("Other")]).as_deref(),
+            Some("Billing")
+        );
+        // A line that only mentions the type, a cut first line, or nothing: no title.
+        assert_eq!(
+            title(&[user("what is custom-title?"), user("and ai-title")]),
+            None
+        );
+        assert_eq!(session_title(b"le\":\"ai-title\",\"aiTitle\":\"Cut\"}\n"), None);
+        assert_eq!(title(&[]), None);
+        // Control characters go, blank titles count as none, long ones are cut.
+        assert_eq!(
+            title(&[ai("Fix\u{1b}[31m login\n")]).as_deref(),
+            Some("Fix[31m login")
+        );
+        assert_eq!(title(&[ai("Kept"), custom("   ")]).as_deref(), Some("Kept"));
+        assert_eq!(title(&[ai(&"x".repeat(500))]).unwrap().chars().count(), MAX_TITLE);
+    }
 
     fn build(raw: &[u8]) -> Option<Event> {
         let args = Args::parse(["--agent", "claude"].map(String::from).into_iter());

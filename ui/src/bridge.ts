@@ -584,6 +584,8 @@ export const Bridge = {
   installApply: (agent: InstallAgent, install: boolean, fingerprint: string) =>
     invoke<string | null>("install_apply", { agent, install, fingerprint }),
   decideAlways: (request: string) => invoke<void>("decide_always", { request }),
+  /** A Claude Code plan allowed, its session accepting edits (ADR 0002). */
+  decidePlan: (request: string) => invoke<void>("decide_plan", { request }),
   setQuestionAgents: (on: boolean) => invoke<void>("question_agents_set", { on }),
   questionInstallStatus: () => invoke<QuestionInstallStatus[]>("question_install_status"),
   questionInstallPreview: (agent: string, install: boolean) => invoke<InstallPreview>("question_install_preview", { agent, install }),
@@ -664,7 +666,7 @@ export const Bridge = {
       ? invoke<void>("set_voice_realtime", { on, limitMicrousd, model })
       : Promise.reject(new Error("Invalid realtime voice budget.")),
   appSettings: () =>
-    invoke<{ questionAgents: boolean; theme: Theme; history: boolean; sounds: boolean; volume: number; autostart: boolean; foldAfter: number; openOnHover: boolean; monitor: string | null; nowPlaying: boolean; codexUsage: boolean; claudeUsage: boolean; priceUpdates: boolean; nativeChat: boolean; dictationKeep: string; dictationSound: boolean; dictationCommands: boolean; dictationCommandMedia: boolean; dictationCommandApps: boolean; dictationCommandOutput: boolean; dictationCleanup: boolean; meetingSummary: boolean; dictationStyle: DictationStyle; dictationWriteIn: DictationOutputLanguage | null; dictationSessionsEnglish: boolean; dictationCommandChat: boolean; dictationMusic: DictationMusic; dictationCancelByVoice: boolean; dictationSpokenCode: boolean; dictationCutRepeats: boolean; dictationRetryBase: boolean; dictationVocabulary: boolean; dictationProjectVocabulary: boolean; dictationMicrophone: string | null; dictationDoubleTap: boolean; dictationSpaceLock: boolean; dictationEscapeCancel: boolean; dictationCaption: boolean; dictationInsert: boolean; dictationInsertAvailable: boolean; dictationWayland: boolean; chatAccess: ChatAccess; memory: boolean; journalSummary: boolean; localEmbeddings: boolean; memorySuggest: boolean; sleep: boolean; zecaSpecies: string; zecaLook: string; flock: Flock; visitors: boolean; presence: Presence; notifications: boolean; quietWhenWatching: boolean; zeca: boolean; widget: Corner | null; dndUntil: number | null; language: string | null; lang: string; settingsPath: string; dataPath: string }>("app_settings"),
+    invoke<{ questionAgents: boolean; antigravityApprovals: boolean; theme: Theme; history: boolean; sounds: boolean; volume: number; autostart: boolean; foldAfter: number; openOnHover: boolean; monitor: string | null; nowPlaying: boolean; codexUsage: boolean; claudeUsage: boolean; priceUpdates: boolean; nativeChat: boolean; dictationKeep: string; dictationSound: boolean; dictationCommands: boolean; dictationCommandMedia: boolean; dictationCommandApps: boolean; dictationCommandOutput: boolean; dictationCleanup: boolean; meetingSummary: boolean; dictationStyle: DictationStyle; dictationWriteIn: DictationOutputLanguage | null; dictationSessionsEnglish: boolean; dictationCommandChat: boolean; dictationMusic: DictationMusic; dictationCancelByVoice: boolean; dictationSpokenCode: boolean; dictationCutRepeats: boolean; dictationRetryBase: boolean; dictationVocabulary: boolean; dictationProjectVocabulary: boolean; dictationMicrophone: string | null; dictationDoubleTap: boolean; dictationSpaceLock: boolean; dictationEscapeCancel: boolean; dictationCaption: boolean; dictationInsert: boolean; dictationInsertAvailable: boolean; dictationWayland: boolean; chatAccess: ChatAccess; memory: boolean; journalSummary: boolean; localEmbeddings: boolean; memorySuggest: boolean; sleep: boolean; zecaSpecies: string; zecaLook: string; flock: Flock; visitors: boolean; presence: Presence; notifications: boolean; quietWhenWatching: boolean; zeca: boolean; widget: Corner | null; dndUntil: number | null; language: string | null; lang: string; settingsPath: string; dataPath: string }>("app_settings"),
   /** "While you were away" read: it goes. */
   digestDismiss: () => invoke<void>("digest_dismiss"),
   recapDismiss: () => invoke<void>("recap_dismiss"),
@@ -765,6 +767,7 @@ export const Bridge = {
   setLocalEmbeddings: (on: boolean) => invoke<void>("set_local_embeddings", { on }),
   setMemorySuggest: (on: boolean) => invoke<void>("set_memory_suggest", { on }),
   setSleep: (on: boolean) => invoke<void>("set_sleep", { on }),
+  setAntigravityApprovals: (on: boolean) => invoke<void>("set_antigravity_approvals", { on }),
   webSettings: () => invoke<WebSettings>("web_settings"),
   setWeb: (on: boolean) => invoke<void>("set_web", { on }),
   setWebEngine: (engine: WebEngine) => invoke<void>("set_web_engine", { engine }),

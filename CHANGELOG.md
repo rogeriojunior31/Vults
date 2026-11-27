@@ -4,6 +4,8 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ## Unreleased
 
+## 0.1.9 (2026-11-27)
+
 ### Removed
 
 - **Tasks** are gone: the Tasks tab, *Open Tasks*, `/task`, `/delegate`, runs in their own clone, context-pack handoff and the review loop. Vults watches and answers your agents; the code stays their work. `/continue`, costs and the daily budget remain, and past spend from tasks still counts in Activity.
@@ -12,6 +14,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 - A Windows 11 preview, still being validated: sessions reach the flock from Claude Code, Codex, Antigravity, OpenCode, Qwen Code, Copilot CLI, Cursor, Factory Droid and Kimi Code, with hooks written for the shell each agent uses (cmd or PowerShell, not only Git Bash), and replaced safely while an agent runs them.
 - Native session notifications, the animated tray with the Linux menu and presets, the Panel island docked by a taskbar on any edge, surfaces placed again when monitors or the taskbar change, and *Open terminal* bringing the session's window forward.
+- The installer installs for you only (no administrator needed) or for every user of the computer (in Program Files, as administrator); `/CURRENTUSER` and `/ALLUSERS` choose it in a silent install.
 - Files dropped from Explorer attach on the island again.
 - Global shortcuts are configurable and never take a chord another app already holds.
 - Local dictation and voice commands: computer audio mute and volume, a player's volume through its own mixer session, opening Start Menu and Microsoft Store apps by name, and media paused during dictation and resumed after. Installers ship and verify Vulkan for GPU transcription.
@@ -20,6 +23,9 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### New
 
+- **Allow and accept edits** on a Claude Code plan's card: the plan starts and that session edits files without asking until it ends, as Claude Code's own terminal offers. Its commands still come as cards, and the audit log keeps the choice ([ADR 0002](docs/adr/0002-permissions.md)).
+- **Approve Antigravity's shell commands from the island**, in **Settings → Agents → Antigravity** (off by default). A `run_command` that none of Antigravity's own rules covers waits on a card; Allow runs it, Deny stops it, and no answer leaves Antigravity's prompt. Antigravity's hooks now give a card 120 seconds: **Update hooks…** once.
+- A Claude Code session's card shows its title beside the project: your `/rename`, else the title Claude Code gave it. Two sessions in one folder are told apart in the card, the Flock search and the chat's session mentions.
 - **GitLab and Gitea connectors**, read-only, next to GitHub: GitLab.com merge requests and self-hosted Gitea pull requests with reviewers and changes asked, diff sizes, checks and pipelines of the default branch, and releases. Each has its own switch, budget and trace; the token lives in the keyring.
 - Zeca's API Chat and spoken replies can read the cached GitLab and Gitea snapshots, each off by default. A specialist reads only the repositories, host and account its grant names, and reconnecting or changing the account revokes it. No extra request is made.
 - **Five themes** in **Settings → General → Theme**: Dark (formerly Black, the default), Light and the SP Night trio, Noite Paulista, Garoa and Pico do Jaragua. Every control follows the theme, selects and focus rings included.
@@ -27,7 +33,16 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Fixes
 
-- On Windows, agents can ask you a text question (`ask_user`): the Claude Code that Vults starts asks by itself, and Settings > Dictation > Agents sets it up for your own Claude Code or Codex. You type the answer; dictating into it is still Linux-only.
+- Allow works on a card for a multi-line command or plan: the click did nothing and the card waited until it went back to the terminal. A card that shows the whole command answers a click; one cut short ("…") still does not, and neither takes an *Always* rule.
+- Full access in Zeca's chat answers on Windows: almost every PowerShell command (anything with a variable, parentheses or brackets) read as destructive, so it always asked. PowerShell is now read for what it runs, inside blocks, subexpressions and assignments, and destructive commands, .NET calls that delete or run code, `& $cmd` and overwriting a file still ask. A command with `2>&1;` no longer reads as overwriting a file, on Linux too.
+- A plan card shows the plan Claude Code asks to start, not just `ExitPlanMode`: its first line in the target and the whole plan below (up to 2,000 characters, marked when longer).
+- A Codex turn reviewed by Codex's own automatic reviewer (`auto_review`, `strict_auto_review`) no longer waits on a card: Codex decides it. Only a turn its rollout proves automatic skips the card.
+- Allowing Claude Code's plan from the island now leaves plan mode: the answer carries the plan back, as Claude Code requires, instead of a bare allow it ignored.
+- On Windows, a card answered in the agent's terminal goes away: when the agent ends the shell its hook ran under, the hook now ends too instead of waiting out its whole budget.
+- A permission card ignores clicks in its first 600 ms: a click meant for the window under it no longer lands on Allow. Its keys still answer at once.
+- The plan meters no longer move back when an idle Claude Code session reports its older copy of the limits: for each window, the later reset wins, and for the same reset the higher use.
+- Voice transcription no longer crashes with an illegal instruction on older processors: the packages' speech engine is built for a portable CPU baseline (AVX2 and below) instead of the build machine's own, on Linux as on Windows.
+- On Windows, agents can ask you a text question (`ask_user`): the Claude Code that Vults starts asks by itself, and Settings > Dictation > Agents sets it up for your own Claude Code or Codex. Type the answer, or hold the dictation key shown on the question and speak, as on Linux.
 - On Windows, a specialist with GitHub tools works in the chat instead of refusing every turn.
 - On Windows, the secrets Vults keeps in Credential Manager stay on this computer: on a domain account with a roaming profile they no longer follow you to other PCs (a secret saved before keeps roaming until it is saved again).
 - On Windows, `/continue` with a Claude Code session says it can't run there (Claude Code has no sandbox on native Windows, and a continued session runs only in one) instead of starting a session whose every command would fail. Codex sessions continue as before.

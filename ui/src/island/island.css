@@ -1124,6 +1124,14 @@ body.still .compact.needs::after {
   font-weight: 600;
   color: var(--fg-bright);
 }
+.who .title {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--fg-muted);
+}
 .who .editor {
   flex: none;
   padding: 0 5px;

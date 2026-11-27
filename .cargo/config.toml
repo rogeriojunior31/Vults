@@ -1,0 +1,6 @@
+# whisper.cpp (ggml) otherwise compiles for the build machine's CPU: a package built on a runner
+# with AVX-512 then dies on an illegal instruction on older CPUs. OFF gives the portable
+# SSE4.2/AVX/AVX2/FMA/F16C baseline on every platform; set GGML_NATIVE=ON yourself for a build
+# that only runs where it was made.
+[env]
+GGML_NATIVE = "OFF"

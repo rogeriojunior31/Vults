@@ -1,5 +1,5 @@
 # Aprovando pela ilha
-<!-- source: 4bb074e9b526 -->
+<!-- source: 3576ef50a9bf -->
 
 Quando o Claude Code, o Codex, o OpenCode, o Qwen Code ou o Copilot CLI pede permissão para uma chamada de
 ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o
@@ -10,6 +10,11 @@ Antigravity, o Cursor, o Factory Droid, o Hermes Agent e o Kimi Code são as exc
   completo (até quatro linhas, depois ele rola);
 - numa edição, as linhas que ela adiciona e remove (**+12 −3**). Patches do Codex também mostram
   seus arquivos e contagens.
+
+Um turno do Codex cujas aprovações vão para o revisor automático do próprio Codex
+(`approvals_reviewer` em `auto_review` ou `strict_auto_review`) não mostra card: o Codex decide
+esses pedidos sozinho. Só um turno que o arquivo da sessão prova ser automático pula o card;
+qualquer outro mostra.
 
 ![Um card de permissão com o comando inteiro, Deny, Allow e Always allow](../../assets/island-approval.png)
 
@@ -147,6 +152,8 @@ Always, uma política, o acesso total do chat, ou o próprio Vults), o agente e 
 recorded** mostra o texto guardado quando ele foi encurtado, como um lançador do PowerShell em volta
 do comando.
 
+![Settings, Approvals: a auditoria das respostas com seus filtros, um pedido que ninguém respondeu a tempo e, abaixo, as regras Always allowed e as Policies](../../assets/settings-approvals.png)
+
 <a id="more-than-one-at-a-time"></a>
 
 ## Mais de um ao mesmo tempo
@@ -207,6 +214,17 @@ notificação): nada esconde um card pelo qual um agente está esperando.
 
 Se o app estiver fechado ou sem responder, o hook não responde nada em milissegundos e todo agente
 pergunta no terminal dele, como de costume.
+
+<a id="a-plan"></a>
+
+## Um plano
+
+Quando o Claude Code termina de planejar, o card dele mostra o plano inteiro. **Allow** começa o
+plano com a sessão perguntando como antes; **Allow and accept edits** começa e deixa essa sessão
+editar arquivos sem perguntar até terminar, a escolha que o próprio terminal do Claude Code oferece.
+Os comandos dela continuam vindo como cards, os destrutivos inclusive, e o log de auditoria guarda
+a escolha numa linha própria ([ADR 0002](../../adr/0002-permissions.md)). **Deny** mantém o plano em
+andamento.
 
 <a id="claude-codes-auto-mode"></a>
 <a id="auto-mode-and-questions"></a>
@@ -289,6 +307,8 @@ que o Vults não escreveu nunca é tocado.
 ## Agentes que perguntam no próprio prompt
 
 Antigravity, Cursor, Factory Droid, Hermes Agent e Kimi Code pedem as permissões no próprio terminal ou prompt, e
-a ilha nunca as responde: os pássaros deles mostram os passos. [O que cada agente consegue
+a ilha nunca as responde: os pássaros deles mostram os passos. A única exceção são os comandos de
+shell do Antigravity, depois que o botão **Approve commands from the island** dele está ligado
+([Antigravity](other-agents.md#antigravity)). [O que cada agente consegue
 fazer](other-agents.md#what-each-agent-can-do) os resume, e a seção de cada um ali diz por que ele
 não tem card.

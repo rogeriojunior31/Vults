@@ -2527,4 +2527,9 @@ export default {
   "Stay quiet when I am looking": "Ficar quieto quando eu estiver olhando",
   "A session that finishes or fails while its terminal is in front makes no sound, and the island stays put. A card always sounds and opens.": "Uma sessão que termina ou falha enquanto o terminal dela está na frente não faz som, e a ilha fica onde está. Um card sempre toca e abre.",
   "Vults reads the active window once, when a turn ends. On GNOME Wayland, and for terminals on Windows, it cannot tell which session is in front, so every finish sounds as before.": "O Vults lê a janela ativa uma vez, quando um turno termina. No GNOME com Wayland, e para terminais no Windows, ele não consegue saber qual sessão está na frente, então todo término toca como antes.",
+  "Approve commands from the island": "Aprovar comandos pela ilha",
+  "A shell command that none of Antigravity's own rules covers waits on a card: Allow runs it, Deny stops it, and no answer leaves Antigravity's own prompt. Hooks installed before this switch need Update hooks… first.": "Um comando de shell que nenhuma regra do próprio Antigravity cobre espera num card: Allow executa, Deny impede, e sem resposta o Antigravity pergunta no próprio prompt. Hooks instalados antes deste botão precisam de Update hooks… primeiro.",
+  "Allow and accept edits": "Permitir e aceitar edições",
+  "Allow the plan, and this session edits files without asking until it ends, as Claude Code's own terminal offers. Its commands still come as cards.": "Permite o plano, e esta sessão edita arquivos sem perguntar até terminar, como o próprio terminal do Claude Code oferece. Os comandos dela continuam vindo como cards.",
+  "Plan allowed, and its session accepts edits": "Plano permitido, e a sessão dele aceita edições",
 } satisfies Record<string, string>;

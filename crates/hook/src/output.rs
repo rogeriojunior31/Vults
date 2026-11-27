@@ -2,7 +2,7 @@
 //! silence makes the agent ask in the terminal, which is always safe.
 
 use serde_json::{Map, Value, json};
-use vults_protocol::{AgentKind, Answer, Decision};
+use vults_protocol::{AgentKind, Answer, Decision, Then};
 
 /// How an agent takes an answer from its hook. An agent without one is never made to wait: its
 /// own terminal asks the user.
@@ -63,6 +63,46 @@ pub fn waits(agent: AgentKind, event: &str, ask: bool, tool: Option<&str>) -> bo
 
 pub fn decision_json(agent: AgentKind, decision: Decision) -> Option<String> {
     replies(agent).map(|r| (r.decision)(decision))
+}
+
+/// [`decision_json`], with the tool's input sent back where the agent needs it: Claude Code
+/// ignores a bare allow of `ExitPlanMode` ("allow alone is not sufficient for these tools",
+/// https://code.claude.com/docs/en/hooks), and then stays in plan mode.
+pub fn decision_for(
+    agent: AgentKind,
+    tool: Option<&str>,
+    tool_input: Option<Value>,
+    decision: Decision,
+    then: Option<Then>,
+) -> Option<String> {
+    let echoed = agent == AgentKind::Claude && tool == Some("ExitPlanMode") && decision == Decision::Allow;
+    match tool_input.filter(|_| echoed) {
+        Some(input) => {
+            let mut allow = json!({"behavior": "allow", "updatedInput": input});
+            // The plan's own choice in Claude Code's terminal: this session's edits go ahead
+            // without asking (https://code.claude.com/docs/en/hooks, `updatedPermissions`).
+            if then == Some(Then::AcceptEdits) {
+                allow["updatedPermissions"] =
+                    json!([{"type": "setMode", "mode": "acceptEdits", "destination": "session"}]);
+            }
+            Some(
+                json!({"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":allow}})
+                    .to_string(),
+            )
+        }
+        None => decision_json(agent, decision),
+    }
+}
+
+/// What Antigravity reads from its PreToolUse hook. Only a click gets here: no answer prints
+/// nothing, and agy asks in its own prompt.
+pub fn antigravity_decision(decision: Decision) -> String {
+    match decision {
+        Decision::Allow => json!({"decision": "allow"}).to_string(),
+        Decision::Deny => {
+            json!({"decision": "deny", "reason": format!("Denied from {}", vults_brand::NAME)}).to_string()
+        }
+    }
 }
 
 pub fn answers_output(agent: AgentKind, tool_input: &Value, answers: Vec<Answer>) -> Option<String> {
@@ -141,6 +181,72 @@ fn answers_json(tool_input: &Value, answers: Vec<Answer>) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn an_allowed_plan_goes_back_with_its_input_and_nothing_else_does() {
+        let plan = json!({ "plan": "1. Read\n2. Write", "planFilePath": "/tmp/plan.md" });
+        let allow =
+            |tool, decision| decision_for(AgentKind::Claude, tool, Some(plan.clone()), decision, None);
+        let out: Value =
+            serde_json::from_str(&allow(Some("ExitPlanMode"), Decision::Allow).unwrap()).unwrap();
+        assert_eq!(out["hookSpecificOutput"]["decision"]["behavior"], "allow");
+        assert_eq!(out["hookSpecificOutput"]["decision"]["updatedInput"], plan);
+        // A deny, another tool or another agent keeps the plain answer: no input is rewritten.
+        assert_eq!(
+            allow(Some("ExitPlanMode"), Decision::Deny),
+            decision_json(AgentKind::Claude, Decision::Deny)
+        );
+        assert_eq!(
+            allow(Some("Bash"), Decision::Allow),
+            decision_json(AgentKind::Claude, Decision::Allow)
+        );
+        assert_eq!(
+            decision_for(
+                AgentKind::Codex,
+                Some("ExitPlanMode"),
+                Some(plan.clone()),
+                Decision::Allow,
+                None
+            ),
+            decision_json(AgentKind::Codex, Decision::Allow)
+        );
+        // Allowed accepting edits: the session's mode goes with the plan, and only with a plan.
+        let accepting = decision_for(
+            AgentKind::Claude,
+            Some("ExitPlanMode"),
+            Some(plan.clone()),
+            Decision::Allow,
+            Some(Then::AcceptEdits),
+        )
+        .unwrap();
+        let accepting: Value = serde_json::from_str(&accepting).unwrap();
+        assert_eq!(
+            accepting["hookSpecificOutput"]["decision"]["updatedPermissions"],
+            json!([{"type": "setMode", "mode": "acceptEdits", "destination": "session"}])
+        );
+        assert_eq!(accepting["hookSpecificOutput"]["decision"]["updatedInput"], plan);
+        assert_eq!(
+            decision_for(
+                AgentKind::Claude,
+                Some("Bash"),
+                Some(plan.clone()),
+                Decision::Allow,
+                Some(Then::AcceptEdits)
+            ),
+            decision_json(AgentKind::Claude, Decision::Allow)
+        );
+        // No input to send back: the plain allow, as before.
+        assert_eq!(
+            decision_for(
+                AgentKind::Claude,
+                Some("ExitPlanMode"),
+                None,
+                Decision::Allow,
+                None
+            ),
+            decision_json(AgentKind::Claude, Decision::Allow)
+        );
+    }
 
     #[test]
     fn answers_are_keyed_by_the_questions_text() {

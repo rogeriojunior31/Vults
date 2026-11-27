@@ -11,15 +11,16 @@
 //! - a hook that fails (exit status not 0) blocks the tool call, so every command ends in
 //!   `|| exit 0`: a missing or broken hook binary must not stop the agent.
 //!
-//! A `PreToolUse` hook could answer allow or deny, but it runs before every tool, read-only ones
-//! included, and says nothing of whether agy would have asked: the island leaves permissions to
-//! agy's terminal and never waits.
+//! agy has no permission request: it runs `PreToolUse` before its own permission check and takes
+//! the hook's `decision`. With Settings → Agents → Antigravity → Approve commands from the island
+//! (off by default), a `run_command` none of agy's own rules covers waits on a card (the app's
+//! gate, with [`crate::AgyRules`]); only a click allows it, and no answer leaves agy's own prompt.
 
 use std::path::{Path, PathBuf};
 
 use serde_json::{Map, Value, json};
 use vults_agent_config::{HookEntry, named};
-use vults_core::{Activity, AgentEvent, AgentUpdate, SessionKey, Step};
+use vults_core::{Activity, AgentEvent, AgentUpdate, RequestId, SessionKey, Step};
 use vults_protocol::{AgentKind, Event};
 
 use crate::{Agent, Dirs, MARKER, WindowsShell, detail, shell_hook_command, target};
@@ -40,7 +41,8 @@ pub struct Antigravity;
 /// next tool or the stop does. Hooks run in agy's loop, one after the other, so fewer is faster.
 const EVENTS: &[(&str, u64)] = &[
     ("PreInvocation", 5),
-    ("PreToolUse", 5),
+    // Room for a card to wait for a click: the hook answers by 110 s, agy waits 120.
+    ("PreToolUse", 120),
     ("PostToolUse", 5),
     ("Stop", 5),
 ];
@@ -240,6 +242,39 @@ pub fn metrics_files(
 }
 
 /// The tool's arguments with agy's names copied to the ones the island reads.
+/// agy's shell tool, under its plain name or a server-qualified one.
+fn is_run_command(tool: &str) -> bool {
+    tool == "run_command" || tool.ends_with(":run_command")
+}
+
+/// The command line of an agy `PreToolUse` about to run a shell command; None for any other event.
+pub fn command(e: &Event) -> Option<String> {
+    let tool = e.payload.pointer("/toolCall/name").and_then(Value::as_str)?;
+    if e.event != "PreToolUse" || !is_run_command(tool) {
+        return None;
+    }
+    let input = input(e.payload.pointer("/toolCall/args"));
+    input["command"]
+        .as_str()
+        .map(str::trim)
+        .filter(|c| !c.is_empty())
+        .map(str::to_owned)
+}
+
+/// That `PreToolUse` as the island's permission card, for the app to show once its gate said so.
+pub fn permission(e: &Event) -> Option<AgentUpdate> {
+    command(e)?;
+    let mut update = Antigravity.parse(e)?;
+    let input = input(e.payload.pointer("/toolCall/args"));
+    update.event = AgentEvent::PermissionRequested {
+        request: RequestId(e.id.clone()),
+        target: target("run_command", &input),
+        ask: crate::ask("run_command", &input),
+        tool: "run_command".into(),
+    };
+    Some(update)
+}
+
 fn input(args: Option<&Value>) -> Value {
     let Some(Value::Object(args)) = args else {
         return Value::Null;
@@ -475,7 +510,7 @@ mod tests {
         assert_eq!(
             installed[KEY]["PreToolUse"],
             json!([{ "matcher": "*", "hooks": [{ "type": "command",
-                "command": format!("{hook} --agent antigravity PreToolUse || exit 0"), "timeout": 5 }] }])
+                "command": format!("{hook} --agent antigravity PreToolUse || exit 0"), "timeout": 120 }] }])
         );
         assert_eq!(
             installed[KEY]["Stop"],

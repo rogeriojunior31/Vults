@@ -71,7 +71,24 @@ fn relay(event: Event, raw: &[u8]) -> Option<String> {
     // The worker owns every blocking call; if it overruns we stop listening and exit,
     // and the process dying takes the connection with it.
     let wants_reply = event.wants_reply;
+    let tool = event
+        .payload
+        .get("tool_name")
+        .and_then(|t| t.as_str())
+        .map(str::to_owned);
+    let antigravity = event.agent_name.as_deref() == Some("antigravity");
     let (tx, rx) = mpsc::channel();
+    // Its starter gone, nobody reads this hook's answer: end it, and the card goes with the
+    // connection. Windows may kill only the shell between the agent and this hook.
+    #[cfg(windows)]
+    if wants_reply {
+        let orphaned = tx.clone();
+        std::thread::spawn(move || {
+            if vults_peer::wait_for_parent_exit() {
+                let _ = orphaned.send(Step::Done(None));
+            }
+        });
+    }
     std::thread::spawn(move || {
         let _ = tx.send(Step::Done(talk(&event, &tx)));
     });
@@ -92,7 +109,11 @@ fn relay(event: Event, raw: &[u8]) -> Option<String> {
         Err(_) => None,
     };
     match outcome {
-        Some(Outcome::Decision(decision)) => output::decision_json(agent, decision),
+        // The whole input, as the agent sent it: the app's copy had its strings capped.
+        Some(Outcome::Decision(decision, _)) if antigravity => Some(output::antigravity_decision(decision)),
+        Some(Outcome::Decision(decision, then)) => {
+            output::decision_for(agent, tool.as_deref(), original_input(raw), decision, then)
+        }
         // The answers go back inside the tool's own input, as the agent sent it: the copy
         // the app saw had its strings capped.
         Some(Outcome::Answers(answers)) => {
@@ -111,7 +132,7 @@ enum Step {
 
 /// What the app said to an event that waited.
 enum Outcome {
-    Decision(protocol::Decision),
+    Decision(protocol::Decision, Option<protocol::Then>),
     Answers(Vec<protocol::Answer>),
 }
 
@@ -123,6 +144,90 @@ fn build_event(
     env: impl Fn(&str) -> Option<String>,
 ) -> Option<Event> {
     vults_hook::build_event(args, raw, cwd, env, parent_pid(), new_id())
+        .filter(|event| !reviewed_by_codex(event, raw))
+        .map(|event| titled(event, raw))
+}
+
+/// A Codex request its own automatic reviewer decides is not relayed at all: Codex goes on to
+/// that reviewer, and no card holds it for a human.
+fn reviewed_by_codex(event: &Event, raw: &[u8]) -> bool {
+    use std::io::{Seek, SeekFrom};
+    if event.agent != protocol::AgentKind::Codex || event.event != "PermissionRequest" || !event.wants_reply {
+        return false;
+    }
+    let raw = raw.strip_prefix(&[0xEF, 0xBB, 0xBF]).unwrap_or(raw);
+    let Ok(payload) = serde_json::from_slice::<serde_json::Value>(raw) else {
+        return false;
+    };
+    let Some(path) = payload.get("transcript_path").and_then(|p| p.as_str()) else {
+        return false;
+    };
+    // Only Codex's own rollouts, by their real path: a link out of them proves nothing.
+    let home = std::env::var_os("CODEX_HOME")
+        .map(std::path::PathBuf::from)
+        .or_else(|| std::env::home_dir().map(|home| home.join(".codex")));
+    let Some(rollout) = home.and_then(|home| {
+        let rollout = std::fs::canonicalize(path).ok()?;
+        ["sessions", "archived_sessions"]
+            .iter()
+            .filter_map(|dir| std::fs::canonicalize(home.join(dir)).ok())
+            .any(|dir| rollout.starts_with(dir))
+            .then_some(rollout)
+    }) else {
+        return false;
+    };
+    // A regular file only: opening a FIFO would block the agent (rule 1).
+    let Ok(meta) = std::fs::metadata(&rollout) else {
+        return false;
+    };
+    if !meta.is_file() {
+        return false;
+    }
+    let mut tail = Vec::new();
+    let read = std::fs::File::open(&rollout).and_then(|mut file| {
+        file.seek(SeekFrom::Start(
+            meta.len().saturating_sub(vults_hook::ROLLOUT_TAIL),
+        ))?;
+        file.take(vults_hook::ROLLOUT_TAIL).read_to_end(&mut tail)
+    });
+    let turn = payload.get("turn_id").and_then(|t| t.as_str());
+    read.is_ok() && vults_hook::codex_auto_review(&tail, turn)
+}
+
+/// A Claude Code event that may follow a new title carries it, read from the end of the session's
+/// transcript, whose path itself never leaves the hook.
+fn titled(mut event: Event, raw: &[u8]) -> Event {
+    use std::io::{Seek, SeekFrom};
+    if event.agent != protocol::AgentKind::Claude || !vults_hook::TITLE_EVENTS.contains(&event.event.as_str())
+    {
+        return event;
+    }
+    let raw = raw.strip_prefix(&[0xEF, 0xBB, 0xBF]).unwrap_or(raw);
+    let Some(path) = serde_json::from_slice::<serde_json::Value>(raw)
+        .ok()
+        .and_then(|p| p.get("transcript_path")?.as_str().map(std::path::PathBuf::from))
+    else {
+        return event;
+    };
+    // Only a regular file: opening a FIFO would block the agent (rule 1).
+    let Ok(meta) = std::fs::metadata(&path) else {
+        return event;
+    };
+    if !meta.is_file() {
+        return event;
+    }
+    let mut tail = Vec::new();
+    let read = std::fs::File::open(&path).and_then(|mut file| {
+        let from = meta.len().saturating_sub(vults_hook::TITLE_TAIL);
+        file.seek(SeekFrom::Start(from))?;
+        file.take(vults_hook::TITLE_TAIL).read_to_end(&mut tail)
+    });
+    if read.is_ok()
+        && let Some(title) = vults_hook::session_title(&tail)
+    {
+        event.payload["session_title"] = title.into();
+    }
+    event
 }
 
 #[cfg(any(unix, windows))]
@@ -171,8 +276,14 @@ fn talk(event: &Event, steps: &mpsc::Sender<Step>) -> Option<Outcome> {
             Reply::Waiting { v, id } if v == protocol::VERSION && id == event.id => {
                 let _ = steps.send(Step::Waiting);
             }
-            Reply::Decision { v, id, decision, .. } if v == protocol::VERSION && id == event.id => {
-                return Some(Outcome::Decision(decision));
+            Reply::Decision {
+                v,
+                id,
+                decision,
+                then,
+                ..
+            } if v == protocol::VERSION && id == event.id => {
+                return Some(Outcome::Decision(decision, then));
             }
             Reply::Answer { v, id, answers } if v == protocol::VERSION && id == event.id => {
                 return Some(Outcome::Answers(answers));
@@ -268,6 +379,44 @@ mod tests {
         assert_eq!(event.payload["cost"]["total_usd"], 0.0042);
         assert!(event.payload.get("email").is_none());
         assert!(event.payload.get("transcript_path").is_none());
+    }
+
+    #[test]
+    fn only_an_antigravity_shell_command_waits_and_gets_its_own_decision() {
+        let args = Args::parse(
+            ["--agent", "antigravity", "PreToolUse"]
+                .map(str::to_string)
+                .into_iter(),
+        );
+        let call = |tool: &str| {
+            format!(
+                r#"{{"conversationId":"c1","toolCall":{{"name":"{tool}","args":{{"CommandLine":"cargo test"}}}}}}"#
+            )
+        };
+        let waits = |tool: &str| {
+            build_event(&args, call(tool).as_bytes(), None, |_| None)
+                .unwrap()
+                .wants_reply
+        };
+        assert!(waits("run_command"));
+        assert!(waits("default_api:run_command"));
+        assert!(!waits("view_file"), "a read never waits");
+        let other = Args::parse(
+            ["--agent", "antigravity", "PostToolUse"]
+                .map(str::to_string)
+                .into_iter(),
+        );
+        assert!(
+            !build_event(&other, call("run_command").as_bytes(), None, |_| None)
+                .unwrap()
+                .wants_reply
+        );
+        let read = |d| serde_json::from_str::<serde_json::Value>(&output::antigravity_decision(d)).unwrap();
+        assert_eq!(
+            read(protocol::Decision::Allow),
+            serde_json::json!({"decision": "allow"})
+        );
+        assert_eq!(read(protocol::Decision::Deny)["decision"], "deny");
     }
 
     #[test]
@@ -597,7 +746,8 @@ mod tests {
             (AgentKind::Other, Some("antigravity"))
         );
         assert_eq!(e.event, "PreToolUse");
-        assert!(!e.wants_reply);
+        // A shell command waits: the app answers at once unless approvals are on.
+        assert!(e.wants_reply);
         assert_eq!(e.terminal.cwd.as_deref(), Some("/home/me/proj"));
         assert_eq!(e.payload.get("transcriptPath"), None);
         assert_eq!(e.payload.get("artifactDirectoryPath"), None);

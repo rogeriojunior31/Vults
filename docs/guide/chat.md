@@ -80,6 +80,8 @@ Before the first message, the folder (*in vults ▾*, at the top in the Nest, un
 will work: the folder of the session in front, unless you pick another one of the sessions on the
 wire, or an empty folder of its own. Once the conversation starts it stays there until **New**.
 
+![Chat on the island in Quick: Zeca's greeting, the composer, and the model, folder and access pickers](../assets/island-chat.png)
+
 ## Model and effort
 
 Beside the folder (on the island, in the control below the draft), *Default model ▾* picks the model and how hard it thinks, for Claude and for
@@ -275,6 +277,8 @@ does not change the permission checks. Collapsing a card never grants access.
 ## What it may do
 
 ![Zeca asks in the chat before running a command](../assets/island-chat-permission.png)
+
+![Settings, Chat and voice: your Claude Code and Codex setup, who answers Zeca's cards (Asks first, Your policies, Full access), memory and the API provider](../assets/settings-chat.png)
 
 - It reads files in that folder freely.
 - Every command and every edit shows up in the conversation as a card like the island's own: what

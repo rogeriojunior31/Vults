@@ -4067,6 +4067,32 @@ mod tests {
     }
 
     #[test]
+    fn full_access_answers_everyday_powershell_on_windows() {
+        use settings::ChatAccess::Full;
+        use vults_core::AgentKind::Claude;
+        // What Claude Code's PowerShell tool sends: variables and subexpressions are only values.
+        for cmd in [
+            "Get-Content $file | Select-String TODO",
+            "(Get-ChildItem src -Recurse).Count",
+            "$out = cargo test 2>&1; $out | Select-Object -Last 20",
+        ] {
+            let ps = call("PowerShell", "command", cmd);
+            assert_eq!(
+                settled(&[], Full, Claude, &ps, false),
+                Some((true, true)),
+                "{cmd}"
+            );
+        }
+        // A destructive one still asks, hidden in a block or not.
+        let wipe = call(
+            "PowerShell",
+            "command",
+            "Get-ChildItem *.log | ForEach-Object { Remove-Item $_ }",
+        );
+        assert_eq!(settled(&[], Full, Claude, &wipe, false), None);
+    }
+
+    #[test]
     fn zeca_off_blocks_only_companion_turns() {
         assert!(zeca_switch_blocks_turn(false, false));
         assert!(!zeca_switch_blocks_turn(false, true));

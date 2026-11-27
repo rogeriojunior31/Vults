@@ -152,6 +152,8 @@ project, branch, agent and state. A right click, the menu key or **Shift+F10** o
 quick actions: terminal, folder, Activity, last diff, focus, mute, pin and hide. A waiting card
 keeps its own session in front.
 
+![The Nest's Flock: five sessions on the wire, the session list with its filters, and the selected session's cost, context, recent steps and changed files](../assets/nest-flock.png)
+
 Above the list, **All sessions**, **Needs you**, **Working**, **Failed** and **Quiet sessions**
 filter the rows. Quiet includes resting sessions and birds flagged for silence. Counts cover the
 whole flock even while searching. **Find a session…** reads projects, repositories, branches,
@@ -266,6 +268,8 @@ check Zeca as their recipient and retain editable text on rejection. A late comm
 newer typing. Changing conversations cancels the chat microphone and discards late transcription;
 voice-command handoff cannot inherit a later empty conversation.
 
+![Chat in the Nest: Zeca's greeting with suggested questions, the conversations list, and the model, access and folder pickers above the composer](../assets/nest-chat.png)
+
 **Ask Zeca** actions in Flock, Connections and the command palette check the current recipient
 before adding a question. They preserve draft text, attachments and source, including text typed
 while preparation waits. A different recipient or a conversation switch rejects the preparation
@@ -299,6 +303,8 @@ History and Audit keep their searches independently until Vults exits. Returning
 to Mini or Quick waits for pending search saves; reopening the Nest restores the
 filters. **Clear filters** clears only that subsection's search. A delayed
 restoration leaves any newer typing alone.
+
+![Activity's week: time with the flock, turns, lines changed and answers, the day-by-day chart, turns by agent and the recap to save as an image](../assets/nest-activity.png)
 
 What this computer keeps, read only here:
 
@@ -337,6 +343,8 @@ Closing and reopening the Nest keeps the repository filter, subsection and selec
 item until Vults exits. In a narrow window, the selected detail opens again; Back
 returns to the filtered list. If the item disappears, the list opens instead.
 An unfinished merge confirmation is discarded when the Nest closes.
+
+![Connections with nothing set up yet: GitHub, GitLab and Gitea, each with what it shows and Turn on in Settings](../assets/nest-connections.png)
 
 The chosen connector has one header: its last sync (or why it failed), **↻ Refresh** to ask again
 (at most once a minute), and **Manage connections** for **Settings → Connectors**. A selector
@@ -385,3 +393,5 @@ Statistics opens Activity > Dictation. Narrow windows use a labeled page picker;
 scrolls independently. History search, disclosures, drafts and reading position survive size
 changes. Erasing transcripts keeps measured usage and Your words preferences. See
 [Your words processing](dictation.md#your-words).
+
+![Dictation's history page: hold the key, speak and release, the voice model setup, and the searchable history](../assets/nest-dictation.png)

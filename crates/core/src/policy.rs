@@ -131,6 +131,9 @@ pub fn classify(tool: &str, target: &str) -> Classified {
         }
         // Claude Code's shell on Windows.
         "PowerShell" => powershell(command_of(target)),
+        // Antigravity's: a Unix shell on Linux, PowerShell on Windows, so it is read as both and
+        // the worse reading holds.
+        "run_command" => shell(command_of(target)).and(powershell(command_of(target))),
         t if SHELL_TOOLS.contains(&t) => shell(command_of(target)),
         _ => Classified::guessed(WRITE),
     }
@@ -151,6 +154,7 @@ const SHELL_TOOLS: &[&str] = &[
     "exec_command",
     "local_shell",
     "unified_exec",
+    "run_command",
 ];
 
 /// Whether a call brings content from outside this machine into the conversation (Z8's taint): a
@@ -164,7 +168,7 @@ pub fn reads_outside(tool: &str, target: &str) -> bool {
     }
     match tool {
         "WebFetch" | "WebSearch" | "web_fetch" | "google_web_search" | "web_search" => true,
-        "PowerShell" => fetches(command_of(target)) || windows_fetches(command_of(target)),
+        "PowerShell" | "run_command" => fetches(command_of(target)) || windows_fetches(command_of(target)),
         t if SHELL_TOOLS.contains(&t) => fetches(command_of(target)),
         _ => false,
     }
@@ -565,19 +569,23 @@ fn shell(cmd: &str) -> Classified {
 }
 
 /// A PowerShell or cmd command line (Claude Code's `PowerShell` tool, `powershell -Command`,
-/// `cmd /c`), read for what it can break. Their own syntax (variables, script blocks, .NET calls,
-/// subexpressions, escapes, `%VAR%`, redirections) is not read here, so a command using it is a
-/// guessed destructive: on Windows the card asks rather than a misread command passing. A cmdlet
-/// that only reads is a read; one that deletes, overwrites, moves, stops processes or runs other
-/// code is destructive; any other cmdlet is a guessed write. A native program (`git`, `cargo`) is
-/// read as the Unix shell reads it.
+/// `cmd /c`), read for what it can break. Each command it runs is read, wherever it sits: after a
+/// separator or a pipe, inside a script block, a subexpression or an assignment. Escapes (`` ` ``,
+/// `^`) go first, so they can't hide a name. A cmdlet that only reads is a read; one that deletes,
+/// overwrites, moves, stops processes or runs other code is destructive, as are .NET calls that do
+/// (`[IO.File]::Delete`, `.Kill()`, `.Invoke()`), the call operator on a variable or an expression
+/// (`& $cmd`), dot-sourcing a script and `>` into a file; any other cmdlet is a guessed write. A
+/// native program (`git`, `cargo`) is read as the Unix shell reads it. Variables, casts, arrays and
+/// a property read are only values, never a reason to ask on their own.
 fn powershell(cmd: &str) -> Classified {
-    if cmd.contains(['$', '@', '{', '}', '[', ']', '`', '%', '>', '<', '(', ')', '^']) {
-        return Classified::guessed(DESTRUCTIVE);
-    }
+    // `R`emove-Item` and cmd's `r^d` are the names they escape.
+    let cmd: String = cmd.chars().filter(|c| !matches!(c, '`' | '^')).collect();
     // As for any shell command, at least a write.
     let mut worst = Classified::known(WRITE);
-    for piece in cmd.split(['\n', '\r', ';', '|', '&']) {
+    if runs_code(&cmd) || breaking_method(&cmd) {
+        return Classified::guessed(DESTRUCTIVE);
+    }
+    for piece in cmd.split(['\n', '\r', ';', '|', '&', '(', ')', '{', '}', '=']) {
         // Quotes go; backslashes stay, as they are Windows' separators.
         let words: Vec<String> = piece
             .split_whitespace()
@@ -587,9 +595,105 @@ fn powershell(cmd: &str) -> Classified {
         let Some(first) = words.first() else {
             continue;
         };
+        // A value, not a command: `$files`, `[int]`, `@(...)`, `-replace 'a','b'`, a number, `.Length`.
+        if first.starts_with(['$', '[', '@', '-', '.', ',', '+', '*', '/', '!'])
+            || first.starts_with(|c: char| c.is_ascii_digit())
+        {
+            continue;
+        }
         worst = worst.and(windows_program(first, &words[1..]));
     }
-    worst
+    // `> file` overwrites it; PowerShell's null sinks are fine.
+    let sinks = cmd.replace("$null", "/dev/null").replace("$NULL", "/dev/null");
+    let sinks = sinks
+        .split_whitespace()
+        .map(|w| match w.to_ascii_lowercase().as_str() {
+            "nul" | ">nul" => w.to_ascii_lowercase().replace("nul", "/dev/null"),
+            _ => w.to_owned(),
+        })
+        .collect::<Vec<_>>()
+        .join(" ");
+    worst.and(redirection(&sinks.replace("*>", ">")))
+}
+
+/// Code the line hands to something else to run: the call operator on a variable, an expression, a
+/// string or a script block (`& $cmd`, `& ('Remove'+'-Item')`), and dot-sourcing a script.
+fn runs_code(cmd: &str) -> bool {
+    let bytes = cmd.as_bytes();
+    let next_after = |i: usize| cmd[i..].trim_start().chars().next();
+    for (i, c) in cmd.char_indices() {
+        let before = cmd[..i].trim_end().chars().last();
+        let starts_piece = before.is_none_or(|b| matches!(b, ';' | '|' | '(' | '{' | '=' | '\n'));
+        if c == '&' {
+            // `&&` chains pipelines; `2>&1` duplicates a stream.
+            if bytes.get(i + 1) == Some(&b'&') || i > 0 && matches!(bytes[i - 1], b'&' | b'>') {
+                continue;
+            }
+            if matches!(next_after(i + 1), Some('$' | '(' | '\'' | '"' | '{' | '[')) {
+                return true;
+            }
+        }
+        // `. .\script.ps1`, `. $profile`: a dot that starts a piece and is followed by a space.
+        if c == '.' && starts_piece && bytes.get(i + 1) == Some(&b' ') {
+            return true;
+        }
+    }
+    false
+}
+
+/// A .NET call that deletes, overwrites, moves, kills or runs code (`[IO.File]::Delete(…)`,
+/// `$p.Kill()`, `[scriptblock]::Create(…).Invoke()`).
+fn breaking_method(cmd: &str) -> bool {
+    const STATIC: &[&str] = &[
+        "delete",
+        "move",
+        "replace",
+        "copy",
+        "create",
+        "createtext",
+        "writealltext",
+        "writealllines",
+        "writeallbytes",
+        "start",
+        "kill",
+        "invoke",
+        "setattributes",
+        "encrypt",
+        "decrypt",
+        "exit",
+        "failfast",
+        "setenvironmentvariable",
+    ];
+    const INSTANCE: &[&str] = &[
+        "delete",
+        "kill",
+        "moveto",
+        "copyto",
+        "invoke",
+        "invokereturnasis",
+        "start",
+        "create",
+        "encrypt",
+        "decrypt",
+        "setaccesscontrol",
+    ];
+    let lower = cmd.to_ascii_lowercase();
+    let bytes = lower.as_bytes();
+    for (open, _) in lower.match_indices('(') {
+        let name_start = lower[..open]
+            .rfind(|c: char| !(c.is_ascii_alphanumeric() || c == '_'))
+            .map_or(0, |i| i + 1);
+        let name = &lower[name_start..open];
+        if name.is_empty() {
+            continue;
+        }
+        let static_call = name_start >= 2 && &bytes[name_start - 2..name_start] == b"::";
+        let instance_call = !static_call && name_start >= 1 && bytes[name_start - 1] == b'.';
+        if static_call && STATIC.contains(&name) || instance_call && INSTANCE.contains(&name) {
+            return true;
+        }
+    }
+    false
 }
 
 /// `C:\Tools\Git.EXE` is `git`: Windows names ignore case and their extension.
@@ -754,6 +858,8 @@ fn redirection(cmd: &str) -> Classified {
             rest = &rest[1..];
         }
         let to = rest.split_whitespace().next().unwrap_or("");
+        // `2>&1;` or `>&2)`: the target ends at the next separator, which is no part of a name.
+        let to = to.split([';', '|', '&', ')']).next().unwrap_or("");
         let to = to.trim_matches(|c| c == '\'' || c == '"');
         if to.is_empty() || matches!(to, "/dev/null" | "/dev/stdout" | "/dev/stderr") {
             continue;
@@ -1345,8 +1451,47 @@ mod tests {
             "git status",
             "Get-Content a.txt | Select-String x",
             "Set-Location src",
+            // Everyday PowerShell syntax is only values: it never asks on its own (full access
+            // answered nothing on Windows while it did).
+            "Get-Content $file",
+            r"(Get-Item C:\x).Length",
+            "Get-ChildItem | Select-Object Name, Length",
+            "$files = Get-ChildItem *.rs; $files.Count",
+            "git log --oneline | Select-Object -First 5",
+            "cargo test 2>&1",
+            "cargo build *> $null",
+            "npm run build > $null",
+            "@(1, 2, 3) | ForEach-Object { $_ * 2 }",
+            "[int]$n = (Get-Content n.txt)",
+            "Get-ChildItem -Recurse -Filter *.md | Measure-Object",
+            "if (Test-Path build) { Get-ChildItem build }",
+            "$env:PATH -split ';'",
+            "\"$((Get-Date).ToString('yyyy-MM-dd'))\"",
+            "cargo test >> log.txt",
         ] {
             assert_ne!(ps(cmd).class, DESTRUCTIVE, "{cmd}");
+        }
+        // What that syntax still can't hide: a command inside a block, an assignment or a
+        // subexpression, an escaped name, a breaking .NET call, code run from a value, a script
+        // dot-sourced, a file overwritten.
+        for cmd in [
+            "Get-ChildItem *.tmp | ForEach-Object { Remove-Item $_ }",
+            "$gone = Remove-Item build -Recurse",
+            "$(Stop-Process -Name app)",
+            "R`emove-Item build",
+            "r^d /s /q build",
+            r"[IO.File]::Delete('C:\x')",
+            "[System.IO.File]::WriteAllText('a.txt', 'x')",
+            "(Get-Process app).Kill()",
+            "[scriptblock]::Create('rm x').Invoke()",
+            "& $cmd",
+            "& ('Remove' + '-Item') build",
+            r". .\setup.ps1",
+            "Get-Content a | Set-Content b",
+            "Get-Date > out.txt",
+            "if (Test-Path b) { Remove-Item b }",
+        ] {
+            assert_eq!(ps(cmd).class, DESTRUCTIVE, "{cmd}");
         }
         assert!(is_shell("PowerShell"));
         assert!(reads_outside(
@@ -1554,6 +1699,22 @@ mod tests {
         ] {
             assert_eq!(bash(cmd).confidence, Confidence::Known, "{cmd}");
         }
+    }
+
+    /// A stream joined to another, then a separator, is no file overwritten: `2>&1;` read `1;` as a
+    /// file and every such command looked destructive, so full access never answered it.
+    #[test]
+    fn a_duplicated_stream_before_a_separator_overwrites_nothing() {
+        for cmd in [
+            "cargo test 2>&1; ls",
+            "make 2>&1 | tail",
+            "(npm test 2>&1)",
+            "x >&2; y",
+        ] {
+            assert_ne!(bash(cmd).class, DESTRUCTIVE, "{cmd}");
+        }
+        assert_eq!(bash("cargo test 2>&1; echo x > out.txt").class, DESTRUCTIVE);
+        assert_eq!(bash("echo x >out.txt;").class, DESTRUCTIVE);
     }
 
     /// The first review's ways to look known while running code, reaching out or breaking things.

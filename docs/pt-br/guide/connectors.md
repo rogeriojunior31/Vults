@@ -1,5 +1,5 @@
 # Conectores
-<!-- source: d9a2c436ac51 -->
+<!-- source: da27270d619b -->
 
 No Nest, Connections mostra uma lista de triagem ao lado do detalhe selecionado. Marcas de
 repositório identificam as linhas, o detalhe mostra a barra de alterações e cada check, e
@@ -17,6 +17,8 @@ subpasta, por exemplo `https://git.example.com:8443/team/`) e um token com os es
 `read:user`, `read:issue` e `read:repository`, além de `read:actions` para repositórios com Actions.
 Não acrescente `/api/v1`. Salve a conexão e
 depois ative **Gitea** separadamente. Não é necessário instalar uma CLI.
+
+![Connections antes de configurar alguma: GitHub, GitLab e Gitea, cada uma com o que mostra e Turn on in Settings](../../assets/nest-connections.png)
 
 A URL e o token são armazenados juntos no cofre do sistema. O token nunca entra nas configurações ou snapshots.
 As configurações mostram a URL, mas nunca leem o token de volta. Um token vazio mantém o salvo

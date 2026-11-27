@@ -97,6 +97,10 @@ export type SessionView = { id: string, agent: AgentKind,
  */
 agent_name?: string | null, project: string,
 /**
+ * The agent's own name for the session, shown beside its project.
+ */
+title?: string | null,
+/**
  * The project folder, where the chat works when this session is in front.
  */
 cwd: string | null, status: Status,

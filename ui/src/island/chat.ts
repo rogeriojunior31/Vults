@@ -945,7 +945,9 @@ export class ChatPanel {
   private sessionMention(s: SessionView): { label: string; mention: ChatMention } {
     const agent = s.agent_name ?? (s.agent === "other" ? t("Agent") : NAME_BY_KIND[s.agent]);
     const duplicates = this.sessions.filter(other => other.agent === s.agent && other.project === s.project).length > 1;
-    const label = t("Session: {session}", { session: `${agent} · ${s.project}` });
+    // Two sessions in one project: the agent's own title tells which.
+    const name = duplicates && s.title ? `${s.project} · ${s.title}` : s.project;
+    const label = t("Session: {session}", { session: `${agent} · ${name}` });
     const tokenLabel = duplicates ? `${label} · ${s.id}` : label;
     return { label, mention: { token: `@${JSON.stringify(tokenLabel)}`, target: { kind: "session", agent: s.agent, id: s.id } } };
   }

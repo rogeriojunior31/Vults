@@ -665,7 +665,7 @@ mod tests {
             );
             assert!(!effects.iter().any(|e| matches!(
                 e,
-                Effect::RespondPermission { .. } | Effect::AnswerQuestion { .. }
+                Effect::RespondPermission { .. } | Effect::RespondPlan { .. } | Effect::AnswerQuestion { .. }
             )));
         }
     }

@@ -1,5 +1,5 @@
 # Primeiros passos
-<!-- source: 772c9aaeb353 -->
+<!-- source: a494d77771f9 -->
 
 <a id="install"></a>
 
@@ -45,6 +45,16 @@ quando você entra na sessão.
 O instalador do Windows é uma prévia. Para compilar o Vults no Windows, veja
 [Desenvolvimento no Windows](contributing/windows-development.md).
 
+O instalador pergunta se o Vults é só para você ou para todos os usuários do computador.
+**Instalar apenas pra mim** instala em `%LOCALAPPDATA%\Programs\Vults` e nunca precisa de
+administrador; uma conta padrão sempre instala assim. **Instalar pra qualquer um usando este
+computador** instala em `%ProgramFiles%\Vults` e precisa de administrador. Numa conta de
+administrador, o Windows pede aprovação (UAC) quando o instalador abre, seja qual for a escolha. Nos
+dois casos, cada usuário guarda suas configurações, hooks e histórico em `%LOCALAPPDATA%\Vults`, e o
+Vults instala os hooks desse usuário na primeira vez que abre. Uma atualização mantém a escolha e a
+pasta anteriores. Para uma instalação silenciosa, rode o instalador com `/S` e `/CURRENTUSER` ou
+`/ALLUSERS` (este num prompt elevado).
+
 Os atalhos do Windows usam teclas que não escrevem caracteres para preservar o AltGr:
 **Ctrl+Alt+Space** abre a ilha; **Ctrl+Alt+Left/Right** muda a sessão; **Ctrl+Alt+F1/F2/F3** seleciona
 Mini/Rápido/Sala; **Ctrl+Alt+F4** grava ditado; **Ctrl+Alt+F5** grava um comando de voz;
@@ -73,6 +83,8 @@ Abra **Set up agents…** pelo ícone da bandeja e clique em **Install hooks…*
 Você vê o arquivo que vai mudar, o diff exato e um botão **Write the file**; antes é feito um backup
 datado, e os hooks de outras ferramentas são mantidos. **Remove hooks…** tira só o que o Vults
 adicionou.
+
+![Settings, Agents: cada agente com o arquivo que o Vults alteraria e Install hooks](../assets/settings-agents.png)
 
 | Agente | Arquivo | Depois de instalar |
 |---|---|---|

@@ -84,6 +84,24 @@ export function badgeOf(s: SessionView | undefined): string | undefined {
 }
 
 /** Keys the desktop bound without saying which: the ones we asked for. */
+/** A card opens under a pointer that may be busy with another window: a click in its first moments
+ * was meant for something else, never for Allow (rule 2). Keys are deliberate and stay instant. */
+const ARM_MS = 600;
+const firstShown = new Map<string, number>();
+function shownAt(request: string): number {
+  let at = firstShown.get(request);
+  if (at === undefined) {
+    at = performance.now();
+    firstShown.set(request, at);
+    // Bounded: only the latest requests are remembered.
+    if (firstShown.size > 64) firstShown.delete(firstShown.keys().next().value as string);
+  }
+  return at;
+}
+
+/** A Claude Code plan's card, the only one that may also accept the session's edits. */
+export const isPlan = (s: SessionView, ask: ApprovalView): boolean => s.agent === "claude" && ask.tool === "ExitPlanMode";
+
 const DEFAULT_KEYS: Record<string, string> = { allow: "Ctrl+Alt+Y", deny: "Ctrl+Alt+N" };
 
 /** The keys the desktop bound, by shortcut id, as a button shows them ("Ctrl+Alt+Y"). */
@@ -99,6 +117,8 @@ export interface CardActions {
   decide(request: string, decision: "allow" | "deny"): void;
   /** Allow, and every identical request in this project from now on. */
   decideAlways(request: string): void;
+  /** A Claude Code plan allowed, and its session accepts edits without asking (ADR 0002). */
+  decidePlan(request: string): void;
   /** The replies to a question card, one per question. */
   answer(request: string, answers: Answer[]): void;
   /** "Reply in the terminal": the card goes, the agent's terminal asks. */
@@ -137,6 +157,8 @@ function who(
     { class: "who" },
     el("span", { class: `dot ${s.agent}` }),
     el("span", { class: "name", text: s.project || agentName(s) }),
+    // The agent's own name for the session tells two in one folder apart; it gives way first.
+    s.title ? Object.assign(el("span", { class: "title", text: s.title }), { title: s.title }) : null,
     // Quick's session view names the agent under the project; the other cards keep the dot.
     el("span", { class: `agent ${s.agent}`, text: agentName(s) }),
     s.editor ? el("span", { class: "editor", text: s.editor }) : null,
@@ -353,10 +375,12 @@ function sessionBody(
     case "approval": {
       if (!approval) break;
       let sent = false;
-      const answer = (d: "allow" | "deny" | "always") => () => {
-        if (sent) return;
+      const shown = shownAt(approval.request);
+      const answer = (d: "allow" | "deny" | "always" | "plan") => () => {
+        if (sent || performance.now() - shown < ARM_MS) return;
         sent = true;
-        if (d === "always") actions.decideAlways(approval.request);
+        if (d === "plan") actions.decidePlan(approval.request);
+        else if (d === "always") actions.decideAlways(approval.request);
         else actions.decide(approval.request, d);
       };
       const always = el("button", { class: "btn ghost-btn", onclick: answer("always") }, el("span", { text: t("Always allow") }));
@@ -393,6 +417,12 @@ function sessionBody(
             ? (() => { const b = button(t("Allow"), "secondary danger", answer("allow"), clickOnly()); b.classList.add("allow-by-click"); return b; })()
             : button(t("Allow"), "primary", answer("allow"), kbd(actions.keys.allow)),
           ruleFolder && !approval.cut && !destructive ? always : null,
+          // Claude Code's own plan choice: one click, said on the button (ADR 0002).
+          isPlan(s, approval)
+            ? Object.assign(el("button", { class: "btn ghost-btn", onclick: answer("plan") }, el("span", { text: t("Allow and accept edits") })), {
+                title: t("Allow the plan, and this session edits files without asking until it ends, as Claude Code's own terminal offers. Its commands still come as cards."),
+              })
+            : null,
         ),
         el("div", { class: "expiry" }, el("span", { class: "expiry-text" }), el("span", { class: "expiry-bar" })),
       ];

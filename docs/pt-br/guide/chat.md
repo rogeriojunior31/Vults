@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 8fd9be251ec1 -->
+<!-- source: 2cbbf5300292 -->
 
 Os painéis laterais redimensionáveis seguem o ponteiro que iniciou o arraste, ignoram toques adicionais e encerram o arraste quando a janela perde o foco. O cancelamento preserva a largura atual e mantém os rascunhos. Quando o espaço limita um painel, o arraste e o redimensionamento pelo teclado partem da largura visível; reduzir apenas o espaço disponível não sobrescreve a largura salva. Os controles de redimensionar e recolher usam a mesma cor de foco de teclado que o restante do tema selecionado.
 
@@ -81,6 +81,8 @@ vínculos informados pelo desktop.
 Antes da primeira mensagem, a pasta (*in vults ▾*, no topo no Nest, embaixo do campo na ilha) diz onde a conversa vai trabalhar: a
 pasta da sessão em primeiro plano, a menos que você escolha outra das sessões no fio, ou uma pasta
 vazia só dela. Depois que a conversa começa, ela fica lá até **New**.
+
+![O Chat na ilha em Quick: a saudação do Zeca, o campo de mensagem e os seletores de modelo, pasta e acesso](../../assets/island-chat.png)
 
 <a id="model-and-effort"></a>
 
@@ -308,6 +310,8 @@ orientação não muda as verificações de permissão. Recolher um cartão nunc
 ## O que ele pode fazer
 
 ![O Zeca pergunta no chat antes de rodar um comando](../../assets/island-chat-permission.png)
+
+![Settings, Chat & voice: a sua configuração do Claude Code e do Codex, quem responde os cards do Zeca (Asks first, Your policies, Full access), a memória e o provedor de API](../../assets/settings-chat.png)
 
 - Ele lê arquivos daquela pasta livremente.
 - Todo comando e toda edição aparecem na conversa como um card igual ao da própria ilha: o que o Zeca

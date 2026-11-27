@@ -8,6 +8,6 @@
       "../target/windows-vulkan/runtime/vulkan-1.dll": "vulkan-1.dll",
       "../target/windows-vulkan/runtime/VulkanRT-License.txt": "licenses/VulkanRT-License.txt"
     },
-    "windows": { "nsis": { "installMode": "currentUser" } }
+    "windows": { "nsis": { "installMode": "both" } }
   }
 }

@@ -241,7 +241,7 @@ pub fn voice_start(
     }
     app.state::<crate::chat::ChatState>()
         .check_companion(generation)?;
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     if crate::questions::active(&app) {
         return Err("Use the physical dictation key to edit the question before sending.".into());
     }
@@ -280,10 +280,10 @@ pub fn voice_start(
     cancel(&app);
     let levels = app.clone();
     let levels_target = target.clone();
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     let grant = crate::questions::admit_ordinary(&app, |stop| stop)
         .ok_or("Use the physical dictation key to edit the question before sending.")?;
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(any(target_os = "linux", windows)))]
     let grant = Arc::new(AtomicBool::new(false));
     let live = grant.clone();
     let mut recorder = Recorder::start_guarded(
@@ -331,12 +331,12 @@ pub fn voice_start(
             .unwrap_or_else(|e| e.into_inner()) = Some((window.label().to_owned(), (generation, recorder)));
         Ok(())
     };
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     {
         crate::questions::admit_ordinary(&app, |_| register())
             .unwrap_or_else(|| Err("The recording was cancelled.".into()))
     }
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(any(target_os = "linux", windows)))]
     {
         register()
     }

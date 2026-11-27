@@ -224,6 +224,27 @@ fn activity(tool: &str) -> Activity {
 
 /// Claude Code's own state (not its settings): `$CLAUDE_CONFIG_DIR/.claude.json`, else
 /// `~/.claude.json`. Read only, never written.
+/// The session's title the hook read from its transcript, as the core takes it: only for a
+/// Claude Code session event, never one from the chat's own CLI.
+pub fn title(event: &Event) -> Option<vults_core::Input> {
+    if event.agent != AgentKind::Claude || event.zeca {
+        return None;
+    }
+    let title = event.payload.get("session_title")?.as_str()?.trim();
+    let session_id = event
+        .payload
+        .get("session_id")?
+        .as_str()
+        .filter(|id| !id.is_empty())?;
+    (!title.is_empty()).then(|| vults_core::Input::SessionTitled {
+        session: SessionKey {
+            agent: AgentKind::Claude,
+            session_id: session_id.to_string(),
+        },
+        title: title.to_string(),
+    })
+}
+
 pub fn state_file(dirs: &Dirs) -> PathBuf {
     dirs.var("CLAUDE_CONFIG_DIR")
         .map_or_else(|| dirs.home().join(".claude.json"), |d| d.join(".claude.json"))
@@ -276,6 +297,26 @@ mod tests {
             },
             payload,
         }
+    }
+
+    #[test]
+    fn a_session_title_comes_only_from_a_claude_session_event() {
+        let titled = event(
+            "Stop",
+            json!({"session_id": "s1", "session_title": " Fix login "}),
+        );
+        let Some(vults_core::Input::SessionTitled { session, title: name }) = title(&titled) else {
+            panic!("a title");
+        };
+        assert_eq!((session.session_id.as_str(), name.as_str()), ("s1", "Fix login"));
+        let mut chat = titled.clone();
+        chat.zeca = true;
+        assert!(title(&chat).is_none(), "the chat's own CLI is not a session");
+        let mut other = titled.clone();
+        other.agent = AgentKind::Codex;
+        assert!(title(&other).is_none());
+        assert!(title(&event("Stop", json!({"session_id": "s1", "session_title": "  "}))).is_none());
+        assert!(title(&event("Stop", json!({"session_title": "No session"}))).is_none());
     }
 
     fn parse(name: &str, payload: Value) -> Option<AgentEvent> {

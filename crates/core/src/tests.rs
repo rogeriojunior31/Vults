@@ -9,7 +9,7 @@ fn visible(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
         .filter(|e| {
             matches!(
                 e,
-                Effect::RespondPermission { .. } | Effect::AnswerQuestion { .. }
+                Effect::RespondPermission { .. } | Effect::RespondPlan { .. } | Effect::AnswerQuestion { .. }
             )
         })
         .count();
@@ -20,7 +20,11 @@ fn visible(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
                 e,
                 Effect::Audit(a) if matches!(
                     a.act,
-                    audit::Act::Allow | audit::Act::Deny | audit::Act::AlwaysAllow | audit::Act::Answer
+                    audit::Act::Allow
+                        | audit::Act::Deny
+                        | audit::Act::AlwaysAllow
+                        | audit::Act::AllowAcceptingEdits
+                        | audit::Act::Answer
                 )
             )
         })
@@ -681,11 +685,14 @@ fn a_question_card_can_go_back_to_the_terminal() {
 }
 
 /// Where a quiet intent (one that must never answer a card) sits in the test's coverage list;
-/// `None` for the three that may answer (ADR 0002). Exhaustive on purpose: a new `Intent` stops
+/// `None` for the four that may answer (ADR 0002). Exhaustive on purpose: a new `Intent` stops
 /// the build here until someone decides which it is, and a quiet one needs a sample below.
 fn quiet_index(intent: &Intent) -> Option<usize> {
     match intent {
-        Intent::Decide { .. } | Intent::DecideAlways { .. } | Intent::Answer { .. } => None,
+        Intent::Decide { .. }
+        | Intent::DecideAlways { .. }
+        | Intent::DecidePlan { .. }
+        | Intent::Answer { .. } => None,
         Intent::Release { .. } => Some(0),
         Intent::OpenAlert { .. } => Some(1),
         Intent::Jump { .. } => Some(2),
@@ -2071,6 +2078,30 @@ fn a_cut_target_gets_no_always() {
         visible(&mut s, cut("r2"), now),
         vec![Effect::AckPermission(rid("r2"))]
     );
+
+    // The card shows the whole command below its cut target: a click answers it (Always never
+    // does, above). A multi-line command or plan was otherwise unanswerable from the island.
+    let effects = visible(&mut s, decide("r2", Decision::Allow), now);
+    assert!(effects.contains(&Effect::RespondPermission {
+        request: rid("r2"),
+        decision: Decision::Allow
+    }));
+    // A whole command longer than the card holds ends in "…": not seen whole, no click.
+    let unseen = agent(
+        "a",
+        AgentEvent::PermissionRequested {
+            request: rid("r3"),
+            tool: "Bash".into(),
+            target: "Bash · echo ok…".into(),
+            ask: Ask {
+                full: Some("echo ok\nmore…".into()),
+                cut: true,
+                ..Ask::default()
+            },
+        },
+    );
+    visible(&mut s, unseen, now);
+    assert!(visible(&mut s, decide("r3", Decision::Allow), now).is_empty());
 }
 
 #[test]
@@ -5388,12 +5419,26 @@ mod properties {
                             } => {
                                 let card = before.get(request);
                                 prop_assert!(card.is_some(), "answered a card that was not waiting");
-                                let card = card.map(|c| (c.ask.cut, c.questions.is_empty()));
-                                // A click (or the rule it saved) answers only a whole permission.
+                                let always = matches!(
+                                    input,
+                                    Input::User(Intent::DecideAlways { .. })
+                                        | Input::Paired {
+                                            intent: Intent::DecideAlways { .. },
+                                            ..
+                                        }
+                                );
+                                // A click answers only a card that shows all it authorizes; the
+                                // rule Always saves, only one whose target is the whole call.
+                                let card = card.map(|c| {
+                                    (
+                                        if always { !c.ask.cut } else { c.ask.whole() },
+                                        c.questions.is_empty(),
+                                    )
+                                });
                                 prop_assert_eq!(
                                     card,
-                                    Some((false, true)),
-                                    "answered a cut card or a question"
+                                    Some((true, true)),
+                                    "answered a card it could not see whole, or a question"
                                 );
                                 if clicked == request {
                                     // Before the hook stops waiting, with the grace to spare.
@@ -6075,4 +6120,69 @@ fn a_new_turn_or_a_gone_session_forgets_the_watched_terminal() {
     // A session the flock does not know is never watched.
     visible(&mut s, Input::Watched(Some(key("ghost"))), now);
     assert_eq!(s.watched, None);
+}
+
+#[test]
+fn a_session_keeps_the_agents_own_title_beside_its_folder() {
+    let mut s = State::default();
+    let now = Instant::now();
+    let titled = |id: &str, title: &str| Input::SessionTitled {
+        session: key(id),
+        title: title.into(),
+    };
+    // A title never makes a bird: the session must be known first.
+    reduce(&mut s, titled("s1", "Fix login"), now);
+    assert!(s.sessions.is_empty());
+    reduce(&mut s, agent("s1", AgentEvent::SessionStarted), now);
+    reduce(&mut s, titled("s1", "Fix login"), now);
+    let view = session_view(&s, "s1");
+    assert_eq!(view.title.as_deref(), Some("Fix login"));
+    assert_eq!(view.project, "vults", "the project stays the folder's");
+    reduce(&mut s, titled("s1", "Billing"), now);
+    assert_eq!(session_view(&s, "s1").title.as_deref(), Some("Billing"));
+    reduce(&mut s, titled("s1", "  "), now);
+    assert_eq!(session_view(&s, "s1").title, None);
+}
+
+#[test]
+fn a_plan_may_be_allowed_with_its_edits_accepted_and_nothing_else_may() {
+    let mut s = State::default();
+    let now = Instant::now();
+    let card = |session: &str, id: &str, tool: &str| {
+        agent(
+            session,
+            AgentEvent::PermissionRequested {
+                request: rid(id),
+                tool: tool.into(),
+                target: format!("{tool} · ## Fix login…"),
+                ask: Ask {
+                    full: Some("## Fix login\n1. Read\n2. Patch".into()),
+                    cut: true,
+                    ..Ask::default()
+                },
+            },
+        )
+    };
+    let plan = |id: &str| Input::User(Intent::DecidePlan { request: rid(id) });
+    // Another tool's card: the plan's button does nothing.
+    visible(&mut s, card("a", "bash", "Bash"), now);
+    assert!(visible(&mut s, plan("bash"), now).is_empty());
+    // Another agent's plan: only Claude Code takes the session's mode from its hook.
+    let mut codex = card("c", "codex-plan", "ExitPlanMode");
+    if let Input::Agent(u) = &mut codex {
+        u.session.agent = AgentKind::Codex;
+    }
+    visible(&mut s, codex, now);
+    assert!(visible(&mut s, plan("codex-plan"), now).is_empty());
+    // A Claude Code plan: allowed, with its edits accepted, audited as its own act.
+    visible(&mut s, card("a", "p1", "ExitPlanMode"), now);
+    let effects = reduce(&mut s, plan("p1"), now);
+    assert!(effects.contains(&Effect::RespondPlan { request: rid("p1") }));
+    assert!(
+        effects
+            .iter()
+            .any(|e| matches!(e, Effect::Audit(a) if a.act == audit::Act::AllowAcceptingEdits))
+    );
+    // Answered once.
+    assert!(visible(&mut s, plan("p1"), now).is_empty());
 }

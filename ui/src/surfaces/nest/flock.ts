@@ -8,7 +8,7 @@ import { AGENTS } from "../../agents.gen";
 import { assignSpecies } from "../../island/flock";
 import { BIRD_W, NEST_HABITAT_SCENE, NEST_HABITAT_WIRE, Scene } from "../../island/scene";
 import { tickerSteps } from "../../island/ticker";
-import { approvalFolder, approvalRuleFolder, shortPath, agentName, badgeOf, lastDiff, needsYou, questionBody, laterButton, statusText } from "../../island/views";
+import { approvalFolder, approvalRuleFolder, isPlan, shortPath, agentName, badgeOf, lastDiff, needsYou, questionBody, laterButton, statusText } from "../../island/views";
 import { allowsByKey, clickOnly, refuseAllowKey } from "../../island/allow-key";
 import { icon } from "../../island/icons";
 import { usageLabel, usageLevel } from "../../cost";
@@ -27,6 +27,8 @@ export interface FlockActions {
   decide: (request: string, decision: "allow" | "deny") => void;
   /** Allow, and every identical request in this project from now on. */
   decideAlways: (request: string) => void;
+  /** A Claude Code plan allowed, its session accepting edits (ADR 0002). */
+  decidePlan: (request: string) => void;
   /** The replies to a question card, one per question. */
   answer: (request: string, answers: Answer[]) => void;
   /** "Reply in the terminal": the card goes, the agent's terminal asks. */
@@ -61,7 +63,7 @@ const waits = (s: SessionView) => s.status === "approval" || s.status === "quest
 export { needsYou };
 
 /** What the search reads: the project, its roost and branch, the agent and what it is doing now. */
-const said = (s: SessionView) => [s.project, s.roost, s.branch, agentName(s), statusText(s), s.step].filter(Boolean).join(" ").toLowerCase();
+const said = (s: SessionView) => [s.project, s.title, s.roost, s.branch, agentName(s), statusText(s), s.step].filter(Boolean).join(" ").toLowerCase();
 
 const AGENT_COLOR: Record<AgentKind, string> = {
   claude: "var(--agent-claude)",
@@ -645,7 +647,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
     menuOn(b, s);
     b.style.setProperty("--bird-color", colorOf(s.agent));
     b.setAttribute("aria-pressed", String(front));
-    b.title = [s.project || agentName(s), s.branch, agentName(s), stateText(s)].filter(Boolean).join(" · ");
+    b.title = [s.project || agentName(s), s.title, s.branch, agentName(s), stateText(s)].filter(Boolean).join(" · ");
     // Two lines: the name and its state, then what it has done. What the agent did not report is
     // left out, not printed as "Not reported".
     const done = s.step_count === 0 && s.elapsed_ms == null && s.context_percent == null && s.context_tokens == null
@@ -778,6 +780,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
     keys: {},
     decide: () => {},
     decideAlways: () => {},
+    decidePlan: () => {},
     answer: (request: string, answers: Answer[]) => on.answer(request, answers),
     release: (request: string) => on.release(request),
     keyboard: () => {},
@@ -803,10 +806,11 @@ export function createFlock(on: FlockActions & FlockAsk): {
    *  destructive makes Deny the bright one and offers no Always). */
   const permissionActions = (s: SessionView, ask: NonNullable<ViewModel["approval"]>, at = "act"): HTMLElement => {
     onScreen = ask.request;
-    const answer = (d: "allow" | "deny" | "always") => () => {
+    const answer = (d: "allow" | "deny" | "always" | "plan") => () => {
       if (sent === ask.request) return;
       sent = ask.request;
-      if (d === "always") on.decideAlways(ask.request);
+      if (d === "plan") on.decidePlan(ask.request);
+      else if (d === "always") on.decideAlways(ask.request);
       else on.decide(ask.request, d);
     };
     const kbd = (k: string | undefined) => (k ? el("span", { class: "kbd", text: k }) : null);
@@ -838,6 +842,9 @@ export function createFlock(on: FlockActions & FlockAsk): {
       scope,
       fid(el("button", { class: destructive ? "primary" : "outline", onclick: answer("deny") }, el("span", { text: t("Deny") }), kbd(keys.deny)), `${at}:deny`),
       fid(el("button", { class: destructive ? "outline danger allow-by-click" : "primary", onclick: answer("allow") }, el("span", { text: t("Allow") }), destructive ? clickOnly() : kbd(keys.allow)), `${at}:allow`),
+      isPlan(s, ask)
+        ? fid(Object.assign(el("button", { class: "outline", onclick: answer("plan") }, el("span", { text: t("Allow and accept edits") })), { title: t("Allow the plan, and this session edits files without asking until it ends, as Claude Code's own terminal offers. Its commands still come as cards.") }), `${at}:plan`)
+        : null,
       always,
     );
   };

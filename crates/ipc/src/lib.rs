@@ -39,6 +39,8 @@ pub struct ReplyHandle(mpsc::Sender<Signal>);
 enum Signal {
     Ack,
     Decide(Decision),
+    /// Allow, and the agent accepts the session's edits (a Claude Code plan's own choice).
+    AllowAcceptingEdits,
     Answer(Vec<Answer>),
     Decline,
 }
@@ -67,6 +69,11 @@ impl ReplyHandle {
     /// Only ever called from a human's click (enforced in `core`).
     pub fn decide(&self, decision: Decision) {
         let _ = self.0.try_send(Signal::Decide(decision));
+    }
+
+    /// Allows a plan, and asks the agent to accept the session's edits without asking.
+    pub fn allow_accepting_edits(&self) {
+        let _ = self.0.try_send(Signal::AllowAcceptingEdits);
     }
 
     /// The user's replies to a question, one per question (checked in `core`).
@@ -110,6 +117,8 @@ impl LocalReply {
                 match signal {
                     Signal::Ack => continue,
                     Signal::Decide(d) => return Local::Decide(d),
+                    // A session Vults drives keeps its own mode: the plan is a plain allow.
+                    Signal::AllowAcceptingEdits => return Local::Decide(Decision::Allow),
                     Signal::Answer(a) => return Local::Answer(a),
                     Signal::Decline => return Local::Decline,
                 }
@@ -144,7 +153,21 @@ impl Endpoint {
         {
             let sid = vults_peer::current_user_sid()
                 .ok_or_else(|| io::Error::other("cannot read the current user's SID"))?;
-            Ok(Self::Pipe(protocol::pipe_name(&sid)))
+            let name = protocol::pipe_name(&sid);
+            // A debug app under test serves the pipe the debug hook's tests use, so the user's real
+            // agents never reach it (the hook's VULTS_HOOK_TEST_PIPE_SUFFIX, same rules).
+            #[cfg(debug_assertions)]
+            let name = match std::env::var("VULTS_HOOK_TEST_PIPE_SUFFIX") {
+                Ok(suffix)
+                    if !suffix.is_empty()
+                        && suffix.len() <= 128
+                        && suffix.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'-') =>
+                {
+                    format!("{name}-test-{suffix}")
+                }
+                _ => name,
+            };
+            Ok(Self::Pipe(name))
         }
     }
 }
@@ -270,7 +293,12 @@ async fn serve_pipe(name: String, incoming: mpsc::Sender<Incoming>, slots: Arc<S
             return Ok(());
         }
         if server.connect().await.is_err() {
+            // An instance whose connect failed is not trusted to connect again: retrying on it could
+            // leave every later hook event unheard until the app restarts. A fresh one replaces it.
             tokio::time::sleep(Duration::from_millis(200)).await;
+            if let Ok(fresh) = ServerOptions::new().create(&name) {
+                server = fresh;
+            }
             continue;
         }
         // The next instance before this client is served; one that fails to open is tried again
@@ -358,6 +386,14 @@ async fn handle<S: AsyncRead + AsyncWrite + Unpin>(mut conn: S, incoming: mpsc::
             id,
             decision,
             reason: None,
+            then: None,
+        },
+        Some(Signal::AllowAcceptingEdits) => Reply::Decision {
+            v,
+            id,
+            decision: Decision::Allow,
+            reason: None,
+            then: Some(protocol::Then::AcceptEdits),
         },
         Some(Signal::Answer(answers)) => Reply::Answer { v, id, answers },
         _ => return,

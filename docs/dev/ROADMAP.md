@@ -15,10 +15,10 @@ changelog) are archived at
 [`497677d3`](https://github.com/rogeriojunior31/Vults/tree/497677d34a2b2ef75590930452896ba0a7bac4e8/docs/dev).
 Read them there when a task below names a step from them.
 
-## Where we are (2026-11-15)
+## Where we are (2026-11-27)
 
-- Released: **0.1.8**. Everything merged since is under *Unreleased* in the changelog.
-- Next release: **0.1.9**, from current `main`. Package versions stay 0.1.8 until REL-2.
+- Released: **0.1.9** (tagged 2026-11-27; its draft release waits for the R3 smoke and the owner's Publish). Everything merged since is under *Unreleased* in the changelog.
+- Next release: **0.1.10**, from current `main`.
 - Current focus, set by the owner on 2026-11-11: **Windows functional validation**. Further connector
   work (GitLab/Gitea CP3 onwards, Notion) waits until it is done.
 

@@ -16,6 +16,8 @@ subfolder, for example `https://git.example.com:8443/team/`) and an access token
 using Actions. Do not append `/api/v1`. Save the
 connection, then switch **Gitea** on separately. No CLI installation is required.
 
+![Connections before any is set up: GitHub, GitLab and Gitea, each with what it shows and Turn on in Settings](../assets/nest-connections.png)
+
 The URL and token are stored together in the OS keyring. The token never enters settings files or snapshots.
 Settings can display the URL but never reads back the token. A blank token retains the saved
 one only for the same URL. Turn Gitea off before editing or removing the connection; changing

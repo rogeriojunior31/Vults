@@ -110,6 +110,9 @@ pub struct SessionView {
     #[cfg_attr(test, ts(optional = nullable))]
     pub agent_name: Option<String>,
     pub project: String,
+    /// The agent's own name for the session, shown beside its project.
+    #[cfg_attr(test, ts(optional = nullable))]
+    pub title: Option<String>,
     /// The project folder, where the chat works when this session is in front.
     pub cwd: Option<String>,
     pub status: Status,
@@ -431,6 +434,7 @@ impl State {
                         .then(|| s.key.session_id.split_once('/').map(|(name, _)| name.to_string()))
                         .flatten(),
                     project: s.project.clone(),
+                    title: s.title.clone(),
                     cwd: s.cwd.clone(),
                     status: s.status,
                     rested: s.rest_since.map(|at| {

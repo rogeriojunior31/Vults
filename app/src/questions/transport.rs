@@ -91,7 +91,11 @@ pub(crate) async fn serve(path: PathBuf, tx: mpsc::Sender<Command>) -> io::Resul
             return Ok(());
         }
         if server.connect().await.is_err() {
+            // An instance whose connect failed is replaced, never retried.
             tokio::time::sleep(POLL).await;
+            if let Ok(fresh) = create(false) {
+                server = fresh;
+            }
             continue;
         }
         let next = loop {

@@ -1,5 +1,5 @@
 # 0002. Quem responde a uma permissão
-<!-- source: 9f67c4d31422 -->
+<!-- source: ab59328f32ec -->
 
 **Status:** Aceita, 2026-10-04. Consolidada em 2026-10-12 a partir da antiga 0014, da antiga 0017, da antiga 0025 e da
 antiga 0026.
@@ -20,7 +20,11 @@ O `core` transforma uma permissão pendente em resposta a partir apenas destas e
 uma escolha de um humano:
 
 - **Um clique**: `Intent::Decide` (Allow ou Deny, ou Ctrl+Alt+Y/N com o card visível), ou
-  `Intent::DecideAlways` (Always: permite este pedido e salva uma regra).
+  `Intent::DecideAlways` (Always: permite este pedido e salva uma regra), ou, só no card de um
+  plano do Claude Code, `Intent::DecidePlan` (permite o plano e passa aquela sessão a aceitar as
+  edições de arquivo sem perguntar, a escolha que o próprio terminal do Claude Code oferece ali). Um
+  clique só responde a um card que mostra tudo o que autoriza: o comando ou o plano inteiro, nunca
+  só a primeira linha.
 - **Uma regra exata** que o usuário salvou: o mesmo agente, pasta, ferramenta e alvo. `cargo test`
   não permite `cargo test && rm -rf build`.
 - **Uma política** que o usuário escreveu, viu como diff e aceitou com um clique, como uma config de
@@ -92,6 +96,9 @@ Acima de tudo isso:
   mantêm ações fora de alcance.
 - Um teste fixa cada metade da regra destrutiva: Always num card destrutivo não salva regra, e uma
   regra antiga não responde a um.
+- Um plano permitido com as edições aceitas deixa aquela sessão do Claude Code editar arquivos sem
+  card até terminar ou mudar de modo; os comandos dela, os destrutivos inclusive, continuam vindo
+  como cards. O card diz isso no botão, e o log de auditoria guarda isso como um ato próprio.
 
 <a id="history"></a>
 
@@ -107,3 +114,6 @@ Acima de tudo isso:
   proteções ficam.
 - 2026-11-15: incorporar as regras de permissão dos registros de voz e ditado (antigas 0028 e
   0032), que foram aposentados.
+- 2026-11-27: o card de um plano pode permitir o plano e passar a sessão a aceitar edições, um
+  clique escolhendo o que o próprio terminal do Claude Code oferece; um clique só responde a um card
+  que mostra o comando ou o plano inteiro.

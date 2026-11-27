@@ -261,6 +261,19 @@ pub struct Ask {
     pub removed: u32,
 }
 
+impl Ask {
+    /// The card shows all that Allow authorizes: a target that is the whole call, or a cut one
+    /// with the whole command or plan below it. A `full` cut short ends in "…" and is not whole.
+    /// A click answers only a whole card; an *Always* rule never answers a cut one.
+    pub fn whole(&self) -> bool {
+        !self.cut
+            || self
+                .full
+                .as_deref()
+                .is_some_and(|f| !f.is_empty() && !f.ends_with('…'))
+    }
+}
+
 /// What a finished edit changed, file by file, for the island's diff card.
 #[derive(Serialize, Clone, Debug, PartialEq, Eq, Default)]
 #[cfg_attr(test, derive(ts_rs::TS))]
@@ -483,6 +496,11 @@ pub enum Intent {
     DecideAlways {
         request: RequestId,
     },
+    /// On a Claude Code plan's card only: allow the plan, and the session accepts its edits
+    /// without asking, as Claude Code's own terminal offers (ADR 0002).
+    DecidePlan {
+        request: RequestId,
+    },
     /// The user's replies to a question card, one per question.
     Answer {
         request: RequestId,
@@ -577,6 +595,7 @@ impl Intent {
             | Self::SetProjectPref { .. } => true,
             Self::Decide { .. }
             | Self::DecideAlways { .. }
+            | Self::DecidePlan { .. }
             | Self::Answer { .. }
             | Self::Release { .. }
             | Self::Skip { .. }
@@ -601,6 +620,11 @@ pub enum Input {
         session: SessionKey,
         pid: u32,
         alive: bool,
+    },
+    /// The agent's own title for a session it already reported (never one of its own making).
+    SessionTitled {
+        session: SessionKey,
+        title: String,
     },
     /// An owned driver's whole turn ended, including any still-waiting subagent cards.
     RunEnded(AgentUpdate),
@@ -729,6 +753,10 @@ pub enum Effect {
         request: RequestId,
         decision: Decision,
     },
+    /// Only ever produced from [`Intent::DecidePlan`]: allow, and the session accepts its edits.
+    RespondPlan {
+        request: RequestId,
+    },
     /// Only ever produced from [`Intent::Answer`].
     AnswerQuestion {
         request: RequestId,
@@ -782,6 +810,9 @@ pub enum Effect {
 pub struct Session {
     pub key: SessionKey,
     pub project: String,
+    /// The agent's own name for the session (Claude Code's `/rename`, else the title it gave it);
+    /// the island shows it with the project, which stays the folder's.
+    pub title: Option<String>,
     pub cwd: Option<String>,
     pub status: Status,
     pub activity: Option<Activity>,
@@ -1096,6 +1127,12 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             board::set(state, connector, rows);
             Vec::new()
         }
+        Input::SessionTitled { session, title } => {
+            if let Some(s) = state.sessions.get_mut(&session) {
+                s.title = Some(title).filter(|t| !t.trim().is_empty());
+            }
+            Vec::new()
+        }
         Input::SessionPresence { session, pid, alive } => {
             if let Some(s) = state.sessions.get_mut(&session)
                 && s.terminal.pid == Some(pid)
@@ -1301,6 +1338,7 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
         Input::User(
             intent @ (Intent::Decide { .. }
             | Intent::DecideAlways { .. }
+            | Intent::DecidePlan { .. }
             | Intent::Answer { .. }
             | Intent::Release { .. }),
         ) => answer(state, intent, &By::Island, now),
@@ -1663,6 +1701,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant, run_ended: boo
     let session = state.sessions.entry(key.clone()).or_insert_with(|| Session {
         key: key.clone(),
         project: String::new(),
+        title: None,
         cwd: None,
         status: Status::Idle,
         activity: None,
@@ -2162,7 +2201,7 @@ fn answer(state: &mut State, intent: Intent, by: &By, now: Instant) -> Vec<Effec
                 |p| {
                     p.request == request
                         && p.questions.is_empty()
-                        && !p.ask.cut
+                        && p.ask.whole()
                         && !(matches!(by, By::Paired { .. }) && p.target.len() > MAX_PHONE_TARGET)
                 },
                 now,
@@ -2182,6 +2221,30 @@ fn answer(state: &mut State, intent: Intent, by: &By, now: Instant) -> Vec<Effec
             vec![
                 Effect::RespondPermission { request, decision },
                 audited(state, &p, by.actor(), act),
+            ]
+        }
+        Intent::DecidePlan { request } => {
+            // A plan's card, on the island: a phone has no such button, and no other card is a plan.
+            let Some(p) = redeem_here(
+                state,
+                by,
+                |p| {
+                    matches!(by, By::Island)
+                        && p.request == request
+                        && p.questions.is_empty()
+                        && p.ask.whole()
+                        && p.session.agent == AgentKind::Claude
+                        && p.tool == "ExitPlanMode"
+                },
+                now,
+            ) else {
+                return Vec::new();
+            };
+            record_end(state, &p, Outcome::Allowed);
+            settle(state, &p.session, now);
+            vec![
+                Effect::RespondPlan { request },
+                audited(state, &p, by.actor(), audit::Act::AllowAcceptingEdits),
             ]
         }
         Intent::Answer { request, answers } => {

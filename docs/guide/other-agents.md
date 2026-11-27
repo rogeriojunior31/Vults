@@ -44,7 +44,7 @@ starts from the Start menu; one installed while Vults runs is found after a rest
 |---|---|---|---|---|---|---|
 | Claude Code | a card | a card | lines, numbered | at once, when Vults started it | bubblewrap, if on | yes |
 | Codex | a card | its terminal | lines | at once, when Vults started it | its sandbox mode | yes |
-| Antigravity | its terminal | its terminal | lines | not from Vults yet | none | not yet |
+| Antigravity | its terminal, or a card for shell commands ([below](#antigravity)) | its terminal | lines | not from Vults yet | none | not yet |
 | OpenCode | a card | a card (OpenCode 1) | lines | not from Vults | none | no |
 | Hermes Agent | its terminal | its terminal | patch lines and repository preview | not from Vults | agent-managed | no |
 | Qwen Code | a card | its terminal | lines | not from Vults | a container, if on | no |
@@ -75,8 +75,17 @@ nothing. Its sessions show as `antigravity`.
 The island shows Antigravity thinking, each step (`view_file`, `run_command`…) and when it stops,
 and each edit's diff, rebuilt from the text it replaced (without line numbers).
 Antigravity does not send its reply, so a finished session has no summary line, and it has no
-session start or end. Silence no longer removes it: an open session can rest or fly, and a previously observed local process must be confirmed gone before cleanup. Its hook runs before every tool and does not say whether Antigravity would have asked,
-so Antigravity asks its permissions itself ([Approving](approvals.md#agents-that-ask-in-their-own-prompt)).
+session start or end. Silence no longer removes it: an open session can rest or fly, and a previously observed local process must be confirmed gone before cleanup.
+
+Antigravity asks its permissions itself ([Approving](approvals.md#agents-that-ask-in-their-own-prompt)),
+except for shell commands once you turn on **Approve commands from the island** on its card in
+**Settings → Agents** (off by default; hooks installed earlier need **Update hooks…** first, which
+gives agy's hook the 120 seconds a card needs). Antigravity has no permission request: it runs its
+hook before its own check and takes the hook's answer. So Vults reads Antigravity's own
+`command(...)` rules (its CLI settings, the global grants and the project's) and puts a
+`run_command` on a card only when none of them covers it. **Allow** runs it, **Deny** stops it, and
+no answer, a command too long to show whole, or Vults closed leave Antigravity's own prompt, as if
+Vults were not there.
 
 ## Cursor
 

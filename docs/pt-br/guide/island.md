@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: d8357290327d -->
+<!-- source: 254ca3e3c622 -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -48,6 +48,8 @@ nenhum, e acrescenta óculos escuros e catorze trajes
 sem estação. **Clique com o botão direito no Zeca** na ilha para escolher ali mesmo: ele veste o que
 estiver sob o ponteiro, um clique fica com ele, Escape o deixa como estava. Só o Zeca os usa.
 
+![Settings, Flock & Zeca: de onde vêm as espécies do bando, visitantes raros, o Zeca ligado ou desligado, o visual dele e os urubus das Américas para escolher a espécie dele](../../assets/settings-flock.png)
+
 ![Os visuais do Zeca: os quatro sazonais, os óculos escuros e os catorze trajes com chapéus, óculos, grills e correntes](../../assets/zeca-looks.png)
 
 <a id="without-zeca"></a>
@@ -72,6 +74,8 @@ Ligue-o de volta no mesmo lugar; sem reiniciar, nos dois casos.
 ## Compacta, aberta e escondida
 
 ![A ilha compacta: o Zeca com a sessão da frente, e vults com seus selos](../../assets/island-compact-flock.png)
+
+![Mini: só o bando na pílula, cinco sessões, uma terminada com um ponto verde e uma que falhou com um quadrado vermelho](../../assets/island-mini.png)
 
 **Compacta** (o **Mini** do menu de apresentação), a ilha é uma pequena pílula sem texto, só o bando:
 o Zeca à esquerda com a sessão da frente, até oito vults espalhados pelo fio e, embaixo, uma linha
@@ -349,6 +353,10 @@ Clique num vult do bando para abrir aquela sessão; ela fica na frente até voc�
 ela sair. Um card esperando ainda vem primeiro. Pelo teclado (**Ctrl+Alt+Space**), **↑** e **↓**
 passam de uma sessão a outra: em repouso o nome na caixa muda, numa sessão a próxima abre.
 
+O card de uma sessão do Claude Code mostra o título dela ao lado do projeto: o nome que você deu
+com `/rename`, ou então o que o próprio Claude Code deu. É ele que distingue duas sessões na mesma
+pasta, no card, na busca do Flock no Nest e nas menções a sessões no chat.
+
 ![Uma sessão aberta pelo bando: Flock para voltar, um ponto por sessão, o card dela e Open in Cursor](../../assets/island-session.png)
 
 **Open terminal** no card dela traz o terminal para a frente:
@@ -419,6 +427,8 @@ atrás de outro, veja [Mais de um por vez](approvals.md#more-than-one-at-a-time)
 Com a tela bloqueada (num desktop que avisa pelo `org.freedesktop.ScreenSaver`, como o Plasma e o
 GNOME), a ilha descansa (sem animação) e os conectores param de verificar. Agentes e
 cards seguem como sempre.
+
+![Now na ilha: um pedido que voltou ao terminal e uma sessão que falhou, cada um a um clique](../../assets/island-now.png)
 
 Quando você desbloqueia, ou sai do *Paused*, uma linha diz o que aconteceu nesse meio-tempo: *While
 you were away: 2 finished, 1 failed, 1 waits for you for 12 min.* No *Island* ela abre a ilha uma vez;

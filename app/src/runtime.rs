@@ -532,6 +532,8 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
             let _ = work;
             crate::questions::publish(&app, &mut questions);
         }
+        // The session's own title, once its event made the session known.
+        let mut titled = None;
         let input = match msg {
             Msg::RequestGone { id, reply } => {
                 if !waiting
@@ -877,6 +879,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     }
                     Some(report.input(session))
                 } else {
+                    titled = vults_agents::claude_title(&event);
                     parse(&event)
                 }
             }
@@ -890,7 +893,14 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     continue;
                 }
                 tracing::info!(agent = ?event.agent, event = %event.event, "request for a human");
-                let mut input = parse(&event);
+                // An Antigravity shell command is a card only when the user's switch, agy's hook
+                // timeout and agy's own rules say so; otherwise it is the step it always was, and
+                // the hook, declined, leaves agy to ask.
+                let mut input = if crate::antigravity::gate(&app, &event) {
+                    vults_agents::antigravity_permission(&event).map(Input::Agent)
+                } else {
+                    parse(&event)
+                };
                 if let Some(Input::Agent(update)) = &mut input {
                     update.received = Some(received);
                 }
@@ -1122,6 +1132,9 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     if matches!(u.event, core::AgentEvent::Stopped { .. } | core::AgentEvent::StopFailed { .. })
             );
             let effects = core::reduce(&mut state, input, now);
+            if let Some(titled) = titled {
+                core::reduce(&mut state, titled, now);
+            }
             if ended {
                 read_watched(&app, &state, &tx);
             }
@@ -1189,6 +1202,12 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     tracing::info!(?decision, "permission answered");
                     if let Some(h) = waiting.remove(&request) {
                         h.decide(decision);
+                    }
+                }
+                Effect::RespondPlan { request } => {
+                    tracing::info!("plan allowed, accepting edits");
+                    if let Some(h) = waiting.remove(&request) {
+                        h.allow_accepting_edits();
                     }
                 }
                 Effect::AnswerQuestion { request, answers } => {
@@ -1593,6 +1612,25 @@ pub async fn decide_always(
     inbox
         .0
         .send(Msg::User(Intent::DecideAlways {
+            request: RequestId(request),
+        }))
+        .await
+        .map_err(|_| ())
+}
+
+/// A click on a plan's "Allow and accept edits": the core takes it for a Claude Code plan only.
+#[tauri::command]
+pub async fn decide_plan(
+    window: tauri::Webview,
+    request: String,
+    inbox: tauri::State<'_, Inbox>,
+) -> Result<(), ()> {
+    if !card_host(&window) {
+        return Err(());
+    }
+    inbox
+        .0
+        .send(Msg::User(Intent::DecidePlan {
             request: RequestId(request),
         }))
         .await

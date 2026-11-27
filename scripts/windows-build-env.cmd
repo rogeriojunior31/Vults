@@ -10,9 +10,6 @@ if errorlevel 1 exit /b 1
 set "PATH=%VULTS_VS%\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja;%VULTS_VS%\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin;%PATH%"
 set "CMAKE_GENERATOR=Ninja"
 set "CMAKE_GENERATOR_INSTANCE="
-rem Without it ggml copies the build machine's CPU (AVX-512 on some runners): users' CPUs then
-rem crash on an illegal instruction. OFF gives the portable SSE4.2/AVX/AVX2/FMA/F16C baseline.
-set "GGML_NATIVE=OFF"
 if not defined LIBCLANG_PATH if exist "%ProgramFiles%\LLVM\bin\libclang.dll" set "LIBCLANG_PATH=%ProgramFiles%\LLVM\bin"
 if not defined LIBCLANG_PATH if exist "%VULTS_VS%\VC\Tools\Llvm\x64\bin\libclang.dll" set "LIBCLANG_PATH=%VULTS_VS%\VC\Tools\Llvm\x64\bin"
 for /d %%L in ("target\local-tools\libclang\*.data") do if not defined LIBCLANG_PATH if exist "%%L\platlib\clang\native\libclang.dll" set "LIBCLANG_PATH=%%~fL\platlib\clang\native"

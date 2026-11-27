@@ -57,6 +57,7 @@ export interface Actions extends UpdateActions {
   chat: ChatBackend;
   decide(request: string, decision: "allow" | "deny"): void;
   decideAlways(request: string): void;
+  decidePlan(request: string): void;
   /** The replies to a question card, one per question. */
   answer(request: string, answers: Answer[]): void;
   /** A question card goes back to the agent's terminal. */
@@ -1686,7 +1687,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const tags = wanting.map((s) => {
       const failed = s.status === "failed" || s.attention === "failed";
       const b = el("button", { class: `need-tag${failed ? " failed" : ""}`, onclick: () => toSession(s) }, el("i", { text: failed ? "×" : "!" }), el("span", { text: s.project || agentName(s) }));
-      b.title = [s.project || agentName(s), statusText(s)].join(" · ");
+      b.title = [s.project || agentName(s), s.title, statusText(s)].filter(Boolean).join(" · ");
       return el("span", { class: "need-chip" }, b,
         s.request ? skipButton(s.request, skipCard, t("Skip {project} for now", { project: s.project || agentName(s) })) : null);
     });
@@ -1951,6 +1952,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     },
     decideAlways: (request: string) => {
       if (answered(request, "allow")) actions.decideAlways(request);
+    },
+    decidePlan: (request: string) => {
+      if (answered(request, "allow")) actions.decidePlan(request);
     },
     answer: (request: string, answers: Answer[]) => {
       if (answered(request, "answered")) actions.answer(request, answers);

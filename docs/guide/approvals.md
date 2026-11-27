@@ -10,6 +10,10 @@ card that shows exactly what **Allow** authorizes (Antigravity, Cursor, Factory 
 - for an edit, the lines it adds and removes (**+12 −3**). Codex patches show their files and counts
   too.
 
+A Codex turn whose approvals go to Codex's own automatic reviewer (`approvals_reviewer` set to
+`auto_review` or `strict_auto_review`) shows no card: Codex decides those requests itself. Only a
+turn its session file proves automatic skips the card; anything else shows it.
+
 ![A permission card with the whole command, Deny, Allow and Always allow](../assets/island-approval.png)
 
 The card takes the whole width of the island until you answer or explicitly skip it. After an answer it says what happened for a
@@ -130,6 +134,8 @@ change to an agent's config). Each row leads with the command as it was asked, t
 the project; **As recorded** shows the stored text when it was shortened, such as a PowerShell
 launcher around the command.
 
+![Settings, Approvals: the audit of answers with its filters, a request nobody answered in time, and the Always allowed rules and Policies below](../assets/settings-approvals.png)
+
 ## More than one at a time
 
 Requests wait in line, each for its own agent. The card shows the first one with **3 requests waiting**, under
@@ -186,6 +192,14 @@ If the app is closed or not responding, the hook answers nothing within millisec
 asks in its terminal as usual.
 
 <a id="auto-mode-and-questions"></a>
+
+## A plan
+
+When Claude Code finishes planning, its card shows the whole plan. **Allow** starts it with the
+session asking as before; **Allow and accept edits** starts it and lets that session edit files
+without asking until it ends, the choice Claude Code's own terminal offers. Its commands still come
+as cards, destructive ones included, and the audit log keeps the choice as its own line
+([ADR 0002](../adr/0002-permissions.md)). **Deny** keeps it planning.
 
 ## Claude Code's auto mode
 
@@ -262,5 +276,7 @@ is never touched.
 ## Agents that ask in their own prompt
 
 Antigravity, Cursor, Factory Droid, Hermes Agent and Kimi Code ask their permissions in their own terminal or
-prompt, and the island never answers them: their birds show the steps. [What each agent can do](other-agents.md#what-each-agent-can-do)
+prompt, and the island never answers them: their birds show the steps. The one exception is
+Antigravity's shell commands, once its **Approve commands from the island** switch is on
+([Antigravity](other-agents.md#antigravity)). [What each agent can do](other-agents.md#what-each-agent-can-do)
 sums them up, and each one's section there says why it has no card.
