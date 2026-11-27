@@ -73,7 +73,9 @@ hooks there are never touched; if one of yours is already named `vults`, the ins
 nothing. Its sessions show as `antigravity`.
 
 The island shows Antigravity thinking, each step (`view_file`, `run_command`…) and when it stops,
-and each edit's diff, rebuilt from the text it replaced (without line numbers).
+and each edit's diff, rebuilt from the text it replaced (without line numbers). When it asks you
+something (`ask_question`), its bird waits for you with the question's sound and text; you answer
+in its terminal.
 Antigravity does not send its reply, so a finished session has no summary line, and it has no
 session start or end. Silence no longer removes it: an open session can rest or fly, and a previously observed local process must be confirmed gone before cleanup.
 
