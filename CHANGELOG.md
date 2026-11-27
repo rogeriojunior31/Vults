@@ -28,6 +28,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Fixes
 
+- Allowing Claude Code's plan from the island now leaves plan mode: the answer carries the plan back, as Claude Code requires, instead of a bare allow it ignored.
 - On Windows, a card answered in the agent's terminal goes away: when the agent ends the shell its hook ran under, the hook now ends too instead of waiting out its whole budget.
 - A permission card ignores clicks in its first 600 ms: a click meant for the window under it no longer lands on Allow. Its keys still answer at once.
 - The plan meters no longer move back when an idle Claude Code session reports its older copy of the limits: for each window, the later reset wins, and for the same reset the higher use.

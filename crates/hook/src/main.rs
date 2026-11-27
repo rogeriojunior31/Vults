@@ -71,6 +71,11 @@ fn relay(event: Event, raw: &[u8]) -> Option<String> {
     // The worker owns every blocking call; if it overruns we stop listening and exit,
     // and the process dying takes the connection with it.
     let wants_reply = event.wants_reply;
+    let tool = event
+        .payload
+        .get("tool_name")
+        .and_then(|t| t.as_str())
+        .map(str::to_owned);
     let (tx, rx) = mpsc::channel();
     // Its starter gone, nobody reads this hook's answer: end it, and the card goes with the
     // connection. Windows may kill only the shell between the agent and this hook.
@@ -103,7 +108,10 @@ fn relay(event: Event, raw: &[u8]) -> Option<String> {
         Err(_) => None,
     };
     match outcome {
-        Some(Outcome::Decision(decision)) => output::decision_json(agent, decision),
+        // The whole input, as the agent sent it: the app's copy had its strings capped.
+        Some(Outcome::Decision(decision)) => {
+            output::decision_for(agent, tool.as_deref(), original_input(raw), decision)
+        }
         // The answers go back inside the tool's own input, as the agent sent it: the copy
         // the app saw had its strings capped.
         Some(Outcome::Answers(answers)) => {

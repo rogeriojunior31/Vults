@@ -65,6 +65,25 @@ pub fn decision_json(agent: AgentKind, decision: Decision) -> Option<String> {
     replies(agent).map(|r| (r.decision)(decision))
 }
 
+/// [`decision_json`], with the tool's input sent back where the agent needs it: Claude Code
+/// ignores a bare allow of `ExitPlanMode` ("allow alone is not sufficient for these tools",
+/// https://code.claude.com/docs/en/hooks), and then stays in plan mode.
+pub fn decision_for(
+    agent: AgentKind,
+    tool: Option<&str>,
+    tool_input: Option<Value>,
+    decision: Decision,
+) -> Option<String> {
+    let echoed = agent == AgentKind::Claude && tool == Some("ExitPlanMode") && decision == Decision::Allow;
+    match tool_input.filter(|_| echoed) {
+        Some(input) => Some(
+            json!({"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"allow","updatedInput":input}}})
+                .to_string(),
+        ),
+        None => decision_json(agent, decision),
+    }
+}
+
 pub fn answers_output(agent: AgentKind, tool_input: &Value, answers: Vec<Answer>) -> Option<String> {
     replies(agent).and_then(|r| (r.answers)(tool_input, answers))
 }
@@ -141,6 +160,39 @@ fn answers_json(tool_input: &Value, answers: Vec<Answer>) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn an_allowed_plan_goes_back_with_its_input_and_nothing_else_does() {
+        let plan = json!({ "plan": "1. Read\n2. Write", "planFilePath": "/tmp/plan.md" });
+        let allow = |tool, decision| decision_for(AgentKind::Claude, tool, Some(plan.clone()), decision);
+        let out: Value =
+            serde_json::from_str(&allow(Some("ExitPlanMode"), Decision::Allow).unwrap()).unwrap();
+        assert_eq!(out["hookSpecificOutput"]["decision"]["behavior"], "allow");
+        assert_eq!(out["hookSpecificOutput"]["decision"]["updatedInput"], plan);
+        // A deny, another tool or another agent keeps the plain answer: no input is rewritten.
+        assert_eq!(
+            allow(Some("ExitPlanMode"), Decision::Deny),
+            decision_json(AgentKind::Claude, Decision::Deny)
+        );
+        assert_eq!(
+            allow(Some("Bash"), Decision::Allow),
+            decision_json(AgentKind::Claude, Decision::Allow)
+        );
+        assert_eq!(
+            decision_for(
+                AgentKind::Codex,
+                Some("ExitPlanMode"),
+                Some(plan.clone()),
+                Decision::Allow
+            ),
+            decision_json(AgentKind::Codex, Decision::Allow)
+        );
+        // No input to send back: the plain allow, as before.
+        assert_eq!(
+            decision_for(AgentKind::Claude, Some("ExitPlanMode"), None, Decision::Allow),
+            decision_json(AgentKind::Claude, Decision::Allow)
+        );
+    }
 
     #[test]
     fn answers_are_keyed_by_the_questions_text() {
