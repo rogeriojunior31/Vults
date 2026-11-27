@@ -480,6 +480,9 @@ export class ChatPanel {
     onclick: () => this.toEnd(),
   });
   private readonly chips = el("div", { class: "chips" });
+  /** Messages written while a turn runs: each goes, in order, when the one before ends well. */
+  private queued: { text: string; files: string[]; mentions: ChatMention[] }[] = [];
+  private readonly queueBox = el("div", { class: "chat-queue" });
   /** The Nest has the room to say how the composer's keys work. */
   private readonly composerHint = el("p", { class: "composer-hint" });
   private readonly attachLabel = el("span");
@@ -748,6 +751,7 @@ export class ChatPanel {
       el("div", { class: "log-box" }, this.log, this.jump),
       el("div", { class: "composer" },
         this.mentionMenu,
+        this.queueBox,
         this.chips,
         el("div", { class: "composer-row" }, this.opts.specialist && !this.backend.chooseFiles ? null : this.attachButton(), this.input, this.wave,
           el("div", { class: "composer-tools" }, this.mic, this.send)),
@@ -771,6 +775,7 @@ export class ChatPanel {
     this.log.setAttribute("aria-label", t("Chat"));
     this.composerHint.textContent = t("Enter sends, Shift+Enter starts a new line, ↑ recalls your last message, and @ references the flock.");
     this.attachLabel.textContent = t("Attach a file");
+    this.paintQueue();
     this.chips.setAttribute("role", "group");
     this.chips.setAttribute("aria-label", t("Attachments"));
     this.setup.setAttribute("aria-label", t("Your setup"));
@@ -1631,6 +1636,11 @@ export class ChatPanel {
       else if (d.kind === "stopped") this.announce(t("Stopped."));
       else if (d.kind === "done" && turn) this.announceReply();
       for (const message of this.messages) if (message.who === "activity") message.ended = true;
+      // The queue moves on after a turn that ended well; Stop or an error hands it back to the draft.
+      if (this.queued.length) {
+        if (d.kind === "done") queueMicrotask(() => this.sendQueued());
+        else this.unqueue();
+      }
       // Anything still waiting is a no now: it can't be answered any more.
       for (const m of this.messages)
         if (m.who === "ask" && !m.answer) { m.answer = "deny"; m.cancelled = true; this.askNodes.delete(m); }
@@ -1752,6 +1762,48 @@ export class ChatPanel {
     void this.submit();
   }
 
+  /** The queue, above the draft: what waits, each removable. */
+  private paintQueue(): void {
+    this.queueBox.hidden = !this.queued.length;
+    this.queueBox.setAttribute("aria-label", t("Queued messages"));
+    this.queueBox.replaceChildren(...this.queued.map((q, i) => {
+      const words = q.text || t("{n} files", { n: q.files.length });
+      const remove = el("button", { class: "queue-remove", onclick: () => { this.queued.splice(i, 1); this.paintQueue(); this.changed(); } });
+      remove.replaceChildren(icon("close", 10, 2.2));
+      remove.title = t("Remove from the queue");
+      remove.setAttribute("aria-label", remove.title);
+      return el("div", { class: "queue-item" }, el("span", { class: "queue-label", text: t("Queued") }), el("span", { class: "queue-text", text: words }), remove);
+    }));
+  }
+
+  /** The next queued message goes, as if typed and sent now. */
+  private sendQueued(): void {
+    const next = this.queued.shift();
+    this.paintQueue();
+    if (!next || this.busy) { if (next) this.queued.unshift(next); this.paintQueue(); return; }
+    const draft = { text: this.input.value, files: this.files, mentions: this.mentions };
+    this.input.value = next.text;
+    this.files = next.files;
+    this.mentions = next.mentions;
+    void this.submit().finally(() => {
+      // Whatever the user typed meanwhile stays theirs.
+      if (!this.input.value && (draft.text || draft.files.length)) {
+        this.input.value = draft.text; this.files = draft.files; this.mentions = draft.mentions;
+        this.grow(); this.keepDraft(); this.paint();
+      }
+    });
+  }
+
+  /** Stopped or failed: nothing goes on its own; the queued words come back into the draft. */
+  private unqueue(): void {
+    const text = [...this.queued.map(q => q.text).filter(Boolean), this.input.value].filter(Boolean).join("\n\n");
+    this.files = [...this.queued.flatMap(q => q.files), ...this.files];
+    this.mentions = [...this.queued.flatMap(q => q.mentions), ...this.mentions];
+    this.queued = [];
+    this.input.value = text;
+    this.grow(); this.keepDraft(); this.paintQueue();
+  }
+
   private async submit(): Promise<void> {
     try {
       await this.restore();
@@ -1760,6 +1812,16 @@ export class ChatPanel {
       return;
     }
     const text = this.input.value.trim();
+    // Written while a reply streams: it waits in the queue and goes when the turn ends well.
+    if (this.busy && !this.navigating && !this.historyPending && !this.opts.specialist && (text || this.files.length)) {
+      this.queued.push({ text, files: this.files, mentions: this.mentions.filter(m => text.includes(m.token)) });
+      this.input.value = "";
+      this.files = [];
+      this.mentions = [];
+      this.grow(); this.keepDraft();
+      this.paintQueue(); this.paintSend(); this.paint(); this.changed();
+      return;
+    }
     // Typing ahead is fine while a reply streams; sending waits for it.
     if (this.busy || this.navigating || this.historyPending || this.profileBlocked() || (!text && !this.files.length)) return;
     const files = this.files;
@@ -1902,6 +1964,8 @@ export class ChatPanel {
 
   /** A new conversation with `provider`, here or (synced) in the other window. */
   private cleared(provider: ChatProvider, draft?: ChatDraft | null): void {
+    this.queued = [];
+    this.paintQueue();
     this.setupOpen = false;
     this.clearAnnouncement();
     this.historyRead++; this.historyPending = null; this.historyError = this.historyReadError = ""; this.renaming = this.deleting = null; this.renameDraft = null;

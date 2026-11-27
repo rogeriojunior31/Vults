@@ -3483,7 +3483,14 @@ body.still #island .inner:has(.main > .chat) .need-strip.top { animation: none; 
 /* The intro takes the room beside the perch and wraps in it: a long setup notice never pushes it
    past the panel's edge. */
 #island .chat-head > .chat-intro { margin-right: auto; flex: 1 1 0; min-width: 0; }
-#island .chat-setup-notice { padding: 8px 10px; }
+#island .chat-queue { display: flex; flex-direction: column; gap: 4px; margin: 0 0 6px; }
+.chat-queue[hidden] { display: none; }
+.queue-item { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 5px 6px 5px 10px; border: 1px dashed var(--line); border-radius: 10px; background: var(--float); }
+.queue-label { flex: none; color: var(--fg-dim); font: 600 10px/1 var(--font); text-transform: uppercase; letter-spacing: 0.4px; }
+.queue-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg); font: var(--text-s) var(--font); }
+.queue-remove { flex: none; display: grid; place-items: center; width: 20px; height: 20px; border: 0; border-radius: 6px; background: transparent; color: var(--fg-dim); cursor: pointer; }
+.queue-remove:hover { background: var(--bg); color: var(--fg); }
+.chat-setup-notice { padding: 8px 10px; }
 #island .chat-setup-notice p { font-size: 11px; }
 #island .chat-head > .chat-intro[hidden] { display: none; }
 #island .chat:not(.has-messages) .chat-head { min-height: 108px; padding-left: 120px; }

@@ -204,8 +204,10 @@ With the memory on, what Zeca remembers and recalls joins as well: see [Zeca's m
 
 ## Writing and reading
 
-- **Enter** sends, **Shift+Enter** starts a new line. You can type the next message while a reply
-  comes, and send it when the reply ends. **↑** in an empty composer brings back your last message,
+- **Enter** sends, **Shift+Enter** starts a new line. While a reply comes, **Enter** queues the
+  message above the draft (**×** takes it out); when the turn ends well the queue goes, in order,
+  one turn each. After **Stop** or an error nothing goes on its own: the queued words come back into
+  the draft. **↑** in an empty composer brings back your last message,
   to change it or send it again.
 - While Zeca answers, the send button becomes **Stop**: it ends the turn there, and anything the turn
   was waiting on is a no.
