@@ -12,7 +12,10 @@ timer, a guess, a model or another program, nor from a message that merely claim
 `core` turns a pending permission into an answer from these inputs only, each a human's choice:
 
 - **A click**: `Intent::Decide` (Allow or Deny, or Ctrl+Alt+Y/N with the card visible), or
-  `Intent::DecideAlways` (Always: allows this request and saves a rule).
+  `Intent::DecideAlways` (Always: allows this request and saves a rule), or, on a Claude Code
+  plan's card only, `Intent::DecidePlan` (allows the plan and switches that session to accept its
+  file edits without asking, the choice Claude Code's own terminal offers there). A click answers
+  only a card that shows all it authorizes: the whole command or plan, never only its first line.
 - **An exact rule** the user saved: the same agent, folder, tool and target. `cargo test` does not
   allow `cargo test && rm -rf build`.
 - **A policy** the user wrote, saw as a diff and clicked to accept, like an agent config
@@ -77,6 +80,9 @@ Above all of these:
   reach.
 - One test pins each half of the destructive rule: Always on a destructive card saves no rule, and
   an old rule does not answer one.
+- A plan allowed with its edits accepted lets that Claude Code session edit files with no card
+  until it ends or its mode changes; its commands, destructive ones included, still come as cards.
+  The card says so on the button, and the audit log keeps it as its own act.
 
 ## History
 
@@ -89,3 +95,6 @@ Above all of these:
 - 2026-10-22: the Chat access picker may raise or lower access directly; every guard stays.
 - 2026-11-15: fold in the permission rules of the voice and dictation records (former 0028 and
   former 0032), which are retired.
+- 2026-11-27: a plan's card may allow the plan and switch the session to accept edits, one click
+  choosing what Claude Code's own terminal offers; a click answers only a card that shows its whole
+  command or plan.
