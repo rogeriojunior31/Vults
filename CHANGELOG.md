@@ -28,6 +28,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Fixes
 
+- On Windows, a card answered in the agent's terminal goes away: when the agent ends the shell its hook ran under, the hook now ends too instead of waiting out its whole budget.
 - A permission card ignores clicks in its first 600 ms: a click meant for the window under it no longer lands on Allow. Its keys still answer at once.
 - The plan meters no longer move back when an idle Claude Code session reports its older copy of the limits: for each window, the later reset wins, and for the same reset the higher use.
 - Voice transcription no longer crashes with an illegal instruction on older processors: the packages' speech engine is built for a portable CPU baseline (AVX2 and below) instead of the build machine's own, on Linux as on Windows.

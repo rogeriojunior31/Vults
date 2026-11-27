@@ -72,6 +72,17 @@ fn relay(event: Event, raw: &[u8]) -> Option<String> {
     // and the process dying takes the connection with it.
     let wants_reply = event.wants_reply;
     let (tx, rx) = mpsc::channel();
+    // Its starter gone, nobody reads this hook's answer: end it, and the card goes with the
+    // connection. Windows may kill only the shell between the agent and this hook.
+    #[cfg(windows)]
+    if wants_reply {
+        let orphaned = tx.clone();
+        std::thread::spawn(move || {
+            if vults_peer::wait_for_parent_exit() {
+                let _ = orphaned.send(Step::Done(None));
+            }
+        });
+    }
     std::thread::spawn(move || {
         let _ = tx.send(Step::Done(talk(&event, &tx)));
     });

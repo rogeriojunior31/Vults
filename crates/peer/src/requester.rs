@@ -6,7 +6,7 @@ use std::os::fd::AsRawFd;
 use std::os::unix::fs::MetadataExt;
 
 #[cfg(windows)]
-mod windows;
+pub(crate) mod windows;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Process {

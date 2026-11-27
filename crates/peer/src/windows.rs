@@ -48,6 +48,42 @@ pub fn process_birth(pid: u32) -> Option<Option<u64>> {
     }
 }
 
+/// Blocks until this process's parent exits: true when it did, false when it can't be watched (no
+/// parent, a parent of another account, or one born after us, whose PID was reused). Agents end a
+/// waiting hook by ending what started it; on Windows that may be only the shell in between,
+/// which would leave the hook, and its card, waiting on.
+pub fn wait_for_parent_exit() -> bool {
+    use windows::Win32::Foundation::{FILETIME, WAIT_OBJECT_0};
+    use windows::Win32::System::Threading::{
+        GetProcessTimes, INFINITE, PROCESS_SYNCHRONIZE, WaitForSingleObject,
+    };
+    let Some(Some(own)) = process_birth(std::process::id()) else {
+        return false;
+    };
+    // SAFETY: query and wait only; the parent's handle is closed on every path.
+    unsafe {
+        let Some(parent) = crate::requester::windows::parent_of(GetCurrentProcess()) else {
+            return false;
+        };
+        let Ok(handle) = OpenProcess(
+            PROCESS_SYNCHRONIZE | PROCESS_QUERY_LIMITED_INFORMATION,
+            false,
+            parent,
+        ) else {
+            return false;
+        };
+        let (mut creation, mut exit) = (FILETIME::default(), FILETIME::default());
+        let (mut kernel, mut user) = (FILETIME::default(), FILETIME::default());
+        let born = GetProcessTimes(handle, &mut creation, &mut exit, &mut kernel, &mut user)
+            .is_ok()
+            .then(|| (u64::from(creation.dwHighDateTime) << 32) | u64::from(creation.dwLowDateTime));
+        let watched =
+            born.is_some_and(|born| born <= own) && WaitForSingleObject(handle, INFINITE) == WAIT_OBJECT_0;
+        let _ = CloseHandle(handle);
+        watched
+    }
+}
+
 /// Skip hook shells without attributing a session to a recycled or foreign parent PID.
 pub fn agent_pid() -> u32 {
     use windows::Win32::System::Diagnostics::ToolHelp::{
@@ -241,6 +277,54 @@ pub(crate) unsafe fn token_sid(process: HANDLE) -> Option<String> {
 
 #[cfg(test)]
 mod process_tests {
+    /// This test binary plays three processes: the test, a middle (a killed shell) and a leaf (the
+    /// hook) that waits on the middle.
+    #[test]
+    fn a_hook_whose_parent_is_killed_stops_waiting() {
+        const NAME: &str = "windows::process_tests::a_hook_whose_parent_is_killed_stops_waiting";
+        let again = |role: &str| {
+            let mut command = std::process::Command::new(std::env::current_exe().unwrap());
+            command
+                .args(["--exact", NAME, "--nocapture"])
+                .env("VULTS_PEER_WATCH", role);
+            command
+        };
+        match std::env::var("VULTS_PEER_WATCH").as_deref() {
+            Ok("leaf") => {
+                let watched = super::wait_for_parent_exit();
+                println!("WATCHED={watched}");
+                return;
+            }
+            Ok("middle") => {
+                let mut leaf = again("leaf").spawn().unwrap();
+                // Killed long before this ends.
+                std::thread::sleep(std::time::Duration::from_secs(30));
+                let _ = leaf.wait();
+                return;
+            }
+            _ => {}
+        }
+        let mut middle = again("middle")
+            .stdout(std::process::Stdio::piped())
+            .spawn()
+            .unwrap();
+        let out = middle.stdout.take().unwrap();
+        let (tx, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let mut text = String::new();
+            let _ = std::io::Read::read_to_string(&mut { out }, &mut text);
+            let _ = tx.send(text);
+        });
+        std::thread::sleep(std::time::Duration::from_millis(800));
+        middle.kill().unwrap();
+        let _ = middle.wait();
+        // The leaf holds the pipe until it ends: its output arrives only once it stopped waiting.
+        let text = rx
+            .recv_timeout(std::time::Duration::from_secs(10))
+            .expect("the leaf kept waiting");
+        assert!(text.contains("WATCHED=true"), "{text}");
+    }
+
     #[test]
     fn hook_shells_resolve_to_the_long_lived_owner() {
         if let Ok(expected) = std::env::var("VULTS_TEST_OWNER_PID") {

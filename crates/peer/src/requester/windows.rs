@@ -38,6 +38,20 @@ unsafe extern "system" {
     fn GetSystemDirectoryW(buffer: *mut u16, size: u32) -> u32;
 }
 
+/// The parent's PID as Windows recorded it when `process` was created (it may have exited since).
+///
+/// # Safety
+/// `process` is an open handle with query access.
+pub(crate) unsafe fn parent_of(process: HANDLE) -> Option<u32> {
+    let mut basic = BasicInformation::default();
+    let size = std::mem::size_of::<BasicInformation>() as u32;
+    // SAFETY: the caller's handle; the buffer is the size passed.
+    if unsafe { NtQueryInformationProcess(process, 0, &mut basic, size, std::ptr::null_mut()) } < 0 {
+        return None;
+    }
+    u32::try_from(basic.parent).ok()
+}
+
 impl Snapshot {
     pub(super) fn read(pid: u32) -> Option<Self> {
         // 0 is the idle process, 4 the kernel: never a requester.
@@ -58,11 +72,7 @@ impl Snapshot {
                 if exit.dwLowDateTime != 0 || exit.dwHighDateTime != 0 {
                     return None;
                 }
-                let mut basic = BasicInformation::default();
-                let size = std::mem::size_of::<BasicInformation>() as u32;
-                if NtQueryInformationProcess(process, 0, &mut basic, size, std::ptr::null_mut()) < 0 {
-                    return None;
-                }
+                let parent = parent_of(process)?;
                 let mut path = vec![0u16; 32_768];
                 let mut length = path.len() as u32;
                 QueryFullProcessImageNameW(
@@ -78,7 +88,7 @@ impl Snapshot {
                 let started = (u64::from(creation.dwHighDateTime) << 32) | u64::from(creation.dwLowDateTime);
                 Some(Self {
                     process: Process { pid, started },
-                    parent: u32::try_from(basic.parent).ok()?,
+                    parent,
                     name,
                     executable: image,
                 })
