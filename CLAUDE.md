@@ -154,6 +154,7 @@ node scripts/check-flock-place.mjs  # retained flock navigation, no browser serv
 node scripts/check-project-search.mjs  # retained project search, no browser server
 node scripts/check-surface-continuity.mjs  # Nest/Quick handoff, drafts, owners and card visibility
 node scripts/check-windows-drop.mjs  # Explorer attachment lifecycle and native transport failures
+node scripts/check-card-arming.mjs  # a permission card ignores clicks in its first 600 ms
 cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace

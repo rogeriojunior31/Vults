@@ -84,6 +84,21 @@ export function badgeOf(s: SessionView | undefined): string | undefined {
 }
 
 /** Keys the desktop bound without saying which: the ones we asked for. */
+/** A card opens under a pointer that may be busy with another window: a click in its first moments
+ * was meant for something else, never for Allow (rule 2). Keys are deliberate and stay instant. */
+const ARM_MS = 600;
+const firstShown = new Map<string, number>();
+function shownAt(request: string): number {
+  let at = firstShown.get(request);
+  if (at === undefined) {
+    at = performance.now();
+    firstShown.set(request, at);
+    // Bounded: only the latest requests are remembered.
+    if (firstShown.size > 64) firstShown.delete(firstShown.keys().next().value as string);
+  }
+  return at;
+}
+
 const DEFAULT_KEYS: Record<string, string> = { allow: "Ctrl+Alt+Y", deny: "Ctrl+Alt+N" };
 
 /** The keys the desktop bound, by shortcut id, as a button shows them ("Ctrl+Alt+Y"). */
@@ -353,8 +368,9 @@ function sessionBody(
     case "approval": {
       if (!approval) break;
       let sent = false;
+      const shown = shownAt(approval.request);
       const answer = (d: "allow" | "deny" | "always") => () => {
-        if (sent) return;
+        if (sent || performance.now() - shown < ARM_MS) return;
         sent = true;
         if (d === "always") actions.decideAlways(approval.request);
         else actions.decide(approval.request, d);
