@@ -3480,7 +3480,11 @@ body.still #island .inner:has(.main > .chat) .need-strip.top { animation: none; 
 }
 #island .chat .hint { padding: 4px; }
 #island .chat .chat-greeting { margin: 0; font-size: 14px; line-height: 1.4; }
-#island .chat-head > .chat-intro { margin-right: auto; }
+/* The intro takes the room beside the perch and wraps in it: a long setup notice never pushes it
+   past the panel's edge. */
+#island .chat-head > .chat-intro { margin-right: auto; flex: 1 1 0; min-width: 0; }
+#island .chat-setup-notice { padding: 8px 10px; }
+#island .chat-setup-notice p { font-size: 11px; }
 #island .chat-head > .chat-intro[hidden] { display: none; }
 #island .chat:not(.has-messages) .chat-head { min-height: 108px; padding-left: 120px; }
 #island .chat:not(.has-messages) .chat-perch { width: 112px; height: 108px; }
