@@ -34,6 +34,9 @@ pub const TERMINAL_VARS: &[&str] = &[
     // The editor's own binary in VS Code-family terminals: tells Cursor from VS Code.
     "VSCODE_GIT_ASKPASS_NODE",
     "CURSOR_TRACE_ID",
+    // How Claude Code was started: `claude-vscode` is the only sign of its VS Code extension,
+    // which runs no terminal of its own (and over Remote-SSH sets no TERM_PROGRAM either).
+    "CLAUDE_CODE_ENTRYPOINT",
     "KITTY_WINDOW_ID",
     // kitty's remote control socket: `kitty @` from outside kitty needs it.
     "KITTY_LISTEN_ON",

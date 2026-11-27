@@ -2189,6 +2189,12 @@ fn the_editor_comes_from_the_terminal() {
         ..Default::default()
     };
     assert_eq!(view::editor(&term(&[("TERM_PROGRAM", "kitty")])), None);
+    // Claude Code's VS Code extension, locally or over Remote-SSH: no TERM_PROGRAM, its own word.
+    assert_eq!(
+        view::editor(&term(&[("CLAUDE_CODE_ENTRYPOINT", "claude-vscode")])),
+        Some("VS Code")
+    );
+    assert_eq!(view::editor(&term(&[("CLAUDE_CODE_ENTRYPOINT", "cli")])), None);
     assert_eq!(
         view::editor(&term(&[("TERM_PROGRAM", "vscode")])),
         Some("VS Code")

@@ -573,7 +573,8 @@ impl State {
 pub(crate) fn editor(t: &Terminal) -> Option<&'static str> {
     let env = |k: &str| t.env.get(k).map(String::as_str);
     if env("TERM_PROGRAM") != Some("vscode") && env("VSCODE_PID").is_none() {
-        return None;
+        // Claude Code's VS Code extension says so itself, with no editor terminal around it.
+        return (env("CLAUDE_CODE_ENTRYPOINT") == Some("claude-vscode")).then_some("VS Code");
     }
     // The program's own name, on Windows too: a VS Code under a folder named after Cursor is VS Code.
     let binary = env("VSCODE_GIT_ASKPASS_NODE")
