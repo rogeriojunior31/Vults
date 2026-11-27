@@ -4,6 +4,8 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ## Unreleased
 
+## 0.1.9 (2026-11-27)
+
 ### Removed
 
 - **Tasks** are gone: the Tasks tab, *Open Tasks*, `/task`, `/delegate`, runs in their own clone, context-pack handoff and the review loop. Vults watches and answers your agents; the code stays their work. `/continue`, costs and the daily budget remain, and past spend from tasks still counts in Activity.
