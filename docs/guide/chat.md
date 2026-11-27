@@ -31,8 +31,11 @@ resumes the same scene.
 Its engines come in two groups, **Your
 setup** (the Claude Code and Codex CLIs, each *Signed in*, *Installed* or *Not installed*: Vults only
 looks whether the CLI and its login file are there, never reads them) and **Vults harness** (the
-API, *Ready* with a key or a local model), with **Engines in Settings ›** under them. **New** (**+** on the island) starts a fresh conversation, and so does switching to
-another provider; the one before stays in the list (see [Conversations](#conversations)). **Esc**
+API, *Ready* with a key or a local model), with **Engines in Settings ›** under them. **New** (**+** on the island) starts a fresh conversation; the one before stays in the list (see
+[Conversations](#conversations)). Picking another engine in an empty chat starts with it; in a
+conversation already going, the other engine takes it over: the lines stay, a note says who goes
+on, and its first turn starts with what was said so far (your first message and the latest lines,
+about 12,000 tokens at most). **Esc**
 first dismisses an open selector, then closes the chat; the conversation is still there when you come back.
 Only one selector opens at a time. **↑/↓** on its trigger opens it and focuses a choice;
 **↑/↓**, **Home** and **End** move between choices without applying them. **Enter** or a click

@@ -97,6 +97,7 @@ const island = createIsland(document.getElementById("island")!, {
     setAccess: (access) => Bridge.setChatAccess(access),
     openSettings: () => void Bridge.openSettings("chat"),
     setNative: (on) => Bridge.setNativeChat(on),
+    switchEngine: (provider, generation) => Bridge.chatSwitchEngine(provider, generation),
     engines: () => Bridge.chatEngines(),
     voice: {
       start: (tap, generation) => Bridge.voiceStart(tap, generation),

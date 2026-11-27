@@ -61,6 +61,8 @@ export interface ChatBackend {
   conversations(): Promise<ConversationView[]>;
   /** Goes on with a saved conversation. */
   open(id: number, generation?: number): Promise<OpenedConversation>;
+  /** Another engine takes this conversation over, with what was said so far. */
+  switchEngine?(provider: ChatProvider, generation?: number): Promise<OpenedConversation>;
   rename(id: number, title: string): Promise<void>;
   /** Deletes one; true when the chat was in it (and now starts a new one). */
   remove(id: number): Promise<boolean | (ChatReset & { current: boolean })>;
@@ -1783,6 +1785,30 @@ export class ChatPanel {
     }
   }
 
+  /** The other engine takes this conversation over: its lines stay, and Zeca says who goes on. */
+  private async switchEngine(provider: ChatProvider): Promise<void> {
+    if (this.isBusy() || this.navigating || !this.backend.switchEngine) return;
+    this.navigating = true;
+    const source = this.sourceVersion;
+    this.paintHead(); this.paintSend(); this.changed();
+    try {
+      await this.flushDraft();
+      const opened = await this.backend.switchEngine(provider, this.generation);
+      if (source !== this.sourceVersion) return;
+      this.load(opened);
+      this.messages.push({ who: "note", text: t("{engine} continues this conversation from here, with what was said so far.", { engine: this.engineName(provider) }) });
+      this.paint();
+    } catch (error) {
+      if (source === this.sourceVersion) {
+        this.messages.push({ who: "note", text: t("Could not switch the engine. The conversation stays with the one it had.") });
+        this.paint();
+      }
+    } finally {
+      this.navigating = false;
+      this.paintHead(); this.paintSend(); this.changed();
+    }
+  }
+
   /** New, or another provider: the conversation so far stays saved, in the list. */
   private ask(what: ChatProvider | "new"): void {
     if (this.busy || this.navigating || this.historyPending || this.specialistChoiceSaving || this.opts.specialist?.state?.archived) return;
@@ -2625,8 +2651,12 @@ export class ChatPanel {
           class: `menu-item engine-row${p === this.provider ? " on" : ""}`,
           onclick: () => {
             this.modelOpen = false;
-            // Mid-reply nothing switches (ask waits for the turn): the menu still closes.
-            if (p !== this.provider) this.ask(p);
+            // Mid-reply nothing switches (ask waits for the turn): the menu still closes. A started
+            // conversation goes on with the other engine; an empty one simply starts with it.
+            if (p !== this.provider) {
+              if (this.started && !this.opts.specialist && this.backend.switchEngine) void this.switchEngine(p);
+              else this.ask(p);
+            }
             this.paintHead();
             this.changed();
           },

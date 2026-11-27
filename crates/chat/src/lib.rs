@@ -547,6 +547,68 @@ impl Approver for TestApprover {
 
 /// The chat's side of a driver's [`Sink`]: what the agent says goes to the chat, and its tool
 /// requests become cards the approver answers.
+/// Characters of conversation a handoff carries (about 12k tokens): the first message and the
+/// latest ones that fit; a single line longer than [`HANDOFF_LINE`] is cut.
+pub const HANDOFF_BUDGET: usize = 48_000;
+const HANDOFF_LINE: usize = 6_000;
+
+/// What was said with `from` before another engine took the conversation over: the user's first
+/// message (what the conversation is for), then the latest lines that fit the budget, oldest first.
+/// Each line is `who` (`you` or `zeca`) and its text; notes and empty lines are left out.
+pub fn handoff(from: &str, lines: &[(String, String)], budget: usize) -> Option<String> {
+    let said: Vec<(&str, String)> = lines
+        .iter()
+        .filter(|(who, text)| matches!(who.as_str(), "you" | "zeca") && !text.trim().is_empty())
+        .map(|(who, text)| {
+            let mut text = text.trim().to_string();
+            if text.len() > HANDOFF_LINE {
+                let mut end = HANDOFF_LINE;
+                while !text.is_char_boundary(end) {
+                    end -= 1;
+                }
+                text.truncate(end);
+                text.push('…');
+            }
+            (if who == "you" { "user" } else { "assistant" }, text)
+        })
+        .collect();
+    if said.is_empty() {
+        return None;
+    }
+    let first = said.iter().position(|(who, _)| *who == "user");
+    let mut used = first.map_or(0, |i| said[i].1.len());
+    let mut kept: Vec<usize> = Vec::new();
+    for i in (0..said.len()).rev() {
+        if Some(i) == first {
+            continue;
+        }
+        if used + said[i].1.len() > budget {
+            break;
+        }
+        used += said[i].1.len();
+        kept.push(i);
+    }
+    kept.reverse();
+    let mut out = format!(
+        "<handoff from=\"{from}\">\nThis conversation began with {from}; you take it over now. What was said so far, oldest first:\n"
+    );
+    let line = |out: &mut String, (who, text): &(&str, String)| {
+        out.push_str(&format!("[{who}] {text}\n"));
+    };
+    if let Some(i) = first {
+        line(&mut out, &said[i]);
+    }
+    let skipped = kept.first().map_or(0, |&k| k - first.map_or(0, |f| f + 1).min(k));
+    if skipped > 0 {
+        out.push_str(&format!("[… {skipped} earlier lines left out]\n"));
+    }
+    for &i in &kept {
+        line(&mut out, &said[i]);
+    }
+    out.push_str("</handoff>");
+    Some(out)
+}
+
 /// Does this call bring outside content in (Z8)? Zeca's own MCP server (M7) reads only this
 /// computer (the island's sessions, his memory, a journal that leaves outside lines out), so its
 /// calls don't, but only where the app gave it (`zeca_mcp`: a Claude conversation with our
@@ -818,6 +880,8 @@ pub struct Chat {
     api: (&'static providers::Provider, String),
     /// API: what the model may call in its loop (Z7's web, Z9's flock); none yet.
     tools: tools::Tools,
+    /// What was said with the engine before, for the first turn of the one that took over.
+    handoff: Option<String>,
 }
 
 impl Chat {
@@ -838,6 +902,7 @@ impl Chat {
                 providers::PROVIDERS[0].default_model.to_string(),
             ),
             tools: Vec::new(),
+            handoff: None,
         }
     }
 
@@ -1015,6 +1080,12 @@ impl Chat {
         self.driver.as_ref().is_some_and(|d| d.session().is_some()) || !self.history.is_empty()
     }
 
+    /// The conversation so far, for the first turn of an engine that takes it over midway
+    /// ([`handoff`]); it goes with that turn only.
+    pub fn set_handoff(&mut self, text: Option<String>) {
+        self.handoff = text;
+    }
+
     /// The folder can only change before the first turn: a conversation lives in one place.
     pub fn set_folder(&mut self, dir: PathBuf) -> bool {
         if self.started() || !dir.is_dir() {
@@ -1145,7 +1216,7 @@ impl Chat {
     /// conversation goes on next time); past that, or for the API, the turn is dropped.
     pub async fn send(
         &mut self,
-        turn: Turn,
+        mut turn: Turn,
         out: mpsc::Sender<Delta>,
         approver: Arc<dyn Approver>,
         mut stop: oneshot::Receiver<()>,
@@ -1165,6 +1236,13 @@ impl Chat {
         }
         if !turn.files.is_empty() && self.outside().is_none() {
             self.set_outside(Some("attachments".into()));
+        }
+        // An engine that took the conversation over: what was said before, once, ahead of the rest.
+        if let Some(handoff) = self.handoff.take() {
+            turn.context = Some(match turn.context.take() {
+                Some(context) => format!("{handoff}\n{context}"),
+                None => handoff,
+            });
         }
         let name = self.name();
         if matches!(self.provider, Provider::Claude | Provider::Codex) && self.driver.is_none() {
@@ -1510,6 +1588,34 @@ mod tests {
         chat.driver = drivers::for_cli(Provider::Claude, chat.spec.clone());
         assert!(chat.set_pick(None, Some(Effort::Low)));
         assert!(chat.driver.is_none());
+    }
+
+    #[test]
+    fn a_handoff_keeps_the_first_request_and_the_latest_lines_within_its_budget() {
+        let said = |who: &str, text: &str| (who.to_string(), text.to_string());
+        let mut lines = vec![said("you", "Fix the login bug"), said("note", "Started")];
+        for i in 0..40 {
+            lines.push(said("zeca", &format!("step {i} {}", "x".repeat(50))));
+        }
+        lines.push(said("you", "Now write the tests"));
+        let text = handoff("Claude Code", &lines, 600).unwrap();
+        assert!(text.starts_with("<handoff from=\"Claude Code\">"));
+        assert!(
+            text.contains("[user] Fix the login bug"),
+            "the first request always goes"
+        );
+        assert!(
+            text.contains("[user] Now write the tests"),
+            "the latest line always goes"
+        );
+        assert!(text.contains("earlier lines left out"));
+        assert!(!text.contains("Started"), "notes stay out");
+        assert!(!text.contains("step 0 "), "the oldest steps are what is left out");
+        assert!(handoff("Codex", &[said("note", "x")], 600).is_none());
+        // The new engine is not started yet: its first turn takes the user's setup and the handoff.
+        let mut chat = Chat::new(Provider::Codex, std::env::temp_dir());
+        chat.set_handoff(Some(text));
+        assert!(!chat.started());
     }
 
     #[test]

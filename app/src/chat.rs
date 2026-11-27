@@ -1629,6 +1629,63 @@ pub async fn chat_reset(
     })
 }
 
+/// Another engine takes the conversation over midway: its lines stay, and the new engine's first
+/// turn starts with what was said so far ([`vults_chat::handoff`]). Zeca stays the one talking.
+#[tauri::command]
+pub async fn chat_switch_engine(
+    app: AppHandle,
+    window: tauri::Webview,
+    provider: Provider,
+    generation: u32,
+) -> Result<Opened, String> {
+    if !crate::runtime::card_host(&window) {
+        return Err("Chat history belongs to the island or Nest.".into());
+    }
+    let state = app.state::<ChatState>();
+    let mut chat = state.navigation(generation)?;
+    if chat.is_specialist() {
+        return Err("A specialist keeps its executor.".into());
+    }
+    let id = state.current().ok_or("Start the conversation first.")?;
+    let from = engine_label(&engine_name(&chat));
+    let folder = chat.folder().to_path_buf();
+    let outside = chat.outside();
+    let lines = store(move |s| s.conversation_messages(id)).await?;
+    let said: Vec<(String, String)> = lines.iter().map(|l| (l.who.clone(), l.text.clone())).collect();
+    let mut next = Chat::new(provider, paths::chat_dir());
+    if folder != paths::chat_dir() {
+        next.set_folder(folder);
+    }
+    next.set_handoff(vults_chat::handoff(&from, &said, vults_chat::HANDOFF_BUDGET));
+    next.set_outside(outside);
+    state.waiting.close_all();
+    crate::voice::cancel(&app);
+    *chat = next;
+    let engine = engine_name(&chat);
+    let (c, lines) = store(move |s| {
+        s.conversation_switch_engine(id, &engine, None, None)?;
+        Ok((s.conversation(id)?, s.conversation_messages(id)?))
+    })
+    .await?;
+    let c = c.ok_or("That conversation is gone.")?;
+    state.live(|l| {
+        *l = Live {
+            started: true,
+            ..Live::default()
+        }
+    });
+    let mut conversation = opened(c, lines, true).ok_or("That conversation's engine is unknown.")?;
+    conversation.generation = state.generation();
+    sync(
+        &app,
+        Sync::Opened {
+            from: window.label().to_string(),
+            conversation: conversation.clone(),
+        },
+    );
+    Ok(conversation)
+}
+
 /// The conversation the chat is in now, as saved, for a window that opens on it (the Nest).
 #[tauri::command]
 pub async fn chat_current(state: tauri::State<'_, ChatState>) -> Result<Option<Opened>, String> {

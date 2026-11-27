@@ -1301,6 +1301,8 @@ export default {
   "A conversation keeps its model; New starts another.": "一段对话会保持它的模型；新建可开始另一段。",
   "The model and effort for new conversations in this folder.": "此文件夹中新对话的模型和力度。",
   "Clean": "干净",
+  "{engine} continues this conversation from here, with what was said so far.": "{engine} 从这里接着这段对话，并带上之前说过的内容。",
+  "Could not switch the engine. The conversation stays with the one it had.": "无法切换引擎。对话仍使用原来的引擎。",
   "Clean setup": "干净环境",
   "Claude Code and Codex read your own setup here: your CLAUDE.md, skills, MCP servers, hooks and allow rules. A project's settings join only in a folder you already trust in Claude Code.": "Claude Code 和 Codex 在这里读取你自己的环境：你的 CLAUDE.md、技能、MCP 服务器、钩子和允许规则。只有在你已在 Claude Code 中信任的文件夹里，项目的设置才会加入。",
   "Claude Code and Codex start clean here: none of your CLAUDE.md, skills, MCP servers, hooks or rules. Codex gets a home of its own, with your login kept only in memory.": "Claude Code 和 Codex 在这里从干净环境开始：不读取你的 CLAUDE.md、技能、MCP 服务器、钩子或规则。Codex 使用自己的目录，你的登录信息只保存在内存中。",

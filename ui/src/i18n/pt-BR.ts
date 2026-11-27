@@ -1301,6 +1301,8 @@ export default {
   "A conversation keeps its model; New starts another.": "Uma conversa mantém o modelo dela; Novo começa outra.",
   "The model and effort for new conversations in this folder.": "O modelo e o esforço das novas conversas nesta pasta.",
   "Clean": "Limpo",
+  "{engine} continues this conversation from here, with what was said so far.": "{engine} continua esta conversa daqui, com o que já foi dito.",
+  "Could not switch the engine. The conversation stays with the one it had.": "Não foi possível trocar o motor. A conversa continua com o que tinha.",
   "Clean setup": "Ambiente limpo",
   "Claude Code and Codex read your own setup here: your CLAUDE.md, skills, MCP servers, hooks and allow rules. A project's settings join only in a folder you already trust in Claude Code.": "O Claude Code e o Codex leem o seu ambiente aqui: o seu CLAUDE.md, skills, servidores MCP, hooks e regras de permissão. As configurações de um projeto entram só numa pasta em que você já confia no Claude Code.",
   "Claude Code and Codex start clean here: none of your CLAUDE.md, skills, MCP servers, hooks or rules. Codex gets a home of its own, with your login kept only in memory.": "O Claude Code e o Codex começam limpos aqui: nada do seu CLAUDE.md, skills, servidores MCP, hooks ou regras. O Codex ganha uma pasta própria, com o seu login guardado só na memória.",

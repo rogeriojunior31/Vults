@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 70be5635b44e -->
+<!-- source: 514114e00e3d -->
 
 Os painéis laterais redimensionáveis seguem o ponteiro que iniciou o arraste, ignoram toques adicionais e encerram o arraste quando a janela perde o foco. O cancelamento preserva a largura atual e mantém os rascunhos. Quando o espaço limita um painel, o arraste e o redimensionamento pelo teclado partem da largura visível; reduzir apenas o espaço disponível não sobrescreve a largura salva. Os controles de redimensionar e recolher usam a mesma cor de foco de teclado que o restante do tema selecionado.
 
@@ -31,8 +31,11 @@ para priorizar leitura e envio; voltar a uma área mais alta retoma a mesma cena
 Os motores vêm em dois grupos, **Your setup** (os
 CLIs do Claude Code e do Codex, cada um *Signed in*, *Installed* ou *Not installed*: o Vults só olha
 se o CLI e o arquivo de login dele estão lá, nunca os lê) e **Vults harness** (a API, *Ready* com uma chave ou um modelo local),
-com **Engines in Settings ›** embaixo. **New** (**+** na ilha) começa uma conversa nova, e trocar de provedor
-também; a anterior fica na lista (veja [Conversas](#conversations)). **Esc** primeiro fecha um seletor aberto e depois fecha o chat; a conversa continua lá quando você volta.
+com **Engines in Settings ›** embaixo. **New** (**+** na ilha) começa uma conversa nova; a anterior fica na lista (veja
+[Conversas](#conversations)). Escolher outro motor num chat vazio começa com ele; numa conversa já
+em andamento, o outro motor assume: as linhas ficam, uma nota diz quem continua, e o primeiro turno
+dele começa com o que já foi dito (a sua primeira mensagem e as linhas mais recentes, no máximo
+cerca de 12.000 tokens). **Esc** primeiro fecha um seletor aberto e depois fecha o chat; a conversa continua lá quando você volta.
 Só um seletor fica aberto por vez. **↑/↓** no botão abre a lista e foca uma opção;
 **↑/↓**, **Home** e **End** percorrem as opções sem aplicá-las. **Enter** ou um clique escolhe;
 **Esc** devolve o foco ao botão. Clicar fora fecha a lista. O carregamento dos modelos mantém
