@@ -271,6 +271,7 @@ pub fn run() {
             runtime::project_set,
             open::editor_found,
             runtime::decide_always,
+            runtime::decide_plan,
             runtime::question_answer,
             runtime::question_release,
             runtime::card_skip,

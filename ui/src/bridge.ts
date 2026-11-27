@@ -584,6 +584,8 @@ export const Bridge = {
   installApply: (agent: InstallAgent, install: boolean, fingerprint: string) =>
     invoke<string | null>("install_apply", { agent, install, fingerprint }),
   decideAlways: (request: string) => invoke<void>("decide_always", { request }),
+  /** A Claude Code plan allowed, its session accepting edits (ADR 0002). */
+  decidePlan: (request: string) => invoke<void>("decide_plan", { request }),
   setQuestionAgents: (on: boolean) => invoke<void>("question_agents_set", { on }),
   questionInstallStatus: () => invoke<QuestionInstallStatus[]>("question_install_status"),
   questionInstallPreview: (agent: string, install: boolean) => invoke<InstallPreview>("question_install_preview", { agent, install }),

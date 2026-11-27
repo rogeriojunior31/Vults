@@ -496,6 +496,11 @@ pub enum Intent {
     DecideAlways {
         request: RequestId,
     },
+    /// On a Claude Code plan's card only: allow the plan, and the session accepts its edits
+    /// without asking, as Claude Code's own terminal offers (ADR 0002).
+    DecidePlan {
+        request: RequestId,
+    },
     /// The user's replies to a question card, one per question.
     Answer {
         request: RequestId,
@@ -590,6 +595,7 @@ impl Intent {
             | Self::SetProjectPref { .. } => true,
             Self::Decide { .. }
             | Self::DecideAlways { .. }
+            | Self::DecidePlan { .. }
             | Self::Answer { .. }
             | Self::Release { .. }
             | Self::Skip { .. }
@@ -746,6 +752,10 @@ pub enum Effect {
     RespondPermission {
         request: RequestId,
         decision: Decision,
+    },
+    /// Only ever produced from [`Intent::DecidePlan`]: allow, and the session accepts its edits.
+    RespondPlan {
+        request: RequestId,
     },
     /// Only ever produced from [`Intent::Answer`].
     AnswerQuestion {
@@ -1328,6 +1338,7 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
         Input::User(
             intent @ (Intent::Decide { .. }
             | Intent::DecideAlways { .. }
+            | Intent::DecidePlan { .. }
             | Intent::Answer { .. }
             | Intent::Release { .. }),
         ) => answer(state, intent, &By::Island, now),
@@ -2210,6 +2221,30 @@ fn answer(state: &mut State, intent: Intent, by: &By, now: Instant) -> Vec<Effec
             vec![
                 Effect::RespondPermission { request, decision },
                 audited(state, &p, by.actor(), act),
+            ]
+        }
+        Intent::DecidePlan { request } => {
+            // A plan's card, on the island: a phone has no such button, and no other card is a plan.
+            let Some(p) = redeem_here(
+                state,
+                by,
+                |p| {
+                    matches!(by, By::Island)
+                        && p.request == request
+                        && p.questions.is_empty()
+                        && p.ask.whole()
+                        && p.session.agent == AgentKind::Claude
+                        && p.tool == "ExitPlanMode"
+                },
+                now,
+            ) else {
+                return Vec::new();
+            };
+            record_end(state, &p, Outcome::Allowed);
+            settle(state, &p.session, now);
+            vec![
+                Effect::RespondPlan { request },
+                audited(state, &p, by.actor(), audit::Act::AllowAcceptingEdits),
             ]
         }
         Intent::Answer { request, answers } => {

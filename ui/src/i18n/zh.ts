@@ -2529,4 +2529,7 @@ export default {
   "Vults reads the active window once, when a turn ends. On GNOME Wayland, and for terminals on Windows, it cannot tell which session is in front, so every finish sounds as before.": "Vults 只在一轮结束时读取一次当前活动窗口。在 Wayland 上的 GNOME 中,以及 Windows 上的终端,它无法判断哪个会话在前台,因此每次结束仍像以前一样发声。",
   "Approve commands from the island": "从岛上批准命令",
   "A shell command that none of Antigravity's own rules covers waits on a card: Allow runs it, Deny stops it, and no answer leaves Antigravity's own prompt. Hooks installed before this switch need Update hooks… first.": "Antigravity 自身规则未覆盖的 shell 命令会在卡片上等待：Allow 运行它，Deny 阻止它，未回答则由 Antigravity 在自己的提示中询问。在此开关之前安装的钩子需要先点 Update hooks…。",
+  "Allow and accept edits": "允许并接受编辑",
+  "Allow the plan, and this session edits files without asking until it ends, as Claude Code's own terminal offers. Its commands still come as cards.": "允许该计划，此会话在结束前编辑文件不再询问，与 Claude Code 自己终端提供的选项相同。它的命令仍以卡片形式出现。",
+  "Plan allowed, and its session accepts edits": "计划已允许，其会话接受编辑",
 } satisfies Record<string, string>;

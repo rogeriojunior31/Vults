@@ -57,6 +57,7 @@ export interface Actions extends UpdateActions {
   chat: ChatBackend;
   decide(request: string, decision: "allow" | "deny"): void;
   decideAlways(request: string): void;
+  decidePlan(request: string): void;
   /** The replies to a question card, one per question. */
   answer(request: string, answers: Answer[]): void;
   /** A question card goes back to the agent's terminal. */
@@ -1951,6 +1952,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     },
     decideAlways: (request: string) => {
       if (answered(request, "allow")) actions.decideAlways(request);
+    },
+    decidePlan: (request: string) => {
+      if (answered(request, "allow")) actions.decidePlan(request);
     },
     answer: (request: string, answers: Answer[]) => {
       if (answered(request, "answered")) actions.answer(request, answers);

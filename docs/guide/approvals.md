@@ -193,6 +193,14 @@ asks in its terminal as usual.
 
 <a id="auto-mode-and-questions"></a>
 
+## A plan
+
+When Claude Code finishes planning, its card shows the whole plan. **Allow** starts it with the
+session asking as before; **Allow and accept edits** starts it and lets that session edit files
+without asking until it ends, the choice Claude Code's own terminal offers. Its commands still come
+as cards, destructive ones included, and the audit log keeps the choice as its own line
+([ADR 0002](../adr/0002-permissions.md)). **Deny** keeps it planning.
+
 ## Claude Code's auto mode
 
 In auto mode the classifier clears most requests in a blink, so the island only shows a card, plays

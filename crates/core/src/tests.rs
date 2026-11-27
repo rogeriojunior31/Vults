@@ -9,7 +9,7 @@ fn visible(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
         .filter(|e| {
             matches!(
                 e,
-                Effect::RespondPermission { .. } | Effect::AnswerQuestion { .. }
+                Effect::RespondPermission { .. } | Effect::RespondPlan { .. } | Effect::AnswerQuestion { .. }
             )
         })
         .count();
@@ -20,7 +20,11 @@ fn visible(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
                 e,
                 Effect::Audit(a) if matches!(
                     a.act,
-                    audit::Act::Allow | audit::Act::Deny | audit::Act::AlwaysAllow | audit::Act::Answer
+                    audit::Act::Allow
+                        | audit::Act::Deny
+                        | audit::Act::AlwaysAllow
+                        | audit::Act::AllowAcceptingEdits
+                        | audit::Act::Answer
                 )
             )
         })
@@ -681,11 +685,14 @@ fn a_question_card_can_go_back_to_the_terminal() {
 }
 
 /// Where a quiet intent (one that must never answer a card) sits in the test's coverage list;
-/// `None` for the three that may answer (ADR 0002). Exhaustive on purpose: a new `Intent` stops
+/// `None` for the four that may answer (ADR 0002). Exhaustive on purpose: a new `Intent` stops
 /// the build here until someone decides which it is, and a quiet one needs a sample below.
 fn quiet_index(intent: &Intent) -> Option<usize> {
     match intent {
-        Intent::Decide { .. } | Intent::DecideAlways { .. } | Intent::Answer { .. } => None,
+        Intent::Decide { .. }
+        | Intent::DecideAlways { .. }
+        | Intent::DecidePlan { .. }
+        | Intent::Answer { .. } => None,
         Intent::Release { .. } => Some(0),
         Intent::OpenAlert { .. } => Some(1),
         Intent::Jump { .. } => Some(2),
@@ -6135,4 +6142,47 @@ fn a_session_keeps_the_agents_own_title_beside_its_folder() {
     assert_eq!(session_view(&s, "s1").title.as_deref(), Some("Billing"));
     reduce(&mut s, titled("s1", "  "), now);
     assert_eq!(session_view(&s, "s1").title, None);
+}
+
+#[test]
+fn a_plan_may_be_allowed_with_its_edits_accepted_and_nothing_else_may() {
+    let mut s = State::default();
+    let now = Instant::now();
+    let card = |session: &str, id: &str, tool: &str| {
+        agent(
+            session,
+            AgentEvent::PermissionRequested {
+                request: rid(id),
+                tool: tool.into(),
+                target: format!("{tool} · ## Fix login…"),
+                ask: Ask {
+                    full: Some("## Fix login\n1. Read\n2. Patch".into()),
+                    cut: true,
+                    ..Ask::default()
+                },
+            },
+        )
+    };
+    let plan = |id: &str| Input::User(Intent::DecidePlan { request: rid(id) });
+    // Another tool's card: the plan's button does nothing.
+    visible(&mut s, card("a", "bash", "Bash"), now);
+    assert!(visible(&mut s, plan("bash"), now).is_empty());
+    // Another agent's plan: only Claude Code takes the session's mode from its hook.
+    let mut codex = card("c", "codex-plan", "ExitPlanMode");
+    if let Input::Agent(u) = &mut codex {
+        u.session.agent = AgentKind::Codex;
+    }
+    visible(&mut s, codex, now);
+    assert!(visible(&mut s, plan("codex-plan"), now).is_empty());
+    // A Claude Code plan: allowed, with its edits accepted, audited as its own act.
+    visible(&mut s, card("a", "p1", "ExitPlanMode"), now);
+    let effects = reduce(&mut s, plan("p1"), now);
+    assert!(effects.contains(&Effect::RespondPlan { request: rid("p1") }));
+    assert!(
+        effects
+            .iter()
+            .any(|e| matches!(e, Effect::Audit(a) if a.act == audit::Act::AllowAcceptingEdits))
+    );
+    // Answered once.
+    assert!(visible(&mut s, plan("p1"), now).is_empty());
 }

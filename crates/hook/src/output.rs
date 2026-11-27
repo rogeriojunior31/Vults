@@ -2,7 +2,7 @@
 //! silence makes the agent ask in the terminal, which is always safe.
 
 use serde_json::{Map, Value, json};
-use vults_protocol::{AgentKind, Answer, Decision};
+use vults_protocol::{AgentKind, Answer, Decision, Then};
 
 /// How an agent takes an answer from its hook. An agent without one is never made to wait: its
 /// own terminal asks the user.
@@ -73,13 +73,23 @@ pub fn decision_for(
     tool: Option<&str>,
     tool_input: Option<Value>,
     decision: Decision,
+    then: Option<Then>,
 ) -> Option<String> {
     let echoed = agent == AgentKind::Claude && tool == Some("ExitPlanMode") && decision == Decision::Allow;
     match tool_input.filter(|_| echoed) {
-        Some(input) => Some(
-            json!({"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"allow","updatedInput":input}}})
-                .to_string(),
-        ),
+        Some(input) => {
+            let mut allow = json!({"behavior": "allow", "updatedInput": input});
+            // The plan's own choice in Claude Code's terminal: this session's edits go ahead
+            // without asking (https://code.claude.com/docs/en/hooks, `updatedPermissions`).
+            if then == Some(Then::AcceptEdits) {
+                allow["updatedPermissions"] =
+                    json!([{"type": "setMode", "mode": "acceptEdits", "destination": "session"}]);
+            }
+            Some(
+                json!({"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":allow}})
+                    .to_string(),
+            )
+        }
         None => decision_json(agent, decision),
     }
 }
@@ -175,7 +185,8 @@ mod tests {
     #[test]
     fn an_allowed_plan_goes_back_with_its_input_and_nothing_else_does() {
         let plan = json!({ "plan": "1. Read\n2. Write", "planFilePath": "/tmp/plan.md" });
-        let allow = |tool, decision| decision_for(AgentKind::Claude, tool, Some(plan.clone()), decision);
+        let allow =
+            |tool, decision| decision_for(AgentKind::Claude, tool, Some(plan.clone()), decision, None);
         let out: Value =
             serde_json::from_str(&allow(Some("ExitPlanMode"), Decision::Allow).unwrap()).unwrap();
         assert_eq!(out["hookSpecificOutput"]["decision"]["behavior"], "allow");
@@ -194,13 +205,45 @@ mod tests {
                 AgentKind::Codex,
                 Some("ExitPlanMode"),
                 Some(plan.clone()),
-                Decision::Allow
+                Decision::Allow,
+                None
             ),
             decision_json(AgentKind::Codex, Decision::Allow)
         );
+        // Allowed accepting edits: the session's mode goes with the plan, and only with a plan.
+        let accepting = decision_for(
+            AgentKind::Claude,
+            Some("ExitPlanMode"),
+            Some(plan.clone()),
+            Decision::Allow,
+            Some(Then::AcceptEdits),
+        )
+        .unwrap();
+        let accepting: Value = serde_json::from_str(&accepting).unwrap();
+        assert_eq!(
+            accepting["hookSpecificOutput"]["decision"]["updatedPermissions"],
+            json!([{"type": "setMode", "mode": "acceptEdits", "destination": "session"}])
+        );
+        assert_eq!(accepting["hookSpecificOutput"]["decision"]["updatedInput"], plan);
+        assert_eq!(
+            decision_for(
+                AgentKind::Claude,
+                Some("Bash"),
+                Some(plan.clone()),
+                Decision::Allow,
+                Some(Then::AcceptEdits)
+            ),
+            decision_json(AgentKind::Claude, Decision::Allow)
+        );
         // No input to send back: the plain allow, as before.
         assert_eq!(
-            decision_for(AgentKind::Claude, Some("ExitPlanMode"), None, Decision::Allow),
+            decision_for(
+                AgentKind::Claude,
+                Some("ExitPlanMode"),
+                None,
+                Decision::Allow,
+                None
+            ),
             decision_json(AgentKind::Claude, Decision::Allow)
         );
     }

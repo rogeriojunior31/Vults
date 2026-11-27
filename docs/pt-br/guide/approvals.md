@@ -1,5 +1,5 @@
 # Aprovando pela ilha
-<!-- source: e06562592158 -->
+<!-- source: 3576ef50a9bf -->
 
 Quando o Claude Code, o Codex, o OpenCode, o Qwen Code ou o Copilot CLI pede permissão para uma chamada de
 ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o
@@ -214,6 +214,17 @@ notificação): nada esconde um card pelo qual um agente está esperando.
 
 Se o app estiver fechado ou sem responder, o hook não responde nada em milissegundos e todo agente
 pergunta no terminal dele, como de costume.
+
+<a id="a-plan"></a>
+
+## Um plano
+
+Quando o Claude Code termina de planejar, o card dele mostra o plano inteiro. **Allow** começa o
+plano com a sessão perguntando como antes; **Allow and accept edits** começa e deixa essa sessão
+editar arquivos sem perguntar até terminar, a escolha que o próprio terminal do Claude Code oferece.
+Os comandos dela continuam vindo como cards, os destrutivos inclusive, e o log de auditoria guarda
+a escolha numa linha própria ([ADR 0002](../../adr/0002-permissions.md)). **Deny** mantém o plano em
+andamento.
 
 <a id="claude-codes-auto-mode"></a>
 <a id="auto-mode-and-questions"></a>

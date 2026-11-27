@@ -19,6 +19,7 @@ const island = createIsland(document.getElementById("island")!, {
   textQuestionDepart: () => questions.depart(),
   decide: (request, decision) => void Bridge.decide(request, decision),
   decideAlways: (request) => void Bridge.decideAlways(request),
+  decidePlan: (request) => void Bridge.decidePlan(request),
   answer: (request, answers) => void Bridge.questionAnswer(request, answers),
   release: (request) => void Bridge.questionRelease(request),
   skip: (request) => void Bridge.cardSkip(request),

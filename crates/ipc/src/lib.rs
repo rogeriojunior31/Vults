@@ -39,6 +39,8 @@ pub struct ReplyHandle(mpsc::Sender<Signal>);
 enum Signal {
     Ack,
     Decide(Decision),
+    /// Allow, and the agent accepts the session's edits (a Claude Code plan's own choice).
+    AllowAcceptingEdits,
     Answer(Vec<Answer>),
     Decline,
 }
@@ -67,6 +69,11 @@ impl ReplyHandle {
     /// Only ever called from a human's click (enforced in `core`).
     pub fn decide(&self, decision: Decision) {
         let _ = self.0.try_send(Signal::Decide(decision));
+    }
+
+    /// Allows a plan, and asks the agent to accept the session's edits without asking.
+    pub fn allow_accepting_edits(&self) {
+        let _ = self.0.try_send(Signal::AllowAcceptingEdits);
     }
 
     /// The user's replies to a question, one per question (checked in `core`).
@@ -110,6 +117,8 @@ impl LocalReply {
                 match signal {
                     Signal::Ack => continue,
                     Signal::Decide(d) => return Local::Decide(d),
+                    // A session Vults drives keeps its own mode: the plan is a plain allow.
+                    Signal::AllowAcceptingEdits => return Local::Decide(Decision::Allow),
                     Signal::Answer(a) => return Local::Answer(a),
                     Signal::Decline => return Local::Decline,
                 }
@@ -377,6 +386,14 @@ async fn handle<S: AsyncRead + AsyncWrite + Unpin>(mut conn: S, incoming: mpsc::
             id,
             decision,
             reason: None,
+            then: None,
+        },
+        Some(Signal::AllowAcceptingEdits) => Reply::Decision {
+            v,
+            id,
+            decision: Decision::Allow,
+            reason: None,
+            then: Some(protocol::Then::AcceptEdits),
         },
         Some(Signal::Answer(answers)) => Reply::Answer { v, id, answers },
         _ => return,

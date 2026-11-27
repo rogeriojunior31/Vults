@@ -99,6 +99,9 @@ function shownAt(request: string): number {
   return at;
 }
 
+/** A Claude Code plan's card, the only one that may also accept the session's edits. */
+export const isPlan = (s: SessionView, ask: ApprovalView): boolean => s.agent === "claude" && ask.tool === "ExitPlanMode";
+
 const DEFAULT_KEYS: Record<string, string> = { allow: "Ctrl+Alt+Y", deny: "Ctrl+Alt+N" };
 
 /** The keys the desktop bound, by shortcut id, as a button shows them ("Ctrl+Alt+Y"). */
@@ -114,6 +117,8 @@ export interface CardActions {
   decide(request: string, decision: "allow" | "deny"): void;
   /** Allow, and every identical request in this project from now on. */
   decideAlways(request: string): void;
+  /** A Claude Code plan allowed, and its session accepts edits without asking (ADR 0002). */
+  decidePlan(request: string): void;
   /** The replies to a question card, one per question. */
   answer(request: string, answers: Answer[]): void;
   /** "Reply in the terminal": the card goes, the agent's terminal asks. */
@@ -371,10 +376,11 @@ function sessionBody(
       if (!approval) break;
       let sent = false;
       const shown = shownAt(approval.request);
-      const answer = (d: "allow" | "deny" | "always") => () => {
+      const answer = (d: "allow" | "deny" | "always" | "plan") => () => {
         if (sent || performance.now() - shown < ARM_MS) return;
         sent = true;
-        if (d === "always") actions.decideAlways(approval.request);
+        if (d === "plan") actions.decidePlan(approval.request);
+        else if (d === "always") actions.decideAlways(approval.request);
         else actions.decide(approval.request, d);
       };
       const always = el("button", { class: "btn ghost-btn", onclick: answer("always") }, el("span", { text: t("Always allow") }));
@@ -411,6 +417,12 @@ function sessionBody(
             ? (() => { const b = button(t("Allow"), "secondary danger", answer("allow"), clickOnly()); b.classList.add("allow-by-click"); return b; })()
             : button(t("Allow"), "primary", answer("allow"), kbd(actions.keys.allow)),
           ruleFolder && !approval.cut && !destructive ? always : null,
+          // Claude Code's own plan choice: one click, said on the button (ADR 0002).
+          isPlan(s, approval)
+            ? Object.assign(el("button", { class: "btn ghost-btn", onclick: answer("plan") }, el("span", { text: t("Allow and accept edits") })), {
+                title: t("Allow the plan, and this session edits files without asking until it ends, as Claude Code's own terminal offers. Its commands still come as cards."),
+              })
+            : null,
         ),
         el("div", { class: "expiry" }, el("span", { class: "expiry-text" }), el("span", { class: "expiry-bar" })),
       ];

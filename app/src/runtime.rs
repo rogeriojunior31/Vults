@@ -1204,6 +1204,12 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                         h.decide(decision);
                     }
                 }
+                Effect::RespondPlan { request } => {
+                    tracing::info!("plan allowed, accepting edits");
+                    if let Some(h) = waiting.remove(&request) {
+                        h.allow_accepting_edits();
+                    }
+                }
                 Effect::AnswerQuestion { request, answers } => {
                     tracing::info!(count = answers.len(), "question answered");
                     if let Some(h) = waiting.remove(&request) {
@@ -1606,6 +1612,25 @@ pub async fn decide_always(
     inbox
         .0
         .send(Msg::User(Intent::DecideAlways {
+            request: RequestId(request),
+        }))
+        .await
+        .map_err(|_| ())
+}
+
+/// A click on a plan's "Allow and accept edits": the core takes it for a Claude Code plan only.
+#[tauri::command]
+pub async fn decide_plan(
+    window: tauri::Webview,
+    request: String,
+    inbox: tauri::State<'_, Inbox>,
+) -> Result<(), ()> {
+    if !card_host(&window) {
+        return Err(());
+    }
+    inbox
+        .0
+        .send(Msg::User(Intent::DecidePlan {
             request: RequestId(request),
         }))
         .await
