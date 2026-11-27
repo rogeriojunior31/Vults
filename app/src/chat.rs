@@ -396,17 +396,17 @@ fn settle_in_route(
     settle(policies, access, folder, agent, ask, outside)
 }
 
-/// What the user's choice answers before a card (ADR 0002). Their policies speak first, as on the
-/// island: a deny denies, an allow allows, an ask asks. Full access then allows the rest, but never
-/// a destructive call (ADR 0002), nor what a policy asks first, nor anything once the conversation
-/// read content from outside: a page's words could be steering the call.
+/// What the user's choice answers before a card. Their policies speak first, as on the island: a
+/// deny denies, an allow allows. Full access is the user's choice to be asked nothing: it allows
+/// every other call, whatever it is and whatever the conversation read; only a policy of theirs
+/// that denies still denies.
 fn settle(
     policies: &[vults_core::policies::Active],
     access: settings::ChatAccess,
     folder: &str,
     agent: vults_core::AgentKind,
     ask: &vults_agents::driver::Ask,
-    outside: bool,
+    _outside: bool,
 ) -> Option<vults_chat::Settled> {
     use vults_chat::{Answer, Settled, SettledBy};
     use vults_core::policies::{self, Verdict};
@@ -429,17 +429,11 @@ fn settle(
     match policies::decide(policies, &call) {
         Verdict::Deny { consent } => Some(by_policy(Answer::Deny, consent)),
         Verdict::Allow { consent } => Some(by_policy(Answer::Allow, consent)),
-        Verdict::Ask
-            if access == settings::ChatAccess::Full
-                && !outside
-                && policies::why_ask(policies, &call).is_none() =>
-        {
-            Some(Settled {
-                answer: Answer::Allow,
-                by: SettledBy::FullAccess,
-                consent: None,
-            })
-        }
+        Verdict::Ask if access == settings::ChatAccess::Full => Some(Settled {
+            answer: Answer::Allow,
+            by: SettledBy::FullAccess,
+            consent: None,
+        }),
         Verdict::Ask => None,
     }
 }
@@ -4058,9 +4052,16 @@ mod tests {
             settled_profile(&[], Full, Claude, &list, false),
             Some((true, true))
         );
+        // Full access asks nothing: not a destructive call, not after the chat read from outside.
         let wipe = call("Bash", "command", "rm -rf /tmp/work");
-        assert!(settle_in_route(Some(Full), &[], Ask, "/home/u/site", Claude, &wipe, false).is_none());
-        assert!(settle_in_route(Some(Full), &[], Ask, "/home/u/site", Claude, &list, true).is_none());
+        assert_eq!(
+            settled_profile(&[], Full, Claude, &wipe, false),
+            Some((true, true))
+        );
+        assert_eq!(
+            settled_profile(&[], Full, Claude, &list, true),
+            Some((true, true))
+        );
     }
 
     #[test]
@@ -4080,13 +4081,16 @@ mod tests {
                 "{cmd}"
             );
         }
-        // A destructive one still asks, hidden in a block or not.
+        // Full access asks nothing, a destructive call or a network one included, and after the
+        // chat read from outside (`gh` used to switch full access off for the conversation).
         let wipe = call(
             "PowerShell",
             "command",
             "Get-ChildItem *.log | ForEach-Object { Remove-Item $_ }",
         );
-        assert_eq!(settled(&[], Full, Claude, &wipe, false), None);
+        assert_eq!(settled(&[], Full, Claude, &wipe, false), Some((true, true)));
+        let gh = call("PowerShell", "command", "gh run list -R me/repo -L 3");
+        assert_eq!(settled(&[], Full, Claude, &gh, true), Some((true, true)));
     }
 
     #[test]
@@ -4144,17 +4148,15 @@ mod tests {
             None,
             "a policy allows only Claude Code's calls"
         );
-        // Full access: the rest runs, but a destructive command still asks (ADR 0002), and what a
-        // policy denies or asks first still does.
+        // Full access: everything runs, destructive commands and what a policy asks first
+        // included, and after the conversation read from outside. Only a policy's deny denies.
         assert_eq!(settled(&p, Full, Claude, &ls, false), Some((true, true)));
         assert_eq!(settled(&p, Full, Codex, &ls, false), Some((true, true)));
-        assert_eq!(settled(&p, Full, Claude, &wipe, false), None);
-        assert_eq!(settled(&p, Full, Claude, &push, false), None);
+        assert_eq!(settled(&p, Full, Claude, &wipe, false), Some((true, true)));
+        assert_eq!(settled(&p, Full, Claude, &push, false), Some((true, true)));
         assert_eq!(settled(&p, Full, Claude, &fetch, false), Some((false, false)));
         assert_eq!(settled(&[], Full, Claude, &ls, false), Some((true, true)));
-        // Once the conversation read from outside, full access gives way to a card; a policy's
-        // own answer still holds.
-        assert_eq!(settled(&p, Full, Claude, &ls, true), None);
+        assert_eq!(settled(&p, Full, Claude, &ls, true), Some((true, true)));
         assert_eq!(settled(&p, Full, Claude, &read, true), Some((true, false)));
     }
 

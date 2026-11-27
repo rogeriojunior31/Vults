@@ -125,8 +125,8 @@ application.
    rule they made, or a policy they wrote, saw as a diff and accepted with a click (destructive
    actions always ask, rules included, a deny beats an allow, every answer is audited). In Zeca's
    chat only, also what they chose in Settings for its cards: their policies, or full access
-   (destructive actions still ask, a policy's deny or ask still holds, content from outside brings
-   cards back, every answer is audited).
+   (the user's choice to be asked nothing: everything runs, only a policy's deny still denies,
+   every answer is audited).
 3. Never write an agent's config without a dated backup, a diff the user saw, and a click.
    Preserve third-party hooks. Never write Codex's `trusted_hash`.
 4. Secrets only in the OS keyring. No telemetry. The app makes a request on its own only when the

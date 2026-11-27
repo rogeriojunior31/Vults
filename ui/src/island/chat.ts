@@ -234,7 +234,7 @@ const EFFORTS: Record<string, string> = {
 const ACCESS: { id: ChatAccess; label: string; about: string }[] = [
   { id: "ask", label: tk("Asks first"), about: tk("A card before every command or edit.") },
   { id: "policies", label: tk("Your policies"), about: tk("Your accepted policies answer what they cover; the rest asks.") },
-  { id: "full", label: tk("Full access"), about: tk("Everything runs without a card, but destructive commands and what a policy denies or asks first. Once the conversation reads from outside, cards ask again.") },
+  { id: "full", label: tk("Full access"), about: tk("Everything runs without a card. Only what a policy of yours denies is refused.") },
 ];
 
 /** How long Zeca takes to swallow a dropped file. */
@@ -2704,7 +2704,7 @@ export class ChatPanel {
 
   /** What full access stops asking, with Cancel (focused) and the grant: the same choice Settings asks. */
   private accessConfirmBlock(): HTMLElement {
-    const about = el("p", { class: "access-confirm-about" }, icon("warning", 13, 2), el("span", { text: t("With full access Zeca runs commands, edits files and reaches the network without asking. Destructive commands still ask; add deny lines to a policy for anything else that must never run.") }));
+    const about = el("p", { class: "access-confirm-about" }, icon("warning", 13, 2), el("span", { text: t("With full access Zeca runs commands, edits files and reaches the network without asking, destructive commands included. Add deny lines to a policy for anything that must never run.") }));
     about.id = "chat-full-access-effect";
     const cancel = el("button", { class: "ghost access-cancel", text: t("Cancel"), onclick: () => { this.accessConfirm = false; this.paintHead(); this.accessButton.focus(); } });
     const grant = el("button", { class: "ghost access-grant", text: t("Turn on full access"), onclick: () => this.saveAccess("full") });
@@ -2726,7 +2726,7 @@ export class ChatPanel {
     const full = this.access === "full";
     this.accessButton.replaceChildren(...(full ? [icon("warning", 12, 2)] : []), el("span", { text: t(now.label) }), icon("chevronDown", 11, 2.2));
     this.accessButton.title = full
-      ? t("Full access: commands and edits run without a card. Destructive ones, and what a policy denies or asks first, still ask.")
+      ? t("Full access: commands and edits run without a card. Only what a policy of yours denies is refused.")
       : this.opts.specialist ? t("Access for this profile") : t("Who answers Zeca's cards in this chat.");
     this.accessMenu.classList.toggle("on", this.accessOpen && !api);
     if (!this.accessOpen) { this.accessConfirm = false; return; }

@@ -308,10 +308,10 @@ does not change the permission checks. Collapsing a card never grants access.
 - **Your policies**: the [policies](approvals.md#policies) you accepted answer the chat's calls as
   they answer Claude Code's on the island. A deny denies, an allow allows (Claude Code's calls,
   inside the conversation's folder), the rest asks.
-- **Full access**: choosing it, in Settings or in the chat's menu, asks you to confirm first; then everything runs with no card, but a destructive command (`rm`, a forced push)
-  still asks, what a policy denies is denied and what a policy asks first still asks. Once the conversation has read content
-  from outside (a web page, a fetch, an MCP tool), its cards ask again until it ends: a page's words
-  could be steering it. Add `deny` lines to a policy for what must never run.
+- **Full access**: choosing it, in Settings or in the chat's menu, asks you to confirm first; then
+  nothing asks: every command and edit runs with no card, destructive ones included, and after the
+  conversation read a web page, a command's network output or an MCP tool. Only what a policy of
+  yours denies is refused: add `deny` lines to a policy for what must never run.
 
 The chat says each answer given this way (*Allowed by your policy*, *Denied by your policy*, *Ran
 with full access*), and the audit log keeps it. Its chip, beside the model (amber with a warning sign under full access),
@@ -447,8 +447,8 @@ while keeping the editable draft. Inbox copies are private and existing original
 
 The existing API file formats still apply: supported images/text, and PDFs on the Anthropic wire.
 Unsupported files or text larger than 512 KB are named rather than inlined. Saved API history keeps
-attachment names, never their bytes. Attached content is outside input; in CLI conversations,
-permission cards ask again before actions under full access. Files do not enable API tools, GitHub
+attachment names, never their bytes. Attached content is outside input: with **Asks first** or
+**Your policies** the cards say so; full access still asks nothing. Files do not enable API tools, GitHub
 or project access. Specialist drag-and-drop is not added in this slice; use its paperclip.
 
 The unsent choice stays with that profile while the app runs and survives closing the Nest or

@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 2cbbf5300292 -->
+<!-- source: 17b821be914e -->
 
 Os painéis laterais redimensionáveis seguem o ponteiro que iniciou o arraste, ignoram toques adicionais e encerram o arraste quando a janela perde o foco. O cancelamento preserva a largura atual e mantém os rascunhos. Quando o espaço limita um painel, o arraste e o redimensionamento pelo teclado partem da largura visível; reduzir apenas o espaço disponível não sobrescreve a largura salva. Os controles de redimensionar e recolher usam a mesma cor de foco de teclado que o restante do tema selecionado.
 
@@ -344,11 +344,10 @@ orientação não muda as verificações de permissão. Recolher um cartão nunc
 - **Your policies**: as [políticas](approvals.md#policies) que você aceitou respondem as chamadas do
   chat como respondem as do Claude Code na ilha. Um deny nega, um allow permite (chamadas do Claude
   Code, dentro da pasta da conversa), o resto pergunta.
-- **Full access**: ao escolher, nas Configurações ou no menu do chat, você confirma antes; depois tudo roda sem card, mas um comando destrutivo (`rm`, um push forçado) ainda
-  pergunta, o que uma política nega é negado e o que uma política manda perguntar ainda pergunta. Depois que a conversa lê conteúdo de
-  fora (uma página web, um fetch, uma ferramenta MCP), os cards dela voltam a perguntar até ela
-  acabar: as palavras de uma página podem estar conduzindo a conversa. Adicione linhas `deny` a uma
-  política para o que nunca deve rodar.
+- **Full access**: ao escolher, nas Configurações ou no menu do chat, você confirma antes; depois
+  nada pergunta: todo comando e edição roda sem card, os destrutivos inclusive, e também depois de a
+  conversa ler uma página web, a saída de rede de um comando ou uma ferramenta MCP. Só o que uma
+  política sua nega é recusado: adicione linhas `deny` a uma política para o que nunca deve rodar.
 
 O chat diz cada resposta dada assim (*Allowed by your policy*, *Denied by your policy*, *Ran with
 full access*), e o log de auditoria guarda. O chip dele, ao lado do modelo (âmbar com um sinal de aviso
@@ -504,7 +503,7 @@ os arquivos originais existentes nunca são substituídos.
 Valem os formatos de arquivo já suportados pela API: imagens/texto compatíveis e PDFs no protocolo
 Anthropic. Arquivos incompatíveis ou textos maiores que 512 KB são apenas nomeados, sem conteúdo
 embutido. O histórico salvo da API mantém nomes dos anexos, nunca seus bytes. Anexos são conteúdo
-externo; em conversas por CLI, cards voltam a perguntar antes de ações sob acesso total. Arquivos
+externo: com **Asks first** ou **Your policies** os cards avisam; o acesso total continua sem perguntar nada. Arquivos
 não habilitam ferramentas da API, GitHub ou acesso ao projeto. Arrastar arquivos para especialistas
 não é adicionado nesta etapa; use seu clipe.
 

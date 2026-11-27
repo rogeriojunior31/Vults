@@ -388,7 +388,7 @@ function approvalsPage(): HTMLElement[] {
     ...(chatAccess === "ask" ? [] : [el("div", { class: "approvals-banner" },
       icon("warning", 14, 2),
       el("span", { text: chatAccess === "full"
-        ? t("Zeca's chat runs with full access: its commands and edits run without a card. Destructive commands, and what a policy denies or asks first, still ask.")
+        ? t("Zeca's chat runs with full access: its commands and edits run without a card. Only what a policy of yours denies is refused.")
         : t("Zeca's chat follows your policies: what they allow runs without a card.") }),
       button(t("Chat & voice"), () => choosePage("chat")))]),
     el("h2", { text: t("What was answered") }),
@@ -1746,9 +1746,9 @@ function chatPage(): HTMLElement[] {
         t("Asks first: a card before every command or edit. Your policies: the policies you accepted in Approvals answer what they cover, and the rest asks. Full access: everything runs without a card, but destructive commands and what a policy denies or asks first; once a conversation reads from outside (a web page, a fetch, an MCP tool), its cards ask again. Every answer is in the audit log. Holds at once."),
       ),
       ...(askingFull && chatAccess !== "full"
-        ? [fullAccessConfirm(t("With full access Zeca runs commands, edits files and reaches the network without asking. Destructive commands still ask; add deny lines to a policy for anything else that must never run."))]
+        ? [fullAccessConfirm(t("With full access Zeca runs commands, edits files and reaches the network without asking, destructive commands included. Add deny lines to a policy for anything that must never run."))]
         : chatAccess === "full"
-          ? [el("p", { class: "note warn with-icon" }, icon("warning", 14, 2), el("span", { text: t("With full access Zeca runs commands, edits files and reaches the network without asking. Destructive commands still ask; add deny lines to a policy for anything else that must never run.") }))]
+          ? [el("p", { class: "note warn with-icon" }, icon("warning", 14, 2), el("span", { text: t("With full access Zeca runs commands, edits files and reaches the network without asking, destructive commands included. Add deny lines to a policy for anything that must never run.") }))]
           : []),
       ...(accessNote ? [el("p", { class: "note error", text: accessNote })] : []),
     ),
