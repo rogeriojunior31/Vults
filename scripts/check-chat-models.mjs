@@ -378,7 +378,7 @@ for (const surface of ["island", "nest"]) {
   const trigger = nodes(engine).find(node => node.classList.contains("model"));
   trigger.listeners.click();
   assert.equal(trigger.title === "", surface === "island", "Quick explains a pinned model inside its menu, without a hovering tooltip blocking choices");
-  assert.ok(nodes(engine).some(node => node.textContent.includes("A conversation keeps its model")) === (surface === "island"));
+  assert.ok(!nodes(engine).some(node => node.textContent.includes("A conversation keeps its model")), "A started conversation may change model and effort");
   assert.equal(chat.element.classList.contains("has-messages"), true, "Restored messages get the full conversation height");
 }
 console.log("check-chat-models: both surfaces keep the greeting in the empty state only, API capability notice survives");

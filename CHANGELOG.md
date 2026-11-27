@@ -19,6 +19,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Added
 
+- **Zeca's chat**: change the model and effort in the middle of a conversation; the next turn uses them and the conversation goes on.
 - **Zeca's chat, full access**: the agent runs in its own mode that asks nothing (Claude Code's `bypassPermissions`, Codex's `never`), switched on or off from the next turn without restarting the conversation.
 - **A plan's card**: **Change plan…** sends the plan back with your words, and Claude plans again ([Approvals](docs/guide/approvals.md#a-plan)).
 - **Antigravity**: when it asks you something (`ask_question`), its bird waits for you with the question's sound and text.

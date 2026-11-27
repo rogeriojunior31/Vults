@@ -282,6 +282,8 @@ pub trait AgentDriver: Send + std::fmt::Debug {
     fn spec(&self) -> &Spec;
     /// Full access turned on or off: it takes effect from the next turn, the conversation going on.
     fn set_full_access(&mut self, _on: bool) {}
+    /// Another model or effort: from the next turn, the conversation going on.
+    fn set_pick(&mut self, _model: Option<String>, _effort: Option<Effort>) {}
     /// A handle that can stop this driver's turns while `send` holds the driver.
     fn interrupter(&self) -> Arc<dyn Interrupter>;
     /// Gets ready for turns (a long-lived process starts here); a no-op for an agent that runs one

@@ -132,6 +132,10 @@ impl AgentDriver for ClaudeDriver {
     fn set_full_access(&mut self, on: bool) {
         self.spec.full_access = on;
     }
+    fn set_pick(&mut self, model: Option<String>, effort: Option<vults_agents::driver::Effort>) {
+        self.spec.model = model;
+        self.spec.effort = effort;
+    }
     fn spec(&self) -> &Spec {
         &self.spec
     }
@@ -188,6 +192,10 @@ impl AgentDriver for CodexDriver {
     fn set_full_access(&mut self, on: bool) {
         self.spec.full_access = on;
     }
+    fn set_pick(&mut self, model: Option<String>, effort: Option<vults_agents::driver::Effort>) {
+        self.spec.model = model;
+        self.spec.effort = effort;
+    }
     fn spec(&self) -> &Spec {
         &self.spec
     }
@@ -237,7 +245,7 @@ impl CodexDriver {
         let Some(server) = self.server.as_mut() else {
             return Err("Codex: no app-server".into());
         };
-        let result = server.turn(input, sink, &self.stop, self.spec.full_access).await;
+        let result = server.turn(input, sink, &self.stop, &self.spec).await;
         if result.is_err() {
             // A dead or confused server is restarted next turn and resumes the same thread.
             self.server = None;

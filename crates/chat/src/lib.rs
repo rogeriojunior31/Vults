@@ -1027,17 +1027,20 @@ impl Chat {
         true
     }
 
-    /// The model and effort a CLI runs with (none: its own default); only before the first turn,
-    /// so a conversation never changes models midway. A name the CLI could misread is dropped.
+    /// The model and effort a CLI runs with (none: its own default), any time: changed midway, the
+    /// next turn runs with them and the conversation goes on. A name the CLI could misread is dropped.
     pub fn set_pick(&mut self, model: Option<String>, effort: Option<Effort>) -> bool {
-        if self.started() {
-            return false;
-        }
         let model = model.filter(|m| valid_model(m));
         if self.spec.model != model || self.spec.effort != effort {
-            self.spec.model = model;
+            self.spec.model = model.clone();
             self.spec.effort = effort;
-            self.forget();
+            // Started, the driver takes it for its next turn; before, a driver made with the old
+            // pick goes.
+            let started = self.started();
+            match self.driver.as_mut().filter(|_| started) {
+                Some(driver) => driver.set_pick(model, effort),
+                None => self.forget(),
+            }
         }
         true
     }
@@ -1472,7 +1475,7 @@ mod tests {
     }
 
     #[test]
-    fn the_pick_is_fixed_once_the_conversation_starts_and_never_a_flag() {
+    fn the_pick_changes_midway_and_is_never_a_flag() {
         let tmp = std::env::temp_dir();
         let mut chat = Chat::new(Provider::Claude, tmp.clone());
         assert!(chat.set_pick(Some("--dangerously-skip-permissions".into()), Some(Effort::High)));
@@ -1483,8 +1486,12 @@ mod tests {
             (Some("sonnet"), Some(Effort::Max))
         );
         chat.driver = Some(Box::new(drivers::ClaudeDriver::resumed(Spec::in_dir(tmp), "s")));
-        assert!(!chat.set_pick(Some("opus".into()), None));
-        assert_eq!(chat.spec.model.as_deref(), Some("sonnet"));
+        // Started: the next turn runs with the new model, the same session going on.
+        assert!(chat.set_pick(Some("opus".into()), None));
+        assert_eq!(chat.spec.model.as_deref(), Some("opus"));
+        let driver = chat.driver.as_ref().unwrap();
+        assert_eq!(driver.spec().model.as_deref(), Some("opus"));
+        assert_eq!(driver.session(), Some("s"));
         // Before the first turn, an effort alone drops a driver made with the old one.
         let mut chat = Chat::new(Provider::Claude, std::env::temp_dir());
         chat.driver = drivers::for_cli(Provider::Claude, chat.spec.clone());

@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 412fd0d7ad73 -->
+<!-- source: fd5924eef459 -->
 
 Os painéis laterais redimensionáveis seguem o ponteiro que iniciou o arraste, ignoram toques adicionais e encerram o arraste quando a janela perde o foco. O cancelamento preserva a largura atual e mantém os rascunhos. Quando o espaço limita um painel, o arraste e o redimensionamento pelo teclado partem da largura visível; reduzir apenas o espaço disponível não sobrescreve a largura salva. Os controles de redimensionar e recolher usam a mesma cor de foco de teclado que o restante do tema selecionado.
 
@@ -12,8 +12,7 @@ de API que você configurou, veja abaixo); na ilha um controle compacto mostra o
 do modelo, com fundo ao passar o mouse ou enquanto está aberto. Seu menu traz o motor, o modelo
 e o esforço. No Quick, as ações da conversa ficam ao lado do Zeca, e o motor fica abaixo do rascunho.
 Seu menu abre para cima usando a largura do rodapé, com uma única área de rolagem para listas
-longas e opções de motor, modelo e esforço que quebram linha. Uma conversa iniciada explica
-seu modelo fixado dentro do menu, sem uma dica flutuante cobrindo as opções.
+longas e opções de motor, modelo e esforço que quebram linha, também numa conversa já iniciada.
 O Chat no Quick é um pouco mais largo que as outras abas (cerca de 561 pixels lógicos após o zoom).
 O chat vazio no Quick fica baixo: o Zeca usa seu retrato original em 3x ao lado de
 uma saudação, com o rascunho e os controles logo abaixo. O título some e o retrato
@@ -110,9 +109,9 @@ Se uma CLI não conseguir listar os modelos, o seletor mostra uma explicação e
 mantém seu rascunho e sua escolha de modelo. Feche e reabra o seletor para tentar
 de novo; digitar ou atualizar o chat não repete continuamente a consulta que falhou.
 
-A escolha é lembrada por pasta e por motor: uma conversa nova naquela pasta começa com ela. Como a
-pasta, ela fica fixa quando a conversa começa, então uma resposta nunca troca de modelo no meio;
-**New** começa outra. O modelo do chat por API é escolhido em **Settings → Chat & voice**.
+A escolha é lembrada por pasta e por motor: uma conversa nova naquela pasta começa com ela. Ela
+também pode mudar no meio da conversa: o próximo turno roda com o novo modelo e esforço, e a
+conversa continua; uma resposta que já está chegando mantém o que começou usando. O modelo do chat por API é escolhido em **Settings → Chat & voice**.
 
 <a id="referencing-the-flock"></a>
 

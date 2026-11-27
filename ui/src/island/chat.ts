@@ -606,8 +606,8 @@ export class ChatPanel {
       // It is the engine's pill too, in both windows: the engine can change whatever was said.
       this.modelOpen = !this.modelOpen;
       this.menuOpen = this.accessOpen = this.historyOpen = false;
-      // Started (or the API chat), the island's menu shows only the engines: no list to ask for.
-      if (this.modelOpen && !this.started) {
+      // Model and effort change any time: the next turn runs with them (the API chat has none).
+      if (this.modelOpen) {
         if (this.modelsFailed[this.provider]) this.models[this.provider] = undefined;
         this.loadModels(this.provider);
       }
@@ -2651,9 +2651,9 @@ export class ChatPanel {
           : null,
       ),
     ];
-    // A conversation keeps its model, and the API chat has none to pick: only the engines then.
-    if (this.started || api) {
-      if (this.compact && this.started) engines[0].append(el("p", { class: "model-menu-note", text: t("A conversation keeps its model; New starts another.") }));
+    // The API chat has no model to pick here: only the engines then. A started conversation may
+    // change model and effort; the next turn runs with them.
+    if (api) {
       this.modelMenu.replaceChildren(...engines);
       return;
     }

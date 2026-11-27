@@ -11,8 +11,7 @@ API provider you set up, see below); on the island one compact control shows the
 its model, with a background on hover or while open. Its menu holds the engine, model and effort.
 In Quick, conversation actions stay beside Zeca, and the engine sits below the draft.
 Its menu opens upward across the footer width, with one scroll area for long lists
-and wrapping engine, model and effort options. A started conversation explains its pinned
-model inside the menu rather than covering the choices with a tooltip.
+and wrapping engine, model and effort options, in a started conversation too.
 Quick Chat is slightly wider than the other tabs (about 561 logical pixels after zoom).
 An empty Quick Chat stays short: Zeca uses his original 3x portrait beside a greeting,
 with the draft and controls directly below. The title disappears and his portrait uses 2x
@@ -105,8 +104,8 @@ draft and model choice. Close and reopen the picker to try again; typing or
 updating the chat does not keep repeating the failed request.
 
 The choice is remembered per folder and per engine: a new conversation in that folder starts with
-it. Like the folder, it is fixed once the conversation starts, so a reply never changes model
-midway; **New** starts another. The API chat's model is chosen in **Settings → Chat & voice**.
+it. It can change during a conversation too: the next turn runs with the new model and effort,
+and the conversation goes on; a reply already streaming keeps the one it started with. The API chat's model is chosen in **Settings → Chat & voice**.
 
 ## Referencing the flock
 

@@ -1044,11 +1044,14 @@ async fn send(
             .any(|l| l.verb == vults_core::policies::Verb::Deny)
     });
     chat.set_full_access(access == settings::ChatAccess::Full && !denies);
-    if !chat.started() && companion {
+    // The model and effort picked for this folder, every turn: changed midway, the next turn uses them.
+    if companion {
         let pick = pick_for(&app, chat.folder(), chat.provider());
         let effort = pick.effort.as_deref().and_then(vults_chat::Effort::parse);
         let effort = effort.filter(|e| effort_fits(chat.provider(), pick.model.as_deref(), *e));
         chat.set_pick(pick.model, effort);
+    }
+    if !chat.started() && companion {
         let native = settings::native_chat(&app);
         let dir = chat.folder().to_path_buf();
         let state = vults_agents::claude_state_file(&paths::agent_dirs());

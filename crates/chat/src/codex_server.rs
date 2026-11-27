@@ -286,13 +286,22 @@ impl TurnTokens {
 /// later turns too), so full access switched on or off applies at once, without a new server:
 /// full access is Codex's own `never` with no sandbox; otherwise everything but known-safe reads
 /// asks, and writes stay in the folder.
-fn turn_params(thread: &str, input: Vec<Value>, full_access: bool) -> Value {
-    let (approval, sandbox) = if full_access {
+fn turn_params(thread: &str, input: Vec<Value>, spec: &Spec) -> Value {
+    let (approval, sandbox) = if spec.full_access {
         (json!("never"), json!({ "type": "dangerFullAccess" }))
     } else {
         (json!("untrusted"), json!({ "type": "workspaceWrite" }))
     };
-    json!({ "threadId": thread, "input": input, "approvalPolicy": approval, "sandboxPolicy": sandbox })
+    let mut params =
+        json!({ "threadId": thread, "input": input, "approvalPolicy": approval, "sandboxPolicy": sandbox });
+    // The model and effort go with each turn too: changed mid-conversation, the next turn uses them.
+    if let Some(model) = &spec.model {
+        params["model"] = json!(model);
+    }
+    if let Some(effort) = spec.effort {
+        params["effort"] = json!(effort.name());
+    }
+    params
 }
 
 impl AppServer {
@@ -448,9 +457,9 @@ impl AppServer {
         turn: &Turn,
         sink: &dyn Sink,
         stop: &Stop,
-        full_access: bool,
+        spec: &Spec,
     ) -> Result<(), String> {
-        let result = self.run(turn, sink, stop, full_access).await;
+        let result = self.run(turn, sink, stop, spec).await;
         let end = match &result {
             Ok(end) => end.clone(),
             Err(e) => EndReason::Failed(e.clone()),
@@ -464,14 +473,14 @@ impl AppServer {
         turn: &Turn,
         sink: &dyn Sink,
         stop: &Stop,
-        full_access: bool,
+        spec: &Spec,
     ) -> Result<EndReason, String> {
         let mut input = vec![json!({ "type": "text", "text": prompt(turn, None), "text_elements": [] })];
         for image in turn.files.iter().filter(|f| is_image(f)) {
             input.push(json!({ "type": "localImage", "path": image }));
         }
         let id = self
-            .send("turn/start", turn_params(&self.thread, input, full_access))
+            .send("turn/start", turn_params(&self.thread, input, spec))
             .await?;
         let mut tokens = TurnTokens::from(self.seen.clone());
         // The turn's id, from `turn/start`'s answer: what `turn/interrupt` names.
@@ -764,10 +773,21 @@ mod tests {
 
     #[test]
     fn every_turn_carries_codexs_own_mode_for_the_users_access() {
-        let full = turn_params("t1", vec![], true);
+        let full_spec = Spec {
+            full_access: true,
+            model: Some("gpt-5.5".into()),
+            effort: Some(vults_agents::driver::Effort::High),
+            ..Spec::default()
+        };
+        let full = turn_params("t1", vec![], &full_spec);
+        assert_eq!(
+            (full["model"].as_str(), full["effort"].as_str()),
+            (Some("gpt-5.5"), Some("high"))
+        );
         assert_eq!(full["approvalPolicy"], "never");
         assert_eq!(full["sandboxPolicy"], json!({ "type": "dangerFullAccess" }));
-        let asks = turn_params("t1", vec![], false);
+        let asks = turn_params("t1", vec![], &Spec::default());
+        assert!(asks.get("model").is_none() && asks.get("effort").is_none());
         assert_eq!(asks["approvalPolicy"], "untrusted");
         assert_eq!(asks["sandboxPolicy"], json!({ "type": "workspaceWrite" }));
         assert_eq!(asks["threadId"], "t1");
