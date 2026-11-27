@@ -310,11 +310,12 @@ fn usage_of(v: &Value) -> Option<Reported> {
 }
 
 /// The answer to a `can_use_tool` request.
-pub(crate) fn decision(id: &str, allow: bool, input: &Value) -> Value {
+/// A no may carry the user's words (why not, or what they chose for a question): Claude reads them.
+pub(crate) fn decision(id: &str, allow: bool, input: &Value, words: Option<&str>) -> Value {
     let response = if allow {
         json!({ "behavior": "allow", "updatedInput": input })
     } else {
-        json!({ "behavior": "deny", "message": "The user said no in Vults." })
+        json!({ "behavior": "deny", "message": words.unwrap_or("The user said no in Vults.") })
     };
     json!({ "type": "control_response", "response": { "subtype": "success", "request_id": id, "response": response } })
 }
@@ -449,8 +450,9 @@ async fn run(
                         answer = sink.ask(ask) => Some(answer),
                     }
                 };
-                let allow = answer.is_some_and(Answer::allows);
-                let written = write(&mut stdin, &decision(&req, allow, &input)).await;
+                let allow = answer.as_ref().is_some_and(Answer::allows);
+                let words = answer.as_ref().and_then(Answer::words);
+                let written = write(&mut stdin, &decision(&req, allow, &input, words)).await;
                 if answer.is_none() {
                     if deadline.is_none() {
                         let _ = write(&mut stdin, &interrupt_request()).await;
@@ -767,12 +769,12 @@ mod tests {
     #[test]
     fn answers() {
         let input = json!({ "command": "ls" });
-        let yes = decision("r1", true, &input);
+        let yes = decision("r1", true, &input, None);
         assert_eq!(yes["response"]["request_id"], "r1");
         assert_eq!(yes["response"]["response"]["behavior"], "allow");
         assert_eq!(yes["response"]["response"]["updatedInput"], input);
         assert_eq!(
-            decision("r1", false, &input)["response"]["response"]["behavior"],
+            decision("r1", false, &input, None)["response"]["response"]["behavior"],
             "deny"
         );
     }

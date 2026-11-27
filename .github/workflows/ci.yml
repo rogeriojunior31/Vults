@@ -66,6 +66,7 @@ jobs:
           node scripts/check-card-arming.mjs
           node scripts/check-chat-queue.mjs
           node scripts/check-chat-paths.mjs
+          node scripts/check-chat-asks.mjs
       # rustup reads rust-toolchain.toml on the first cargo call.
       - uses: Swatinem/rust-cache@v2
       # Same sequence as CLAUDE.md.

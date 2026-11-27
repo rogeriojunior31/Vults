@@ -150,6 +150,7 @@ node scripts/check-windows-drop.mjs  # Explorer attachment lifecycle and native 
 node scripts/check-card-arming.mjs  # a permission card ignores clicks in its first 600 ms
 node scripts/check-chat-queue.mjs  # messages written mid-turn queue, go after it, return on Stop
 node scripts/check-chat-paths.mjs  # @ lists the folder's files and folders; a dropped folder goes in by path
+node scripts/check-chat-asks.mjs  # an agent's question gets options; typing while a card waits answers it
 cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace

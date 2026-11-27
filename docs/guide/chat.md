@@ -216,6 +216,10 @@ With the memory on, what Zeca remembers and recalls joins as well: see [Zeca's m
   the draft. **↑** in an empty composer brings back your last message,
   to change it or send it again. **/** at the start of the draft lists the chat's commands:
   `/remember`, `/forget`, `/continue` and `/new`, which starts a new conversation at once.
+- When the agent asks you something (Claude Code's `AskUserQuestion`), its card shows each question
+  with its options: a click on each goes back as your answer, or type your own and press **Enter**.
+  Full access never answers a question for you. While a permission card waits, typing and **Enter**
+  answers it too: a no with your words, which Claude Code reads (Codex and ACP agents get a plain no).
 - While Zeca answers, the send button becomes **Stop**: it ends the turn there, and anything the turn
   was waiting on is a no.
 - The reply streams in as it is written. Scroll up to read and it stays where you are, with a

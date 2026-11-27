@@ -85,6 +85,8 @@ export interface ChatBackend {
   setAccess?: (access: ChatAccess) => Promise<void>;
   /** Settings' Chat page, where more access is given. */
   openSettings?: () => void;
+  /** A no with the user's own words, for the card waiting: why not, or what they chose. */
+  reply?: (id: string, text: string) => Promise<void>;
   /** Writes something pasted (an image, long text) to the inbox; its copy's path. */
   paste?: (name: string, bytes: number[]) => Promise<string>;
   /** Files and folders of the conversation's folder matching `query`, by relative path. */
@@ -217,6 +219,10 @@ type Ask = {
   outside: string | null;
   answer?: ChatAnswer;
   cancelled?: boolean;
+  /** The agent's questions (AskUserQuestion), the options picked so far, and the words sent back. */
+  questions?: { question: string; options: string[] }[];
+  picks?: string[];
+  replied?: string;
 };
 
 type ActivityMessage = { who: "activity"; data: ChatActivity; ended: boolean };
@@ -1686,6 +1692,7 @@ export class ChatPanel {
         removed,
         always,
         outside,
+        questions: d.questions?.length ? d.questions : undefined,
       });
       this.announce(t("{name} needs your permission for {tool}.", { name: this.recipientName(), tool }));
       Sound.play("approval");
@@ -1918,6 +1925,14 @@ export class ChatPanel {
       return;
     }
     const text = this.input.value.trim();
+    // A card waits: what is typed now is the answer to it, a no with these words for the agent.
+    const waiting = this.pendingAsk();
+    if (waiting && text && !this.opts.specialist && this.backend.reply) {
+      this.input.value = "";
+      this.grow(); this.keepDraft();
+      this.reply(waiting, text);
+      return;
+    }
     // Written while a reply streams: it waits in the queue and goes when the turn ends well.
     if (this.busy && !this.navigating && !this.historyPending && !this.opts.specialist && (text || this.files.length)) {
       this.queued.push({ text, files: this.files, mentions: this.mentions.filter(m => text.includes(m.token)) });
@@ -2102,6 +2117,39 @@ export class ChatPanel {
     this.keepDraft();
     this.paint();
     this.changed();
+  }
+
+  /** Answers the waiting card with the user's words: a no the agent reads (or their choice). */
+  private reply(m: Ask, text: string): void {
+    if (m.answer || this.pendingAsk() !== m || !this.messages.includes(m) || !this.backend.reply) return;
+    m.answer = "deny";
+    m.replied = text;
+    this.askNodes.delete(m);
+    const version = this.sourceVersion;
+    void this.backend.reply(m.id, text).catch(error => {
+      if (version !== this.sourceVersion || !this.messages.includes(m)) return;
+      m.answer = undefined; m.replied = undefined; this.askNodes.delete(m);
+      this.messages.push({ who: "note", text: String(error) }); this.paint(); this.changed();
+    });
+    this.messages.push({ who: "you", text, files: [] });
+    this.paint();
+    this.reviewApproval();
+    this.changed();
+  }
+
+  /** An option picked for one of the agent's questions; once each has one, they go back together. */
+  private pickOption(m: Ask, index: number, option: string): void {
+    // Only a click the user can see answers, as with Allow and Deny.
+    if (m.answer || !m.questions || !this.enabled || !this.open || document.hidden) return;
+    m.picks = [...(m.picks ?? m.questions.map(() => ""))];
+    m.picks[index] = option;
+    this.askNodes.delete(m);
+    if (m.picks.every(Boolean)) {
+      const text = m.questions.length === 1
+        ? t("I chose: {answer}", { answer: m.picks[0] })
+        : m.questions.map((q, i) => `${q.question} ${m.picks![i]}`).join("\n");
+      this.reply(m, text);
+    } else this.paint();
   }
 
   private answer(m: Ask, answer: ChatAnswer): void {
@@ -2367,6 +2415,20 @@ export class ChatPanel {
     };
     const githubChange = this.provider === "api" && !this.opts.specialist && Object.hasOwn(GITHUB_CONTROL_EFFECT, m.tool);
     const description = githubChange ? t(GITHUB_CONTROL_EFFECT[m.tool]) : m.description;
+    const asking = !!m.questions?.length;
+    const questions = asking
+      ? el("div", { class: "ask-questions" }, ...m.questions!.map((q, i) =>
+          el("div", { class: "ask-question" },
+            el("p", { class: "ask-question-text", text: q.question }),
+            el("div", { class: "ask-options" }, ...q.options.map(option => {
+              const picked = m.picks?.[i] === option;
+              const b = el("button", { class: `btn ${picked ? "primary" : "secondary"}`, text: option, onclick: () => this.pickOption(m, i, option) });
+              b.disabled = !!m.answer;
+              return b;
+            })),
+          )),
+          m.answer ? null : el("p", { class: "ask-hint", text: t("Or type your own answer below and press Enter.") }))
+      : null;
     const operation = el("pre", { class: "code", text: m.full ? `${m.tool} · ${m.full}` : m.target });
     operation.tabIndex = 0;
     operation.setAttribute("role", "region");
@@ -2378,7 +2440,7 @@ export class ChatPanel {
         "div",
         { class: "who" },
         el("span", { class: "ask-heading" },
-          el("span", { class: "ask-state", text: m.answer ? t("Permission answered") : t("Permission required") }),
+          el("span", { class: "ask-state", text: asking ? (m.answer ? t("Question answered") : t("Question")) : m.answer ? t("Permission answered") : t("Permission required") }),
           el("span", { class: "label", text: asks(m.tool, this.opts.specialist ? this.recipientName() : undefined) }),
         ),
         diff,
@@ -2393,22 +2455,23 @@ export class ChatPanel {
             }),
           ]
         : []),
-      ...(description
+      ...(description && !asking
         ? [el("div", { class: "ask-what", text: description })]
         : []),
-      operation,
+      asking ? questions : operation,
       m.answer
         ? el(
             "div",
             { class: `settled-label ${m.answer === "always" ? "allow" : m.answer}` },
             icon(m.answer === "deny" ? "close" : "check", 12, 2.6),
-            el("span", { text: m.cancelled ? t("Cancelled") : settled[m.answer] }),
+            el("span", { text: m.cancelled ? t("Cancelled") : m.replied ? t("Answered: {text}", { text: m.replied }) : settled[m.answer] }),
           )
         : el(
             "div",
             { class: "actions" },
-            button(t("Deny"), !m.always || m.outside ? "primary" : "secondary", "deny", this.keys.deny),
-            !m.always || m.outside
+            asking ? null : button(t("Deny"), !m.always || m.outside ? "primary" : "secondary", "deny", this.keys.deny),
+            asking ? button(t("Skip the question"), "secondary", "deny", undefined)
+            : !m.always || m.outside
               ? (() => { const b = button(t("Allow"), "secondary allow-by-click", "allow", undefined); b.append(clickOnly()); return b; })()
               : button(t("Allow"), "primary", "allow", this.keys.allow),
             m.always ? el("details", { class: "ask-more" }, el("summary", { class: "btn secondary", text: t("More choices") }), always) : null,

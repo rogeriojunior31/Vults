@@ -19,7 +19,7 @@ impl Approver for Fixed {
     fn wait(&self, id: &str, _tool: &str, _target: &str) -> oneshot::Receiver<vults_chat::Answer> {
         let (tx, rx) = oneshot::channel();
         println!("\n  [asked {id}: answering {:?}]", self.0);
-        let _ = tx.send(self.0);
+        let _ = tx.send(self.0.clone());
         rx
     }
 

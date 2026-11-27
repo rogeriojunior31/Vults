@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 68b58ee52fa9 -->
+<!-- source: 07a0baaf3bf8 -->
 
 Os painéis laterais redimensionáveis seguem o ponteiro que iniciou o arraste, ignoram toques adicionais e encerram o arraste quando a janela perde o foco. O cancelamento preserva a largura atual e mantém os rascunhos. Quando o espaço limita um painel, o arraste e o redimensionamento pelo teclado partem da largura visível; reduzir apenas o espaço disponível não sobrescreve a largura salva. Os controles de redimensionar e recolher usam a mesma cor de foco de teclado que o restante do tema selecionado.
 
@@ -237,6 +237,11 @@ Com a memória ligada, o que o Zeca lembra e o que ele recupera também entram: 
   de volta a sua última mensagem, para mudá-la ou enviá-la de novo. **/** no começo do rascunho
   lista os comandos do chat: `/remember`, `/forget`, `/continue` e `/new`, que começa uma conversa
   nova na hora.
+- Quando o agente te pergunta algo (`AskUserQuestion` do Claude Code), o card mostra cada pergunta
+  com as opções: um clique em cada volta como a sua resposta, ou escreva a sua e aperte **Enter**.
+  O acesso total nunca responde uma pergunta por você. Enquanto um card de permissão espera,
+  escrever e apertar **Enter** também responde: um não com as suas palavras, que o Claude Code lê (o
+  Codex e os agentes ACP recebem um não simples).
 - Enquanto o Zeca responde, o botão de enviar vira **Stop**: ele encerra o turno ali, e tudo o que o
   turno estava esperando vira um não.
 - A resposta chega à medida que é escrita. Role para cima para ler e ela fica onde você está, com um

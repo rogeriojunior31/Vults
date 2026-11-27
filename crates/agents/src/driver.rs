@@ -243,18 +243,29 @@ pub struct Ask {
 }
 
 /// A human's answer to an [`Ask`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Answer {
     Deny,
     Allow,
     /// Allow, and the same whole command again in this conversation (Z2): bound to `full` (or
     /// `target` when nothing was cut), gone when the conversation ends.
     AllowInConversation,
+    /// No, with the user's own words for the agent: why not, or what they chose for a question
+    /// it asked. An agent that takes no words reads it as a plain no.
+    Reply(String),
 }
 
 impl Answer {
-    pub fn allows(self) -> bool {
-        !matches!(self, Self::Deny)
+    pub fn allows(&self) -> bool {
+        matches!(self, Self::Allow | Self::AllowInConversation)
+    }
+
+    /// The user's words that go with a no, if any.
+    pub fn words(&self) -> Option<&str> {
+        match self {
+            Self::Reply(words) => Some(words),
+            _ => None,
+        }
     }
 }
 

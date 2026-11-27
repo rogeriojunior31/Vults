@@ -361,7 +361,7 @@ mod tests {
     impl Approver for Human {
         fn wait(&self, _: &str, _: &str, _: &str) -> tokio::sync::oneshot::Receiver<crate::Answer> {
             let (tx, rx) = tokio::sync::oneshot::channel();
-            let _ = tx.send(self.0);
+            let _ = tx.send(self.0.clone());
             rx
         }
     }

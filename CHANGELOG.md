@@ -19,6 +19,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Added
 
+- **Zeca's chat**: an agent's question shows its options to click, and typing while a card waits answers it with your words (a no Claude Code reads); full access never answers a question for you.
 - **Zeca's chat**: paste an image, or text of 32 KB or more, and it is attached as a file.
 - **Zeca's chat**: **/** at the start of the draft lists its commands (`/remember`, `/forget`, `/continue`, `/new`).
 - **Zeca's chat**: **@** lists the conversation folder's files and folders, and a folder dropped on the chat goes into the draft by its path instead of being refused.

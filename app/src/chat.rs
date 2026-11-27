@@ -389,6 +389,10 @@ fn settle_in_route(
     ask: &vults_agents::driver::Ask,
     outside: bool,
 ) -> Option<vults_chat::Settled> {
+    // The agent asking the user something is for the user, whatever the access: never answered here.
+    if ask.tool == vults_protocol::QUESTION_TOOL {
+        return None;
+    }
     let access = profile_access.unwrap_or(access);
     if access == settings::ChatAccess::Ask {
         return None;
@@ -1414,7 +1418,28 @@ pub fn chat_decide(
     if !crate::runtime::card_host(&window) {
         return;
     }
-    decide_for(window.app_handle(), &window, &state, &id, answer, "zeca");
+    decide_for(window.app_handle(), &window, &state, &id, answer, "zeca", None);
+}
+
+/// A no with the user's own words, typed while a card waits or picked for the agent's question:
+/// the agent reads them (Claude Code); one that takes no words gets a plain no. The words are never
+/// kept in the audit log, only that the user said no.
+#[tauri::command]
+pub fn chat_reply(window: tauri::Webview, state: tauri::State<'_, ChatState>, id: String, text: String) {
+    if !crate::runtime::card_host(&window) {
+        return;
+    }
+    let text: String = text.trim().chars().take(4000).collect();
+    let words = (!text.is_empty()).then_some(text);
+    decide_for(
+        window.app_handle(),
+        &window,
+        &state,
+        &id,
+        ChatAnswer::Deny,
+        "zeca",
+        words,
+    );
 }
 
 fn decide_for(
@@ -1424,11 +1449,15 @@ fn decide_for(
     id: &str,
     answer: ChatAnswer,
     subject: &str,
+    words: Option<String>,
 ) {
     tracing::info!(?answer, "chat permission answered");
     let asked = state.waiting.0.lock().ok().and_then(|mut m| m.remove(id));
     if let Some(asked) = asked {
         let (reply, act) = match answer {
+            ChatAnswer::Deny if words.is_some() => {
+                (vults_chat::Answer::Reply(words.unwrap_or_default()), Act::Deny)
+            }
             ChatAnswer::Deny => (vults_chat::Answer::Deny, Act::Deny),
             ChatAnswer::Allow => (vults_chat::Answer::Allow, Act::Allow),
             ChatAnswer::Always => (vults_chat::Answer::AllowInConversation, Act::AllowInConversation),
@@ -2769,7 +2798,7 @@ pub fn specialist_chat_decide(
     let Some(state) = app.state::<SpecialistChatState>().existing(&profile)? else {
         return Ok(());
     };
-    decide_for(&app, &window, &state, &id, answer, &profile);
+    decide_for(&app, &window, &state, &id, answer, &profile, None);
     Ok(())
 }
 

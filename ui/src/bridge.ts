@@ -479,6 +479,8 @@ export type ChatDelta =
       always: boolean;
       /** The conversation read content from outside, through this tool: the card warns. */
       outside: string | null;
+      /** The agent asks the user: each question with its options. */
+      questions?: { question: string; options: string[] }[];
     }
   | { kind: "allowed"; tool: string; target: string }
   /** The user's own choice for the chat answered with no card (ADR 0002). */
@@ -864,6 +866,7 @@ export const Bridge = {
   chatDecide: (id: string, answer: ChatAnswer) => invoke<void>("chat_decide", { id, answer }),
   chatStop: () => invoke<void>("chat_stop"),
   chatReset: (provider: ChatProvider | null, generation?: number) => invoke<{ provider: ChatProvider; generation: number }>("chat_reset", { provider, generation }),
+  chatReply: (id: string, text: string) => invoke<void>("chat_reply", { id, text }),
   chatPaste: (name: string, bytes: number[]) => invoke<string>("chat_paste", { name, bytes }),
   chatPaths: (folder: string | null, query: string) => invoke<{ path: string; dir: boolean }[]>("chat_paths", { folder, query }),
   chatSignIn: (provider: "claude" | "codex") => invoke<void>("chat_sign_in", { provider }),

@@ -347,7 +347,7 @@ pub fn prompts() -> Vec<(&'static str, String)> {
         files: vec![PathBuf::from("/home/me/notes/plan.md")],
         ..Turn::default()
     };
-    let denied = claude::decision("r", false, &serde_json::json!({}));
+    let denied = claude::decision("r", false, &serde_json::json!({}), None);
     vec![
         ("cli-persona", PERSONA.to_string()),
         ("api-persona", api::PERSONA.to_string()),
@@ -568,6 +568,41 @@ pub struct Detail {
     pub always: bool,
     /// The conversation read content from outside (the tool that did): the card warns (Z8).
     pub outside: Option<String>,
+    /// The agent asks the user (`AskUserQuestion`): each question with the options it offers.
+    pub questions: Vec<Question>,
+}
+
+/// One question the agent asks, as the chat's card shows it.
+#[derive(Serialize, Debug, Clone, PartialEq, Default)]
+pub struct Question {
+    pub question: String,
+    pub options: Vec<String>,
+}
+
+/// The questions of an `AskUserQuestion` call, at most 4 with 8 options each, their text capped.
+pub fn questions(tool: &str, input: &serde_json::Value) -> Vec<Question> {
+    if tool != vults_protocol::QUESTION_TOOL {
+        return Vec::new();
+    }
+    let cap = |s: &str| s.chars().take(500).collect::<String>();
+    input["questions"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .take(4)
+        .filter_map(|q| {
+            let question = cap(q["question"].as_str()?.trim());
+            let options = q["options"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(|o| o["label"].as_str().or_else(|| o.as_str()).map(|l| cap(l.trim())))
+                .filter(|l| !l.is_empty())
+                .take(8)
+                .collect();
+            (!question.is_empty()).then_some(Question { question, options })
+        })
+        .collect()
 }
 
 impl Detail {
@@ -581,6 +616,7 @@ impl Detail {
             removed: a.removed,
             always: false,
             outside: None,
+            questions: questions(tool, input),
         }
     }
 }
@@ -596,7 +632,7 @@ pub enum SettledBy {
 }
 
 /// An answer given before any card: what it was, and whose.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Settled {
     pub answer: Answer,
     pub by: SettledBy,
@@ -802,7 +838,7 @@ impl Sink for TurnSink<'_> {
             let settled = self.approver.settle(&a, outside.is_some());
             let ruled = self.rules.lock().is_ok_and(|r| r.allows(&a));
             if let Some(s) = settled.filter(|s| !ruled || !s.answer.allows()) {
-                self.approver.settled(&a.tool, &a.target, s);
+                self.approver.settled(&a.tool, &a.target, s.clone());
                 let _ = self
                     .out
                     .send(Delta::Settled {
@@ -842,7 +878,7 @@ impl Sink for TurnSink<'_> {
             )
             .await;
             if let Ok(mut rules) = self.rules.lock() {
-                rules.note(&a, answer);
+                rules.note(&a, answer.clone());
             }
             answer
         })
@@ -1728,6 +1764,26 @@ mod tests {
     }
 
     #[test]
+    fn a_question_card_carries_the_questions_and_their_options() {
+        let input = serde_json::json!({ "questions": [
+            { "question": "Which database?", "options": [ { "label": "Postgres" }, { "label": "SQLite" } ] },
+            { "question": "  ", "options": [] },
+        ] });
+        let q = questions("AskUserQuestion", &input);
+        assert_eq!(
+            q,
+            vec![Question {
+                question: "Which database?".into(),
+                options: vec!["Postgres".into(), "SQLite".into()]
+            }]
+        );
+        assert!(
+            questions("Bash", &input).is_empty(),
+            "only the agent's question tool"
+        );
+    }
+
+    #[test]
     fn model_names() {
         for ok in ["opus", "gpt-6.1-sol", "claude-sonnet-5-5[1m]", "org/model:latest"] {
             assert!(valid_model(ok), "{ok}");
@@ -1917,7 +1973,7 @@ mod tests {
             if let Ok(mut seen) = self.1.lock() {
                 seen.0 += 1;
             }
-            let _ = tx.send(self.0);
+            let _ = tx.send(self.0.clone());
             rx
         }
         fn ruled(&self, _: &str, target: &str) {
@@ -1984,7 +2040,7 @@ mod tests {
             rx
         }
         fn settle(&self, _: &AgentAsk, outside: bool) -> Option<Settled> {
-            self.0.filter(|_| !outside)
+            self.0.clone().filter(|_| !outside)
         }
         fn settled(&self, _: &str, target: &str, s: Settled) {
             self.1.lock().unwrap().push((target.into(), s.answer.allows()));
@@ -2036,7 +2092,7 @@ mod tests {
             by: SettledBy::Policy,
             consent: Some(7),
         };
-        let approver = Settling(Some(deny), Default::default());
+        let approver = Settling(Some(deny.clone()), Default::default());
         let outside = std::sync::Mutex::new(None);
         rules.lock().unwrap().note(&ls, Answer::AllowInConversation);
         let sink = TurnSink {

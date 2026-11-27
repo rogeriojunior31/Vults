@@ -50,6 +50,7 @@ const nest = createNest(
     signIn: (provider) => Bridge.chatSignIn(provider),
     paths: (folder, query) => Bridge.chatPaths(folder, query),
     paste: (name, bytes) => Bridge.chatPaste(name, bytes),
+    reply: (id, text) => Bridge.chatReply(id, text),
       engines: () => Bridge.chatEngines(),
       openFlock: () => void changeSize(async () => nest.open("flock")),
       pickFiles: (title) => Bridge.chatPickFiles(title),
