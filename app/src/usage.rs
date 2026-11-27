@@ -56,11 +56,30 @@ pub fn set(app: &AppHandle, agent: AgentKind, windows: Vec<Window>) {
 /// Claude has two sources (the account read and each session's statusLine) and either may carry
 /// only one of its windows: replacing the whole list made the other meter vanish and come back.
 /// A read updates the windows it has; another one stays until its own reset, and one with no reset
-/// time (an unused window: 0 %) until a read of its length replaces it.
+/// time (an unused window: 0 %) until a read of its length replaces it. Each session's statusLine
+/// carries its own copy of the limits, so an idle session's older copy never moves a meter back:
+/// for one window, the later reset wins, and for the same reset the higher use (it only grows).
 fn merge(old: &[Window], new: Vec<Window>, now: i64) -> Vec<Window> {
     if new.is_empty() {
         return new;
     }
+    let newer = |kept: &Window, read: &Window| match (kept.resets_at, read.resets_at) {
+        (Some(kept_at), _) if kept_at <= now => false,
+        (Some(kept_at), Some(read_at)) => {
+            kept_at > read_at || (kept_at == read_at && kept.used_percent > read.used_percent)
+        }
+        (Some(_), None) => true,
+        (None, _) => false,
+    };
+    let new: Vec<Window> = new
+        .into_iter()
+        .map(|read| {
+            old.iter()
+                .find(|kept| kept.minutes == read.minutes && newer(kept, &read))
+                .cloned()
+                .unwrap_or(read)
+        })
+        .collect();
     let mut windows: Vec<Window> = old
         .iter()
         .filter(|w| !new.iter().any(|n| n.minutes == w.minutes) && w.resets_at.is_none_or(|at| at > now))
@@ -280,6 +299,29 @@ mod tests {
         assert_eq!(
             merge(&[w(10080, 20, None)], vec![w(300, 1, None)], now),
             [w(300, 1, None), w(10080, 20, None)]
+        );
+        // An idle session's older copy never moves a meter back: same reset and less used, an
+        // earlier reset, or no reset at all against a live one.
+        assert_eq!(
+            merge(&five, vec![w(300, 40, Some(now + 600))], now)[0],
+            w(300, 45, Some(now + 600))
+        );
+        assert_eq!(
+            merge(&five, vec![w(300, 90, Some(now - 60))], now)[0],
+            w(300, 45, Some(now + 600))
+        );
+        assert_eq!(
+            merge(&five, vec![w(300, 0, None)], now)[0],
+            w(300, 45, Some(now + 600))
+        );
+        // A newer window replaces it, past its reset anything does.
+        assert_eq!(
+            merge(&five, vec![w(300, 2, Some(now + 900))], now)[0],
+            w(300, 2, Some(now + 900))
+        );
+        assert_eq!(
+            merge(&five, vec![w(300, 50, Some(now + 600))], now)[0],
+            w(300, 50, Some(now + 600))
         );
         // Nothing reported clears: the switch went off.
         assert!(merge(&five, Vec::new(), now).is_empty());

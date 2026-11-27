@@ -28,6 +28,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Fixes
 
+- The plan meters no longer move back when an idle Claude Code session reports its older copy of the limits: for each window, the later reset wins, and for the same reset the higher use.
 - Voice transcription no longer crashes with an illegal instruction on older processors: the packages' speech engine is built for a portable CPU baseline (AVX2 and below) instead of the build machine's own, on Linux as on Windows.
 - On Windows, agents can ask you a text question (`ask_user`): the Claude Code that Vults starts asks by itself, and Settings > Dictation > Agents sets it up for your own Claude Code or Codex. Type the answer, or hold the dictation key shown on the question and speak, as on Linux.
 - On Windows, a specialist with GitHub tools works in the chat instead of refusing every turn.
