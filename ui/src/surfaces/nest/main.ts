@@ -45,6 +45,7 @@ const nest = createNest(
       handoff: (text, folder, generation) => Bridge.continueCommand(text, folder, generation),
       setAccess: (access) => Bridge.setChatAccess(access),
       openSettings: () => void Bridge.openSettings("chat"),
+    setNative: (on) => Bridge.setNativeChat(on),
       engines: () => Bridge.chatEngines(),
       openFlock: () => void changeSize(async () => nest.open("flock")),
       pickFiles: (title) => Bridge.chatPickFiles(title),

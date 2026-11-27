@@ -1071,6 +1071,19 @@ impl Chat {
         }
     }
 
+    /// Where a clean Codex keeps its own home (with [`Settings::Isolated`]); like the folder, only
+    /// before the first turn.
+    pub fn set_state_dir(&mut self, dir: Option<PathBuf>) -> bool {
+        if self.started() || self.is_specialist() {
+            return false;
+        }
+        if self.spec.state_dir != dir {
+            self.spec.state_dir = dir;
+            self.forget();
+        }
+        true
+    }
+
     /// Which of the user's settings a CLI reads; like the folder, only before the first turn.
     pub fn set_settings(&mut self, settings: Settings) -> bool {
         if self.started() || (self.is_specialist() && settings != Settings::Isolated) {

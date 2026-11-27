@@ -83,6 +83,8 @@ export interface ChatBackend {
   setAccess?: (access: ChatAccess) => Promise<void>;
   /** Settings' Chat page, where more access is given. */
   openSettings?: () => void;
+  /** The environment new conversations start in: the user's own setup, or a clean one. */
+  setNative?: (on: boolean) => Promise<void>;
   /** Whether each CLI engine is installed and signed in, for the engine menu. */
   engines?: () => Promise<ChatEngines>;
 }
@@ -417,7 +419,10 @@ export class ChatPanel {
   private readonly setup = el("button", { class: "setup" }, icon("person", 12, 2));
   private readonly setupExplanation = el("p", { class: "setup-explanation" });
   private readonly setupSettings = el("button", { class: "btn setup-settings" });
-  private readonly setupMenu = el("div", { class: "menu setup-menu" }, this.setupExplanation, this.setupSettings);
+  private readonly setupMine = el("button", { class: "setup-choice" });
+  private readonly setupClean = el("button", { class: "setup-choice" });
+  private readonly setupChoices = el("div", { class: "setup-choices" }, this.setupMine, this.setupClean);
+  private readonly setupMenu = el("div", { class: "menu setup-menu" }, this.setupChoices, this.setupExplanation, this.setupSettings);
   private readonly setupBox = el("div", { class: "setup-box" }, this.setup, this.setupMenu);
   private setupOpen = false;
   /** The switch as it is now; the badge keeps what the conversation started with. */
@@ -528,6 +533,15 @@ export class ChatPanel {
       this.paintHead(); this.changed();
     });
     this.setupSettings.addEventListener("click", () => { this.closeMenus(); this.backend.openSettings?.(); });
+    // The environment is chosen before the first message: a conversation keeps what its CLI read.
+    const environment = (on: boolean) => () => {
+      if (this.started || this.native === on || !this.backend.setNative) return;
+      this.backend.setNative(on).then(() => this.setNative(on), () => {});
+    };
+    this.setupChoices.setAttribute("role", "radiogroup");
+    this.setupMine.type = this.setupClean.type = "button";
+    this.setupMine.addEventListener("click", environment(true));
+    this.setupClean.addEventListener("click", environment(false));
     this.input.addEventListener("keydown", (e) => {
       if (e.isComposing || e.keyCode === 229) return;
       if (e.shiftKey && (e.key === "Enter" || e.key === "Tab")) { this.closeMentions(); return; }
@@ -753,7 +767,8 @@ export class ChatPanel {
     this.setup.setAttribute("aria-label", t("Your setup"));
     this.setup.title = t("Your setup");
     this.setupMenu.setAttribute("aria-label", t("Your setup"));
-    this.setupExplanation.textContent = t("Claude Code and Codex read your own setup here: your CLAUDE.md, skills, MCP servers, hooks and allow rules. A project's settings join only in a folder you already trust in Claude Code. Change it in Settings → Chat & voice.");
+    this.setupMine.textContent = t("Your setup");
+    this.setupClean.textContent = t("Clean");
     this.setupSettings.textContent = t("Open Chat settings");
     this.setupSettings.hidden = !this.backend.openSettings;
     this.historyButton.title = t("Conversations");
@@ -2831,7 +2846,21 @@ export class ChatPanel {
     this.element.classList.toggle("chat-api", api);
     this.place.hidden = api;
     this.place.disabled = this.profileBlocked();
-    this.setup.hidden = api || !this.native || !!this.opts.specialist;
+    this.setup.hidden = api || !!this.opts.specialist;
+    this.setup.classList.toggle("clean", !this.native);
+    const setupName = this.native ? t("Your setup") : t("Clean setup");
+    this.setup.title = setupName;
+    this.setup.setAttribute("aria-label", setupName);
+    for (const [button, on] of [[this.setupMine, true], [this.setupClean, false]] as const) {
+      button.setAttribute("role", "radio");
+      button.setAttribute("aria-checked", String(this.native === on));
+      button.classList.toggle("on", this.native === on);
+      button.disabled = this.started || !this.backend.setNative;
+    }
+    this.setupExplanation.textContent = this.native
+      ? t("Claude Code and Codex read your own setup here: your CLAUDE.md, skills, MCP servers, hooks and allow rules. A project's settings join only in a folder you already trust in Claude Code.")
+      : t("Claude Code and Codex start clean here: none of your CLAUDE.md, skills, MCP servers, hooks or rules. Codex gets a home of its own, with your login kept only in memory.");
+    if (this.started) this.setupExplanation.textContent += " " + t("A conversation keeps the setup it started with; New starts another.");
     this.setupBox.hidden = this.setup.hidden;
     if (this.setup.hidden) this.setupOpen = false;
     this.setup.setAttribute("aria-expanded", String(this.setupOpen));

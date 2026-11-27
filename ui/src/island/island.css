@@ -1879,6 +1879,11 @@ body.still .compact.needs::after {
 .setup-menu .setup-explanation { flex: 1 1 auto; min-height: 0; overflow-y: auto; margin: 0; padding: 8px; white-space: normal; overflow-wrap: anywhere; font: var(--text-s)/1.6 var(--font); color: var(--fg-dim); }
 .setup-menu .setup-explanation:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 .setup-menu .setup-settings { flex: none; min-height: 30px; margin: 0 8px 8px; }
+.setup-menu .setup-choices { display: flex; gap: 4px; flex: none; margin: 8px 8px 0; padding: 3px; border-radius: 10px; background: var(--float); }
+.setup-menu .setup-choice { flex: 1; min-height: 28px; border: 0; border-radius: 8px; background: transparent; color: var(--fg-dim); font: var(--text-s) var(--font); cursor: pointer; }
+.setup-menu .setup-choice.on { background: var(--bg); color: var(--fg); box-shadow: 0 0 0 1px var(--line); }
+.setup-menu .setup-choice:disabled { cursor: default; }
+.setup-menu .setup-choice:disabled:not(.on) { opacity: 0.5; }
 .place[hidden],
 .setup[hidden] {
   display: none;

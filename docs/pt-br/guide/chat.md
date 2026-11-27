@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: fd5924eef459 -->
+<!-- source: 70be5635b44e -->
 
 Os painéis laterais redimensionáveis seguem o ponteiro que iniciou o arraste, ignoram toques adicionais e encerram o arraste quando a janela perde o foco. O cancelamento preserva a largura atual e mantém os rascunhos. Quando o espaço limita um painel, o arraste e o redimensionamento pelo teclado partem da largura visível; reduzir apenas o espaço disponível não sobrescreve a largura salva. Os controles de redimensionar e recolher usam a mesma cor de foco de teclado que o restante do tema selecionado.
 
@@ -393,8 +393,11 @@ valem em qualquer pasta. Os cards continuam perguntando o que suas regras não l
 o `defaultMode` das suas configurações, e os seus hooks nunca fazem o chat aparecer como uma sessão
 de agente.
 
-Desligue em **Settings → Chat & voice → Your Claude Code and Codex setup**, e o Claude não lê nada disso; o
-Codex então só deixa de fora os seus hooks. O interruptor vale para a próxima conversa. Bom saber:
+Escolha por conversa no ícone de pessoa junto aos controles do chat: **Your setup** ou **Clean**,
+antes da primeira mensagem (a escolha também vira o padrão das próximas, como o interruptor em
+**Settings → Chat & voice → Your Claude Code and Codex setup**). No limpo, o Claude não lê nada
+disso, e o Codex começa numa pasta própria: nada do seu `config.toml`, servidores MCP, skills, hooks
+ou `AGENTS.md`, com o seu login guardado só na memória. Bom saber:
 
 - `claude -p` pula a pergunta de confiança, então um repositório que você acabou de clonar não
   consegue trazer regras ou hooks próprios.
@@ -402,7 +405,6 @@ Codex então só deixa de fora os seus hooks. O interruptor vale para a próxima
   card.
 - Com o interruptor desligado, o Claude não recebe servidores MCP além do próprio Vults, e nenhuma
   regra salva pula um card.
-- O `config.toml` do Codex ainda traz os servidores MCP dele, e o `AGENTS.md` dele ainda é lido.
 - Uma conversa já em andamento mantém o que leu.
 
 Veja [Segurança](../safety.md) para o resto.

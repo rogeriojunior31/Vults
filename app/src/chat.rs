@@ -1056,7 +1056,11 @@ async fn send(
         let dir = chat.folder().to_path_buf();
         let state = vults_agents::claude_state_file(&paths::agent_dirs());
         let read = tauri::async_runtime::spawn_blocking(move || cli_settings(native, &dir, &state));
-        chat.set_settings(read.await.unwrap_or_default());
+        let settings = read.await.unwrap_or_default();
+        chat.set_settings(settings);
+        // A clean Codex gets a home of its own; with the user's environment, theirs.
+        let clean_codex = chat.provider() == Provider::Codex && settings == vults_chat::Settings::Isolated;
+        chat.set_state_dir(clean_codex.then(|| paths::data_dir().join("chat").join("codex")));
         // Zeca's own tools for Claude Code (M7), the same file for every conversation.
         if chat.provider() == Provider::Claude {
             chat.set_mcp_config(crate::mcp::config_file());

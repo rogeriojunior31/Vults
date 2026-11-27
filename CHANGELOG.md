@@ -19,6 +19,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Added
 
+- **Zeca's chat**: choose **Your setup** or **Clean** per conversation, from the chat itself; a clean Codex now runs in a home of its own, without your config, MCP servers, skills or `AGENTS.md`.
 - **Zeca's chat**: change the model and effort in the middle of a conversation; the next turn uses them and the conversation goes on.
 - **Zeca's chat, full access**: the agent runs in its own mode that asks nothing (Claude Code's `bypassPermissions`, Codex's `never`), switched on or off from the next turn without restarting the conversation.
 - **A plan's card**: **Change plan…** sends the plan back with your words, and Claude plans again ([Approvals](docs/guide/approvals.md#a-plan)).

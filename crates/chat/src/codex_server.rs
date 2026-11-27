@@ -304,10 +304,18 @@ fn turn_params(thread: &str, input: Vec<Value>, spec: &Spec) -> Value {
     params
 }
 
+/// A Codex in its own home, apart from the user's: a specialist always, and Zeca's chat when the user
+/// chose a clean environment (none of their config, MCP servers, skills or AGENTS.md; their login
+/// only in memory).
+fn managed(spec: &Spec) -> bool {
+    spec.role == vults_agents::driver::Role::Specialist
+        || (spec.settings == Settings::Isolated && spec.state_dir.as_ref().is_some_and(|p| p.is_absolute()))
+}
+
 impl AppServer {
     /// Starts the server and opens (or reopens) the conversation.
     pub(crate) async fn start(spec: &Spec, resume: Option<&str>) -> Result<Self, String> {
-        let auth = if spec.role == vults_agents::driver::Role::Specialist {
+        let auth = if managed(spec) {
             Some(crate::codex_isolation::credentials(
                 &crate::codex_isolation::auth_path()?,
             )?)
@@ -396,7 +404,7 @@ impl AppServer {
         auth: Option<Value>,
     ) -> Result<Self, String> {
         let mut cmd = command(spec);
-        let specialist = spec.filter(|s| s.role == vults_agents::driver::Role::Specialist);
+        let specialist = spec.filter(|s| managed(s));
         if let Some(spec) = specialist {
             crate::codex_isolation::prepare(spec, &mut cmd)?;
             if auth.is_none() {
@@ -770,6 +778,29 @@ fn config_overrides(spec: &Spec) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_clean_environment_is_a_codex_home_of_its_own() {
+        let clean = Spec {
+            settings: Settings::Isolated,
+            state_dir: Some(std::env::temp_dir().join("clean")),
+            ..Spec::default()
+        };
+        assert!(managed(&clean));
+        assert!(!managed(&Spec {
+            settings: Settings::User,
+            ..clean.clone()
+        }));
+        assert!(!managed(&Spec {
+            state_dir: None,
+            ..clean
+        }));
+        let specialist = Spec {
+            role: vults_agents::driver::Role::Specialist,
+            ..Spec::default()
+        };
+        assert!(managed(&specialist));
+    }
 
     #[test]
     fn every_turn_carries_codexs_own_mode_for_the_users_access() {

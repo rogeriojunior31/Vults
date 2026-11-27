@@ -348,14 +348,16 @@ read either way. Your allow rules apply in every folder. Cards still ask whateve
 allow, whatever `defaultMode` your settings set, and your hooks never make the chat show up as an
 agent session.
 
-Turn it off in **Settings → Chat & voice → Your Claude Code and Codex setup**, and Claude reads none of it;
-Codex then only leaves out your hooks. The switch applies to the next conversation. Worth knowing:
+Choose it per conversation with the person icon beside the chat controls: **Your setup** or
+**Clean**, before the first message (the choice is also the default for the next ones, as the
+switch in **Settings → Chat & voice → Your Claude Code and Codex setup**). Clean, Claude reads none
+of it, and Codex starts in a home of its own: none of your `config.toml`, MCP servers, skills,
+hooks or `AGENTS.md`, with your login kept only in memory. Worth knowing:
 
 - `claude -p` skips the trust prompt, so a repository you just cloned can't bring rules or hooks of
   its own.
 - An allow rule such as `Bash(npm test:*)` runs a cloned project's test script with no card.
 - With the switch off, Claude gets no MCP servers but Vults' own, and no saved rule skips a card.
-- Codex's `config.toml` still brings its MCP servers, and its `AGENTS.md` is still read.
 - A conversation already running keeps what it read.
 
 See [Safety](../safety.md) for the rest.
