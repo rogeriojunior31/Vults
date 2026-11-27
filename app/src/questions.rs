@@ -6,14 +6,10 @@ use tokio::sync::oneshot;
 use vults_core::questions::{Owner, Revocation, Slot, Ticket};
 use vults_peer::requester::Requester;
 
-// Editing a question by dictation rides the Linux dictation worker; Windows answers are typed.
-#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 mod capture;
 pub(crate) mod install;
 pub(crate) mod transport;
-pub(crate) use capture::invalidate as invalidate_capture;
-#[cfg(target_os = "linux")]
-pub(crate) use capture::{admit_ordinary, cancel as cancel_capture, key};
+pub(crate) use capture::{admit_ordinary, cancel as cancel_capture, invalidate as invalidate_capture, key};
 #[derive(Debug, Default)]
 pub(crate) struct Active {
     live: std::sync::atomic::AtomicBool,
@@ -21,7 +17,6 @@ pub(crate) struct Active {
     access_changed: std::sync::Mutex<Option<Instant>>,
     route: std::sync::Mutex<capture::Routing>,
 }
-#[cfg(target_os = "linux")]
 pub(crate) fn active(app: &AppHandle) -> bool {
     app.try_state::<Active>()
         .is_some_and(|state| state.live.load(std::sync::atomic::Ordering::Acquire))
@@ -65,7 +60,6 @@ const UNAVAILABLE: &str = "The question is no longer available. Ask a new questi
 
 type Answer = Result<String, String>;
 #[derive(Debug)]
-#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 pub(crate) enum Command {
     Open {
         connection: u64,

@@ -1127,6 +1127,8 @@ fn listen_shortcuts(app: &AppHandle) {
         let result = vults_platform::windows_shortcuts::start(
             initial,
             move |status| {
+                questions::cancel_capture(&keys);
+                // Rebinding may not deliver the old key's release.
                 if let Some(state) = keys.try_state::<dictation::State>() {
                     state.shortcuts_changed();
                 }

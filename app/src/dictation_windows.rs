@@ -75,6 +75,10 @@ pub fn key(app: &AppHandle, id: &str, down: bool) {
         cancel(app, true);
         return;
     }
+    // A question on screen takes the key: its words go into the question's draft, never typed.
+    if crate::questions::key(app, id, down) {
+        return;
+    }
     if matches!(id, "talk" | "talk-command") && down {
         crate::doctor::dictation::stop_mic(app);
         crate::voice::cancel(app);
@@ -98,9 +102,9 @@ pub fn key(app: &AppHandle, id: &str, down: bool) {
     let choice = (id == "talk" && down)
         .then(|| cleanup::snapshot(app, &saved, target.as_ref().map(|target| target.window()), false))
         .flatten();
-    let ticket = app
-        .try_state::<State>()
-        .and_then(|state| state.key_at(id, down, std::time::Instant::now()));
+    let ticket = app.try_state::<State>().and_then(|state| {
+        crate::questions::admit_ordinary(app, |_| state.key_at(id, down, std::time::Instant::now())).flatten()
+    });
     drop(saved);
     if let Some(ticket) = ticket {
         ticket.pin_cleanup(choice);
@@ -137,6 +141,7 @@ pub fn key(app: &AppHandle, id: &str, down: bool) {
 }
 pub fn cancel(app: &AppHandle, forget: bool) {
     if forget {
+        crate::questions::cancel_capture(app);
         crate::runtime::cancel_voice_commands(app);
     }
     if let Some(state) = app.try_state::<State>() {

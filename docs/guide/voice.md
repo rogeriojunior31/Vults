@@ -74,8 +74,7 @@ gives you what you said as an editable draft that is not sent anywhere.
 An agent can ask you a question in text and wait for your answer in Quick or the Nest. Type it, or
 hold the dictation key shown on the question and speak; the words go into the draft for you to
 review. Only **Send reply** (or Enter in the editor) sends it. The question expires after two
-minutes, and a permission card always comes first. On Windows you type the answer: dictating into
-a question works on Linux only for now.
+minutes, and a permission card always comes first.
 
 The Claude Code that Vults starts can ask by itself. For your own Claude Code or Codex:
 
