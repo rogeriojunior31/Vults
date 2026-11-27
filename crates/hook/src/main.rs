@@ -141,7 +141,55 @@ fn build_event(
     cwd: Option<std::path::PathBuf>,
     env: impl Fn(&str) -> Option<String>,
 ) -> Option<Event> {
-    vults_hook::build_event(args, raw, cwd, env, parent_pid(), new_id()).map(|event| titled(event, raw))
+    vults_hook::build_event(args, raw, cwd, env, parent_pid(), new_id())
+        .filter(|event| !reviewed_by_codex(event, raw))
+        .map(|event| titled(event, raw))
+}
+
+/// A Codex request its own automatic reviewer decides is not relayed at all: Codex goes on to
+/// that reviewer, and no card holds it for a human.
+fn reviewed_by_codex(event: &Event, raw: &[u8]) -> bool {
+    use std::io::{Seek, SeekFrom};
+    if event.agent != protocol::AgentKind::Codex || event.event != "PermissionRequest" || !event.wants_reply {
+        return false;
+    }
+    let raw = raw.strip_prefix(&[0xEF, 0xBB, 0xBF]).unwrap_or(raw);
+    let Ok(payload) = serde_json::from_slice::<serde_json::Value>(raw) else {
+        return false;
+    };
+    let Some(path) = payload.get("transcript_path").and_then(|p| p.as_str()) else {
+        return false;
+    };
+    // Only Codex's own rollouts, by their real path: a link out of them proves nothing.
+    let home = std::env::var_os("CODEX_HOME")
+        .map(std::path::PathBuf::from)
+        .or_else(|| std::env::home_dir().map(|home| home.join(".codex")));
+    let Some(rollout) = home.and_then(|home| {
+        let rollout = std::fs::canonicalize(path).ok()?;
+        ["sessions", "archived_sessions"]
+            .iter()
+            .filter_map(|dir| std::fs::canonicalize(home.join(dir)).ok())
+            .any(|dir| rollout.starts_with(dir))
+            .then_some(rollout)
+    }) else {
+        return false;
+    };
+    // A regular file only: opening a FIFO would block the agent (rule 1).
+    let Ok(meta) = std::fs::metadata(&rollout) else {
+        return false;
+    };
+    if !meta.is_file() {
+        return false;
+    }
+    let mut tail = Vec::new();
+    let read = std::fs::File::open(&rollout).and_then(|mut file| {
+        file.seek(SeekFrom::Start(
+            meta.len().saturating_sub(vults_hook::ROLLOUT_TAIL),
+        ))?;
+        file.take(vults_hook::ROLLOUT_TAIL).read_to_end(&mut tail)
+    });
+    let turn = payload.get("turn_id").and_then(|t| t.as_str());
+    read.is_ok() && vults_hook::codex_auto_review(&tail, turn)
 }
 
 /// A Claude Code event that may follow a new title carries it, read from the end of the session's

@@ -10,6 +10,10 @@ card that shows exactly what **Allow** authorizes (Antigravity, Cursor, Factory 
 - for an edit, the lines it adds and removes (**+12 −3**). Codex patches show their files and counts
   too.
 
+A Codex turn whose approvals go to Codex's own automatic reviewer (`approvals_reviewer` set to
+`auto_review` or `strict_auto_review`) shows no card: Codex decides those requests itself. Only a
+turn its session file proves automatic skips the card; anything else shows it.
+
 ![A permission card with the whole command, Deny, Allow and Always allow](../assets/island-approval.png)
 
 The card takes the whole width of the island until you answer or explicitly skip it. After an answer it says what happened for a

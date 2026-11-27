@@ -1,5 +1,5 @@
 # Aprovando pela ilha
-<!-- source: 4bb074e9b526 -->
+<!-- source: 67577f520f89 -->
 
 Quando o Claude Code, o Codex, o OpenCode, o Qwen Code ou o Copilot CLI pede permissão para uma chamada de
 ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o
@@ -10,6 +10,11 @@ Antigravity, o Cursor, o Factory Droid, o Hermes Agent e o Kimi Code são as exc
   completo (até quatro linhas, depois ele rola);
 - numa edição, as linhas que ela adiciona e remove (**+12 −3**). Patches do Codex também mostram
   seus arquivos e contagens.
+
+Um turno do Codex cujas aprovações vão para o revisor automático do próprio Codex
+(`approvals_reviewer` em `auto_review` ou `strict_auto_review`) não mostra card: o Codex decide
+esses pedidos sozinho. Só um turno que o arquivo da sessão prova ser automático pula o card;
+qualquer outro mostra.
 
 ![Um card de permissão com o comando inteiro, Deny, Allow e Always allow](../../assets/island-approval.png)
 
