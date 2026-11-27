@@ -122,7 +122,15 @@ impl Service {
             #[cfg(windows)]
             let stream = {
                 if server.connect().await.is_err() {
-                    return;
+                    // A client that came and went fails this instance, never the turn's tools.
+                    let Ok(fresh) = ServerOptions::new()
+                        .reject_remote_clients(true)
+                        .create(&self.path)
+                    else {
+                        return;
+                    };
+                    server = fresh;
+                    continue;
                 }
                 // The next instance before this client is served, so a second call finds one.
                 let Ok(next) = ServerOptions::new()

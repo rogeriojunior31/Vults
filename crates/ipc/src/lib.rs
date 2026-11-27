@@ -270,7 +270,12 @@ async fn serve_pipe(name: String, incoming: mpsc::Sender<Incoming>, slots: Arc<S
             return Ok(());
         }
         if server.connect().await.is_err() {
+            // An instance whose connect failed is not trusted to connect again: retrying on it could
+            // leave every later hook event unheard until the app restarts. A fresh one replaces it.
             tokio::time::sleep(Duration::from_millis(200)).await;
+            if let Ok(fresh) = ServerOptions::new().create(&name) {
+                server = fresh;
+            }
             continue;
         }
         // The next instance before this client is served; one that fails to open is tried again
