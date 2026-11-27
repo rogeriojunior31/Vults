@@ -47,6 +47,17 @@ enum Signal {
     Decline,
 }
 
+impl Signal {
+    /// A human's answer that goes back to the hook. Every answer a click can give is listed here:
+    /// one missing is dropped silently, and the agent asks in its terminal instead.
+    fn is_human(&self) -> bool {
+        match self {
+            Signal::Decide(_) | Signal::AllowAcceptingEdits | Signal::DenyWith(_) | Signal::Answer(_) => true,
+            Signal::Ack | Signal::Decline => false,
+        }
+    }
+}
+
 impl ReplyHandle {
     /// Whether the waiting connection/local driver has already left.
     pub fn is_gone(&self) -> bool {
@@ -447,7 +458,7 @@ async fn wait_for_decision<S: AsyncWrite + Unpin>(
     conn: &mut S,
     id: &str,
 ) -> Option<Signal> {
-    let human = |s: Signal| matches!(s, Signal::Decide(_) | Signal::Answer(_)).then_some(s);
+    let human = |s: Signal| s.is_human().then_some(s);
     match timeout(limits::ACK_TIMEOUT, rx.recv()).await {
         Ok(Some(Signal::Ack)) => {}
         // A click that beats the ack is still a click.
@@ -681,5 +692,42 @@ mod tests {
         let (path, _rx) = start("perms").await;
         let mode = std::fs::metadata(&path).unwrap().permissions().mode() & 0o777;
         assert_eq!(mode, 0o600);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+    use super::*;
+
+    /// Each answer a click can give reaches the hook, past the card's acknowledgement.
+    #[test]
+    fn every_kind_of_click_reaches_the_hook() {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_time()
+            .build()
+            .unwrap();
+        for click in [
+            Signal::Decide(Decision::Allow),
+            Signal::Decide(Decision::Deny),
+            Signal::AllowAcceptingEdits,
+            Signal::DenyWith("Keep the old API.".into()),
+            Signal::Answer(Vec::new()),
+        ] {
+            let name = format!("{click:?}");
+            let (tx, mut rx) = mpsc::channel(4);
+            tx.try_send(Signal::Ack).unwrap();
+            tx.try_send(click).unwrap();
+            let got = runtime.block_on(wait_for_decision(&mut rx, &mut tokio::io::sink(), "r1"));
+            assert!(got.is_some(), "{name} never reached the hook");
+        }
+        let (tx, mut rx) = mpsc::channel(4);
+        tx.try_send(Signal::Ack).unwrap();
+        tx.try_send(Signal::Decline).unwrap();
+        assert!(
+            runtime
+                .block_on(wait_for_decision(&mut rx, &mut tokio::io::sink(), "r1"))
+                .is_none()
+        );
     }
 }
