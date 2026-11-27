@@ -98,3 +98,5 @@ Above all of these:
 - 2026-11-27: a plan's card may allow the plan and switch the session to accept edits, one click
   choosing what Claude Code's own terminal offers; a click answers only a card that shows its whole
   command or plan.
+- 2026-11-27: a plan's card may also send the plan back with what to change: a click's deny that
+  carries the user's words to Claude, which plans again; the audit keeps the act, not the words.

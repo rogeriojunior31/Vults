@@ -1,5 +1,5 @@
 # 0002. Quem responde a uma permissão
-<!-- source: ab59328f32ec -->
+<!-- source: 221359048a14 -->
 
 **Status:** Aceita, 2026-10-04. Consolidada em 2026-10-12 a partir da antiga 0014, da antiga 0017, da antiga 0025 e da
 antiga 0026.
@@ -117,3 +117,6 @@ Acima de tudo isso:
 - 2026-11-27: o card de um plano pode permitir o plano e passar a sessão a aceitar edições, um
   clique escolhendo o que o próprio terminal do Claude Code oferece; um clique só responde a um card
   que mostra o comando ou o plano inteiro.
+- 2026-11-27: o card de um plano também pode devolver o plano com o que mudar: um deny por clique
+  que leva as palavras do usuário ao Claude, que planeja de novo; a auditoria guarda o ato, não as
+  palavras.
