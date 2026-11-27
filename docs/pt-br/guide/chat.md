@@ -224,8 +224,10 @@ Com a memória ligada, o que o Zeca lembra e o que ele recupera também entram: 
 
 ## Escrevendo e lendo
 
-- **Enter** envia, **Shift+Enter** começa uma nova linha. Você pode digitar a próxima mensagem
-  enquanto uma resposta chega, e enviá-la quando a resposta terminar. **↑** com o campo vazio traz
+- **Enter** envia, **Shift+Enter** começa uma nova linha. Enquanto uma resposta chega, **Enter** põe
+  a mensagem numa fila acima do rascunho (**×** tira da fila); quando o turno termina bem, a fila
+  sai, em ordem, um turno para cada uma. Depois de **Stop** ou de um erro nada sai sozinho: as
+  palavras da fila voltam para o rascunho. **↑** com o campo vazio traz
   de volta a sua última mensagem, para mudá-la ou enviá-la de novo.
 - Enquanto o Zeca responde, o botão de enviar vira **Stop**: ele encerra o turno ali, e tudo o que o
   turno estava esperando vira um não.
