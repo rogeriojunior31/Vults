@@ -6,6 +6,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Fixed
 
+- **A plan's card**: **Allow and accept edits** now reaches Claude Code; since 0.1.9 the click was dropped on the way and Claude Code asked in its terminal instead.
 - **Activity**: a day's bar, the busiest day and the grid count turns side by side once, as the week's total does (they added them up, so parallel agents showed more time per day than in the week).
 - **Activity**: a turn still running when Vults quits or updates is kept, ending at its last event, instead of being lost.
 - **Microphones**: a 24-bit microphone (and 8, 32 and 64-bit ones) opens for dictation, voice and meetings instead of failing.
