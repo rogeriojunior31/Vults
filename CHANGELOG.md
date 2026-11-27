@@ -19,6 +19,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Added
 
+- **Zeca's chat**: **@** lists the conversation folder's files and folders, and a folder dropped on the chat goes into the draft by its path instead of being refused.
 - **Zeca's chat**: messages written while a reply comes wait in a queue above the draft and go, in order, when the turn ends well.
 - **Zeca's chat, easy setup**: the engine menu asks Claude Code and Codex whether they are signed in (a keychain login or an API key counts), **Sign in** opens a terminal with the CLI's own sign-in, and an empty chat says when its engine is not installed or not signed in, with **Sign in** and **Check again**.
 - **Zeca's chat**: OpenCode, Qwen Code, Copilot CLI, Kimi Code and every other installed agent that speaks ACP can run the chat, beside Claude Code and Codex.

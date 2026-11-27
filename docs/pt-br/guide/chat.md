@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: e7437b752fbb -->
+<!-- source: f5414dc0cd68 -->
 
 Os painéis laterais redimensionáveis seguem o ponteiro que iniciou o arraste, ignoram toques adicionais e encerram o arraste quando a janela perde o foco. O cancelamento preserva a largura atual e mantém os rascunhos. Quando o espaço limita um painel, o arraste e o redimensionamento pelo teclado partem da largura visível; reduzir apenas o espaço disponível não sobrescreve a largura salva. Os controles de redimensionar e recolher usam a mesma cor de foco de teclado que o restante do tema selecionado.
 
@@ -123,6 +123,12 @@ conversa continua; uma resposta que já está chegando mantém o que começou us
 <a id="referencing-the-flock"></a>
 
 ## Mencionando o bando
+
+Numa conversa com pasta, **@** e algumas letras também listam os arquivos e pastas dela
+(`File: src/main.rs`, `Folder: src/auth`), primeiro. Escolher um coloca o caminho no rascunho como
+texto, como `@src/main.rs`, para o agente abrir onde roda; controle de versão, dependências e
+pastas de build ficam de fora. Uma pasta solta no chat entra do mesmo jeito, pelo caminho completo,
+e nunca é copiada.
 
 Digite **@** no rascunho para encontrar uma sessão ou projeto aberto. Busque pelo projeto,
 agente, pasta ou ID da sessão. **↑/↓** percorrem as sugestões; **Enter**, **Tab** ou um clique

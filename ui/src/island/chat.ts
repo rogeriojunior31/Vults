@@ -85,6 +85,8 @@ export interface ChatBackend {
   setAccess?: (access: ChatAccess) => Promise<void>;
   /** Settings' Chat page, where more access is given. */
   openSettings?: () => void;
+  /** Files and folders of the conversation's folder matching `query`, by relative path. */
+  paths?: (folder: string | null, query: string) => Promise<{ path: string; dir: boolean }[]>;
   /** Opens a terminal running the engine's own sign-in. */
   signIn?: (provider: "claude" | "codex") => Promise<void>;
   /** The environment new conversations start in: the user's own setup, or a clean one. */
@@ -490,7 +492,11 @@ export class ChatPanel {
   private mentions: ChatMention[] = [];
   private sessions: SessionView[] = [];
   private readonly mentionMenu = el("div", { class: "menu mention-menu" });
-  private mentionRows: { label: string; detail: string; mention: ChatMention }[] = [];
+  /** A row is a flock reference (`mention`) or a path of the folder, which goes in as plain text. */
+  private mentionRows: { label: string; detail: string; mention: ChatMention; path?: string }[] = [];
+  /** The folder's paths for the last query asked, so the menu repaints when they arrive. */
+  private pathHits: { folder: string | null; query: string; hits: { path: string; dir: boolean }[] } | null = null;
+  private pathsAsked = 0;
   private mentionIndex = 0;
   private mentionStart = 0;
   private readonly send = el("button", {
@@ -771,7 +777,7 @@ export class ChatPanel {
     this.askNodes = new WeakMap();
     this.input.placeholder = this.opts.specialist ? t("Message {name}…", { name: this.recipientName() }) : t("Ask Zeca…");
     this.input.setAttribute("aria-label", this.input.placeholder);
-    this.input.title = t("Type @ to reference a session or project. References limit this turn's flock reads.");
+    this.input.title = t("Type @ to reference a file, folder, session or project.");
     this.log.setAttribute("aria-label", t("Chat"));
     this.composerHint.textContent = t("Enter sends, Shift+Enter starts a new line, ↑ recalls your last message, and @ references the flock.");
     this.attachLabel.textContent = t("Attach a file");
@@ -1131,8 +1137,34 @@ export class ChatPanel {
       rows.push({ ...this.sessionMention(s), detail: [s.cwd, s.id].filter(Boolean).join(" · ") });
     }
     this.mentionStart = end - (typed.length + 1);
-    this.mentionRows = rows.filter(r => `${r.label} ${r.detail}`.toLocaleLowerCase().includes(query)
-      && !this.mentions.some(m => m.token === r.mention.token)).slice(0, 8);
+    // The conversation folder's files and folders first once something is typed: what the agent
+    // works on. They come from the app; the menu paints again when they arrive.
+    const pathRows: typeof this.mentionRows = [];
+    if (query && this.folder && this.backend.paths) {
+      const hits = this.pathHits;
+      if (hits && hits.folder === this.folder && hits.query === query) {
+        for (const hit of hits.hits) {
+          const token = /[\s"]/u.test(hit.path) ? `@${JSON.stringify(hit.path)}` : `@${hit.path}`;
+          pathRows.push({
+            label: hit.dir ? t("Folder: {path}", { path: hit.path }) : t("File: {path}", { path: hit.path }),
+            detail: this.folder,
+            mention: { token, target: { kind: "project", cwd: this.folder } },
+            path: token,
+          });
+        }
+      } else {
+        const asked = ++this.pathsAsked;
+        const folder = this.folder;
+        void this.backend.paths(folder, query).then(found => {
+          if (asked !== this.pathsAsked) return;
+          this.pathHits = { folder, query, hits: Array.isArray(found) ? found : [] };
+          this.findMentions();
+        }, () => {});
+      }
+    }
+    const flock = rows.filter(r => `${r.label} ${r.detail}`.toLocaleLowerCase().includes(query)
+      && !this.mentions.some(m => m.token === r.mention.token));
+    this.mentionRows = [...pathRows, ...flock].slice(0, 8);
     if (!this.mentionRows.length) { this.closeMentions(); return; }
     this.mentionIndex = Math.max(0, this.mentionRows.findIndex(r => r.mention.token === previous));
     this.paintMentions();
@@ -1170,9 +1202,10 @@ export class ChatPanel {
     const row = this.mentionRows[this.mentionIndex];
     if (!row) return;
     const end = this.input.selectionStart ?? this.input.value.length;
-    const inserted = `${row.mention.token} `;
+    const inserted = `${row.path ?? row.mention.token} `;
     this.input.value = this.input.value.slice(0, this.mentionStart) + inserted + this.input.value.slice(end);
-    this.mentions.push(row.mention);
+    // A path is plain text for the agent, which opens it in the folder; a flock reference is kept.
+    if (!row.path) this.mentions.push(row.mention);
     const caret = this.mentionStart + inserted.length;
     this.input.setSelectionRange(caret, caret);
     this.closeMentions();
@@ -1509,9 +1542,15 @@ export class ChatPanel {
     this.input.focus();
   }
 
-  attach(paths: string[], refused: Refused[] = []): void {
+  attach(paths: string[], refused: Refused[] = [], folders: string[] = []): void {
     this.setDragOver(false);
     this.paintDrop();
+    // A dropped folder goes into the draft by its path, for the agent to look in.
+    if (folders.length && !this.opts.specialist) {
+      const refs = folders.map(f => /[\s"]/u.test(f) ? `@${JSON.stringify(f)}` : `@${f}`).join(" ");
+      this.input.value = this.input.value ? `${this.input.value.replace(/\s+$/u, "")} ${refs} ` : `${refs} `;
+      this.grow(); this.paintSend(); this.keepDraft();
+    }
     for (const r of refused)
       this.messages.push({ who: "note", text: REFUSED[r.reason](r.name) });
     if (paths.length) {

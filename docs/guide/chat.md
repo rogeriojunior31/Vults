@@ -116,6 +116,12 @@ and the conversation goes on; a reply already streaming keeps the one it started
 
 ## Referencing the flock
 
+In a conversation with a folder, **@** and a few letters also list that folder's files and folders
+(`File: src/main.rs`, `Folder: src/auth`), first. Picking one puts its path in the draft as plain
+text, such as `@src/main.rs`, for the agent to open where it runs; version control, dependencies
+and build folders are left out. A folder dropped on the chat goes in the same way, by its full
+path, and is never copied.
+
 Type **@** in the draft to find an open session or project. Search by its project, agent,
 folder or session ID. **↑/↓** move through suggestions; **Enter**, **Tab** or a click inserts
 the selected reference. The draft keeps focus, and selecting never sends a message. **Esc**

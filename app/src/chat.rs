@@ -3109,6 +3109,27 @@ async fn files_engines() -> Engines {
     })
 }
 
+/// Files and folders of the conversation's folder that match what follows `@` in the draft: relative
+/// paths only, never in the chat's own empty folder or a folder that is not there.
+#[tauri::command]
+pub async fn chat_paths(folder: Option<String>, query: String) -> Vec<crate::chat_paths::Hit> {
+    let Some(folder) = folder
+        .map(PathBuf::from)
+        .filter(|f| f.is_absolute() && *f != paths::chat_dir())
+    else {
+        return Vec::new();
+    };
+    tokio::task::spawn_blocking(move || {
+        if folder.is_dir() {
+            crate::chat_paths::find(&folder, &query)
+        } else {
+            Vec::new()
+        }
+    })
+    .await
+    .unwrap_or_default()
+}
+
 /// Opens a terminal running the engine's own sign-in (`claude auth login`, `codex login`): the
 /// login happens there, between the user and the CLI; Vults never sees it.
 #[tauri::command]
@@ -3268,6 +3289,8 @@ pub async fn api_key_clear(window: tauri::Webview, app: AppHandle, provider: Str
 struct Dropped {
     copied: Vec<String>,
     refused: Vec<Refused>,
+    /// Folders dropped: never copied, only named, for the agent to look in where it runs.
+    folders: Vec<String>,
     /// The page whose chat takes them: the island's drop and paperclip, or the Nest's paperclip.
     /// Every page hears the event; only that one attaches them, so nothing waits twice.
     to: &'static str,
@@ -3451,9 +3474,15 @@ fn copy_dropped(paths: &[PathBuf], to: &'static str) -> Dropped {
     let mut out = Dropped {
         copied: Vec::new(),
         refused: Vec::new(),
+        folders: Vec::new(),
         to,
     };
     for path in paths {
+        // A folder goes in by its path: the agent reads what it needs there, nothing is copied.
+        if path.is_absolute() && std::fs::symlink_metadata(path).is_ok_and(|m| m.is_dir()) {
+            out.folders.push(path.to_string_lossy().into_owned());
+            continue;
+        }
         match copy_to_inbox(path) {
             Ok(copy) => out.copied.push(copy),
             Err(reason) => out.refused.push(Refused {

@@ -99,6 +99,7 @@ const island = createIsland(document.getElementById("island")!, {
     setNative: (on) => Bridge.setNativeChat(on),
     switchEngine: (provider, generation) => Bridge.chatSwitchEngine(provider, generation),
     signIn: (provider) => Bridge.chatSignIn(provider),
+    paths: (folder, query) => Bridge.chatPaths(folder, query),
     engines: () => Bridge.chatEngines(),
     voice: {
       start: (tap, generation) => Bridge.voiceStart(tap, generation),
@@ -173,7 +174,7 @@ Bridge.onChatSync((s) => island.chat.sync(s));
 // Every page hears it; the island takes its own drop and paperclip, and the Nest's files when the
 // Nest closed while its chooser was open (they would wait for nobody).
 let nestShown = false;
-Bridge.onFiles((d) => (d.to === "island" || !nestShown) && island.chat.attach(d.copied, d.refused));
+Bridge.onFiles((d) => (d.to === "island" || !nestShown) && island.chat.attach(d.copied, d.refused, d.folders));
 Bridge.onDrag((over) => island.chat.setDragOver(over));
 Bridge.onOpenChat(() => island.chat.toggle(true));
 Bridge.onOpenNow(() => island.openNow());

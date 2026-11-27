@@ -149,6 +149,7 @@ node scripts/check-surface-continuity.mjs  # Nest/Quick handoff, drafts, owners 
 node scripts/check-windows-drop.mjs  # Explorer attachment lifecycle and native transport failures
 node scripts/check-card-arming.mjs  # a permission card ignores clicks in its first 600 ms
 node scripts/check-chat-queue.mjs  # messages written mid-turn queue, go after it, return on Stop
+node scripts/check-chat-paths.mjs  # @ lists the folder's files and folders; a dropped folder goes in by path
 cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
