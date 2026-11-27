@@ -206,6 +206,41 @@ pub fn current_user_sid() -> Option<String> {
     unsafe { token_sid(GetCurrentProcess()) }
 }
 
+/// Runs `create` with security attributes that let only this user, administrators and SYSTEM open
+/// the pipe (`D:P`, nothing inherited): another account on the machine can't even connect, before
+/// the same-user check on each client. Without our SID or a descriptor, `create` gets a null
+/// pointer (the default security), so the pipe still opens and the client check still applies.
+pub fn private_pipe<T>(create: impl FnOnce(*mut std::ffi::c_void) -> T) -> T {
+    use windows::Win32::Security::Authorization::{
+        ConvertStringSecurityDescriptorToSecurityDescriptorW, SDDL_REVISION_1,
+    };
+    use windows::Win32::Security::{PSECURITY_DESCRIPTOR, SECURITY_ATTRIBUTES};
+    use windows::core::HSTRING;
+    let Some(sid) = current_user_sid() else {
+        return create(std::ptr::null_mut());
+    };
+    let sddl = HSTRING::from(format!("D:P(A;;GA;;;SY)(A;;GA;;;BA)(A;;GA;;;{sid})"));
+    let mut sd = PSECURITY_DESCRIPTOR::default();
+    // SAFETY: `sddl` is a valid NUL-terminated string; `sd` receives a LocalAlloc'd descriptor.
+    let made = unsafe {
+        ConvertStringSecurityDescriptorToSecurityDescriptorW(&sddl, SDDL_REVISION_1, &mut sd, None)
+    };
+    if made.is_err() {
+        return create(std::ptr::null_mut());
+    }
+    let mut sa = SECURITY_ATTRIBUTES {
+        nLength: std::mem::size_of::<SECURITY_ATTRIBUTES>() as u32,
+        lpSecurityDescriptor: sd.0,
+        bInheritHandle: false.into(),
+    };
+    let out = create((&raw mut sa).cast());
+    // SAFETY: `sd` came from the conversion above and nothing uses it after the pipe is made.
+    unsafe {
+        let _ = LocalFree(Some(HLOCAL(sd.0)));
+    }
+    out
+}
+
 /// Client side: the process serving `pipe` runs as us.
 pub fn pipe_server_is_same_user(pipe: &impl AsRawHandle) -> bool {
     let mut pid = 0u32;

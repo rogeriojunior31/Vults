@@ -270,16 +270,25 @@ async fn serve_unix(
 }
 
 #[cfg(windows)]
-async fn serve_pipe(name: String, incoming: mpsc::Sender<Incoming>, slots: Arc<Semaphore>) -> io::Result<()> {
-    use tokio::net::windows::named_pipe::ServerOptions;
+/// An instance of the hook's pipe that only this user (and administrators, SYSTEM) may open.
+#[cfg(windows)]
+fn private_pipe(name: &str, first: bool) -> io::Result<tokio::net::windows::named_pipe::NamedPipeServer> {
+    let mut options = tokio::net::windows::named_pipe::ServerOptions::new();
+    options.first_pipe_instance(first).reject_remote_clients(true);
+    // SAFETY: the attributes, when given, outlive the call (`private_pipe` frees them after).
+    vults_peer::private_pipe(|attributes| unsafe {
+        options.create_with_security_attributes_raw(name, attributes)
+    })
+}
 
+async fn serve_pipe(name: String, incoming: mpsc::Sender<Incoming>, slots: Arc<Semaphore>) -> io::Result<()> {
     use std::time::Duration;
     // first_pipe_instance: refuse to serve on a name somebody else already owns. That may be this
     // app's previous run still closing (an update, a restart): waited for, never given up on, or
     // this run would see no hook event for its whole life.
     let mut wait = Duration::from_millis(100);
     let mut server = loop {
-        match ServerOptions::new().first_pipe_instance(true).create(&name) {
+        match private_pipe(&name, true) {
             Ok(server) => break server,
             Err(_) if !incoming.is_closed() => {
                 tokio::time::sleep(wait).await;
@@ -296,7 +305,7 @@ async fn serve_pipe(name: String, incoming: mpsc::Sender<Incoming>, slots: Arc<S
             // An instance whose connect failed is not trusted to connect again: retrying on it could
             // leave every later hook event unheard until the app restarts. A fresh one replaces it.
             tokio::time::sleep(Duration::from_millis(200)).await;
-            if let Ok(fresh) = ServerOptions::new().create(&name) {
+            if let Ok(fresh) = private_pipe(&name, false) {
                 server = fresh;
             }
             continue;
@@ -304,7 +313,7 @@ async fn serve_pipe(name: String, incoming: mpsc::Sender<Incoming>, slots: Arc<S
         // The next instance before this client is served; one that fails to open is tried again
         // (the client meanwhile waits in its buffer), never the end of the server.
         let next = loop {
-            match ServerOptions::new().create(&name) {
+            match private_pipe(&name, false) {
                 Ok(next) => break next,
                 Err(_) if !incoming.is_closed() => tokio::time::sleep(Duration::from_millis(200)).await,
                 Err(e) => return Err(e),

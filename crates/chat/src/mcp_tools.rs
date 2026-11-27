@@ -10,6 +10,17 @@ use tokio::net::UnixListener;
 use tokio::net::windows::named_pipe::{NamedPipeServer, ServerOptions};
 const LIMIT: u64 = 1024 * 1024;
 
+/// An instance of the tools' pipe that only this user (and administrators, SYSTEM) may open.
+#[cfg(windows)]
+fn private_pipe(path: &Path, first: bool) -> std::io::Result<NamedPipeServer> {
+    let mut options = ServerOptions::new();
+    options.first_pipe_instance(first).reject_remote_clients(true);
+    // SAFETY: the attributes, when given, outlive the call.
+    vults_peer::private_pipe(|attributes| unsafe {
+        options.create_with_security_attributes_raw(path, attributes)
+    })
+}
+
 pub(crate) struct Service {
     #[cfg(unix)]
     listener: UnixListener,
@@ -62,11 +73,8 @@ impl Service {
             let sid = vults_peer::current_user_sid().ok_or("Could not start the specialist tool service.")?;
             let path = PathBuf::from(format!("{}-tools-{name}", vults_protocol::pipe_name(&sid)));
             // first_pipe_instance: a name another process made first is never served on.
-            let listener = ServerOptions::new()
-                .first_pipe_instance(true)
-                .reject_remote_clients(true)
-                .create(&path)
-                .map_err(|_| "Could not start the specialist tool service.")?;
+            let listener =
+                private_pipe(&path, true).map_err(|_| "Could not start the specialist tool service.")?;
             // The user's own temp folder, which only they (and administrators) can read.
             let root = std::env::temp_dir().join(format!("vults-tools-{sid}"));
             std::fs::create_dir_all(&root).map_err(|_| "Could not prepare the specialist tool service.")?;
@@ -123,20 +131,14 @@ impl Service {
             let stream = {
                 if server.connect().await.is_err() {
                     // A client that came and went fails this instance, never the turn's tools.
-                    let Ok(fresh) = ServerOptions::new()
-                        .reject_remote_clients(true)
-                        .create(&self.path)
-                    else {
+                    let Ok(fresh) = private_pipe(&self.path, false) else {
                         return;
                     };
                     server = fresh;
                     continue;
                 }
                 // The next instance before this client is served, so a second call finds one.
-                let Ok(next) = ServerOptions::new()
-                    .reject_remote_clients(true)
-                    .create(&self.path)
-                else {
+                let Ok(next) = private_pipe(&self.path, false) else {
                     return;
                 };
                 let stream = std::mem::replace(&mut server, next);

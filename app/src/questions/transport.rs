@@ -70,10 +70,12 @@ pub(crate) async fn serve(path: PathBuf, tx: mpsc::Sender<Command>) -> io::Resul
     use tokio::net::windows::named_pipe::ServerOptions;
     let slots = Arc::new(Semaphore::new(8));
     let create = |first| {
-        ServerOptions::new()
-            .first_pipe_instance(first)
-            .reject_remote_clients(true)
-            .create(&path)
+        let mut options = ServerOptions::new();
+        options.first_pipe_instance(first).reject_remote_clients(true);
+        // SAFETY: the attributes, when given, outlive the call.
+        vults_peer::private_pipe(|attributes| unsafe {
+            options.create_with_security_attributes_raw(&path, attributes)
+        })
     };
     let mut wait = Duration::from_millis(100);
     let mut server = loop {
