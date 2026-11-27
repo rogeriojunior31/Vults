@@ -4,7 +4,7 @@ import { t, tk } from "../../i18n";
 import { button, row } from "./pieces";
 
 /** WebView2 says so in its user agent; WebKitGTK never does. */
-const ON_WINDOWS = navigator.userAgent.includes("Windows");
+const onWindows = () => navigator.userAgent.includes("Windows");
 
 const ACTIONS = [
   ["open", tk("Open the island")], ["next", tk("Next session")], ["previous", tk("Previous session")],
@@ -88,5 +88,5 @@ export function createWindowsShortcuts(port: Port, onReady: () => void = () => {
     return root;
   }
   // The platform, known at once: a failed or pending read must not show Linux rows on Windows.
-  return { render, refresh, supported: () => ON_WINDOWS, desktopEditor: () => state === null, initialize: () => { void refresh(); } };
+  return { render, refresh, supported: onWindows, desktopEditor: () => state === null, initialize: () => { void refresh(); } };
 }
