@@ -214,7 +214,8 @@ With the memory on, what Zeca remembers and recalls joins as well: see [Zeca's m
   message above the draft (**×** takes it out); when the turn ends well the queue goes, in order,
   one turn each. After **Stop** or an error nothing goes on its own: the queued words come back into
   the draft. **↑** in an empty composer brings back your last message,
-  to change it or send it again.
+  to change it or send it again. **/** at the start of the draft lists the chat's commands:
+  `/remember`, `/forget`, `/continue` and `/new`, which starts a new conversation at once.
 - While Zeca answers, the send button becomes **Stop**: it ends the turn there, and anything the turn
   was waiting on is a no.
 - The reply streams in as it is written. Scroll up to read and it stays where you are, with a

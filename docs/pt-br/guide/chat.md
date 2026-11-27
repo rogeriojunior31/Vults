@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: f5414dc0cd68 -->
+<!-- source: 0e636d957766 -->
 
 Os painéis laterais redimensionáveis seguem o ponteiro que iniciou o arraste, ignoram toques adicionais e encerram o arraste quando a janela perde o foco. O cancelamento preserva a largura atual e mantém os rascunhos. Quando o espaço limita um painel, o arraste e o redimensionamento pelo teclado partem da largura visível; reduzir apenas o espaço disponível não sobrescreve a largura salva. Os controles de redimensionar e recolher usam a mesma cor de foco de teclado que o restante do tema selecionado.
 
@@ -234,7 +234,9 @@ Com a memória ligada, o que o Zeca lembra e o que ele recupera também entram: 
   a mensagem numa fila acima do rascunho (**×** tira da fila); quando o turno termina bem, a fila
   sai, em ordem, um turno para cada uma. Depois de **Stop** ou de um erro nada sai sozinho: as
   palavras da fila voltam para o rascunho. **↑** com o campo vazio traz
-  de volta a sua última mensagem, para mudá-la ou enviá-la de novo.
+  de volta a sua última mensagem, para mudá-la ou enviá-la de novo. **/** no começo do rascunho
+  lista os comandos do chat: `/remember`, `/forget`, `/continue` e `/new`, que começa uma conversa
+  nova na hora.
 - Enquanto o Zeca responde, o botão de enviar vira **Stop**: ele encerra o turno ali, e tudo o que o
   turno estava esperando vira um não.
 - A resposta chega à medida que é escrita. Role para cima para ler e ela fica onde você está, com um

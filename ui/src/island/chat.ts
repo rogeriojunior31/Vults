@@ -273,6 +273,14 @@ const REFUSED: Record<Refused["reason"], (name: string) => string> = {
   unreadable: (n) => t("{name} couldn't be read.", { name: n }),
 };
 
+/** The chat's own commands, for the `/` menu: what each does, in a few words. */
+const COMMANDS: { name: string; about: string }[] = [
+  { name: "remember", about: tk("Zeca keeps a fact in his memory") },
+  { name: "forget", about: tk("Zeca drops a fact from his memory") },
+  { name: "continue", about: tk("Go on with a session that stopped in this folder") },
+  { name: "new", about: tk("Start a new conversation") },
+];
+
 /** What a permission asks for, in a few words. */
 function asks(tool: string, name?: string): string {
   if (name) return t("{name} requests {tool}", { name, tool });
@@ -493,7 +501,7 @@ export class ChatPanel {
   private sessions: SessionView[] = [];
   private readonly mentionMenu = el("div", { class: "menu mention-menu" });
   /** A row is a flock reference (`mention`) or a path of the folder, which goes in as plain text. */
-  private mentionRows: { label: string; detail: string; mention: ChatMention; path?: string }[] = [];
+  private mentionRows: { label: string; detail: string; mention: ChatMention; path?: string; command?: string }[] = [];
   /** The folder's paths for the last query asked, so the menu repaints when they arrive. */
   private pathHits: { folder: string | null; query: string; hits: { path: string; dir: boolean }[] } | null = null;
   private pathsAsked = 0;
@@ -1118,6 +1126,20 @@ export class ChatPanel {
     if (!this.enabled) { this.closeMentions(); return; }
     const end = this.input.selectionStart ?? this.input.value.length;
     const before = this.input.value.slice(0, end);
+    // `/` at the start of the draft: the chat's own commands.
+    const slash = /^\/([a-z]*)$/u.exec(before)?.[1];
+    if (slash !== undefined && !this.opts.specialist) {
+      if (this.menuOpen || this.modelOpen || this.accessOpen || this.historyOpen) this.closeMenus();
+      this.mentionStart = 0;
+      this.mentionRows = COMMANDS.filter(c => c.name.startsWith(slash)).map(c => ({
+        label: `/${c.name}`, detail: t(c.about), command: c.name,
+        mention: { token: `/${c.name}`, target: { kind: "project", cwd: "" } },
+      }));
+      if (!this.mentionRows.length) { this.closeMentions(); return; }
+      this.mentionIndex = Math.min(this.mentionIndex, this.mentionRows.length - 1);
+      this.paintMentions();
+      return;
+    }
     const typed = /(?:^|\s)@([^@"\n]*)$/u.exec(before)?.[1];
     if (typed === undefined || this.mentions.length >= 8 || this.input.selectionEnd !== null && this.input.selectionEnd !== undefined && this.input.selectionEnd !== end) {
       this.closeMentions(); return;
@@ -1201,6 +1223,21 @@ export class ChatPanel {
   private pickMention(): void {
     const row = this.mentionRows[this.mentionIndex];
     if (!row) return;
+    if (row.command) {
+      this.closeMentions();
+      // /new acts at once; the others wait for their words.
+      if (row.command === "new") {
+        this.input.value = "";
+        this.grow(); this.paintSend(); this.keepDraft();
+        this.ask("new");
+        return;
+      }
+      this.input.value = `/${row.command} `;
+      const caret = this.input.value.length;
+      this.input.setSelectionRange(caret, caret);
+      this.grow(); this.paintSend(); this.keepDraft(); this.input.focus();
+      return;
+    }
     const end = this.input.selectionStart ?? this.input.value.length;
     const inserted = `${row.path ?? row.mention.token} `;
     this.input.value = this.input.value.slice(0, this.mentionStart) + inserted + this.input.value.slice(end);

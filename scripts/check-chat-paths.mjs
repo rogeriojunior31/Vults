@@ -90,4 +90,14 @@ input.value = "Review";
 panel.attach([], [], ["/work/api/src", "C:\Users\me\My Repo"]);
 assert.equal(input.value, 'Review @/work/api/src @"C:\Users\me\My Repo" ');
 assert.equal(panel.files.length, 0, "a folder is not an attachment");
-console.log("check-chat-paths: @ lists the conversation folder's files and folders and puts the chosen path in the draft; a dropped folder goes in by its path");
+// "/" at the start lists the chat's commands; picking one puts it in the draft.
+await typeAt("/re");
+const commands = nodes(menu()).filter(node => node.tag === "button");
+assert.deepEqual(commands.map(b => b.children[0].textContent), ["/remember"], "only the commands that match");
+commands[0].listeners.click();
+assert.equal(input.value, "/remember ", "the command waits for its words");
+await typeAt("/");
+assert.equal(nodes(menu()).filter(node => node.tag === "button").length, 4, "all four commands");
+await typeAt("Say /re");
+assert.ok(!menu().className.split(" ").includes("on") || !nodes(menu()).some(n => n.tag === "button" && n.textContent.startsWith("/")), "a / mid-sentence is just text");
+console.log("check-chat-paths: @ lists the conversation folder's files and folders and puts the chosen path in the draft; a dropped folder goes in by its path; / lists the chat's commands");
