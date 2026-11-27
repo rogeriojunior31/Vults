@@ -739,6 +739,9 @@ pub enum Input {
         cwd: String,
         prefs: ProjectPrefs,
     },
+    /// The app is quitting: each running turn ends at its last event, so it is kept rather than
+    /// lost with the app's memory (an update, a restart).
+    Closing,
     Tick,
 }
 
@@ -1587,6 +1590,12 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             state.alerts.retain(|a| a.key != key);
             Vec::new()
         }
+        Input::Closing => state
+            .sessions
+            .values_mut()
+            .filter_map(|s| turns::end(s, now, false))
+            .map(Effect::Turn)
+            .collect(),
         Input::Tick => {
             let mut effects = Vec::new();
             state.ledger.sweep(now);

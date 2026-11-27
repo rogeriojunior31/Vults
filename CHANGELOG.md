@@ -4,6 +4,11 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ## Unreleased
 
+### Fixed
+
+- **Activity**: a day's bar, the busiest day and the grid count turns side by side once, as the week's total does (they added them up, so parallel agents showed more time per day than in the week).
+- **Activity**: a turn still running when Vults quits or updates is kept, ending at its last event, instead of being lost.
+
 ## 0.1.9 (2026-11-27)
 
 ### Removed
