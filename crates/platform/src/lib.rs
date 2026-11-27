@@ -7,6 +7,7 @@ pub mod linux;
 #[path = "windows/player_audio.rs"]
 pub mod player_audio;
 pub mod system_audio;
+pub mod terminal;
 
 #[cfg(target_os = "linux")]
 pub mod jump;

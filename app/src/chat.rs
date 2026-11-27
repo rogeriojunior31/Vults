@@ -3059,6 +3059,23 @@ pub struct AcpEngine {
 
 #[tauri::command]
 pub async fn chat_engines() -> Engines {
+    let mut engines = files_engines().await;
+    // The CLI's own word on its login beats the file check (a keychain login or a key counts).
+    let (claude, codex) = tokio::join!(
+        vults_chat::signed_in(Provider::Claude),
+        vults_chat::signed_in(Provider::Codex)
+    );
+    for (state, signed) in [(&mut engines.claude, claude), (&mut engines.codex, codex)] {
+        if *state != "missing"
+            && let Some(signed) = signed
+        {
+            *state = if signed { "signed-in" } else { "installed" };
+        }
+    }
+    engines
+}
+
+async fn files_engines() -> Engines {
     // The folders may wait on the login shell (up to 2 s at start-up): never on the main thread.
     tokio::task::spawn_blocking(|| {
         let dirs = crate::paths::agent_dirs();
@@ -3090,6 +3107,18 @@ pub async fn chat_engines() -> Engines {
         codex: "missing",
         acp: Vec::new(),
     })
+}
+
+/// Opens a terminal running the engine's own sign-in (`claude auth login`, `codex login`): the
+/// login happens there, between the user and the CLI; Vults never sees it.
+#[tauri::command]
+pub fn chat_sign_in(provider: Provider) -> Result<(), String> {
+    let command: &[&str] = match provider {
+        Provider::Claude => &["claude", "auth", "login"],
+        Provider::Codex => &["codex", "login"],
+        _ => return Err("This engine signs in elsewhere.".into()),
+    };
+    vults_platform::terminal::run(command)
 }
 
 fn engine(installed: bool, login: &Path) -> &'static str {

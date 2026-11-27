@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 017b96195d6d -->
+<!-- source: fb4c477b7171 -->
 
 Os painéis laterais redimensionáveis seguem o ponteiro que iniciou o arraste, ignoram toques adicionais e encerram o arraste quando a janela perde o foco. O cancelamento preserva a largura atual e mantém os rascunhos. Quando o espaço limita um painel, o arraste e o redimensionamento pelo teclado partem da largura visível; reduzir apenas o espaço disponível não sobrescreve a largura salva. Os controles de redimensionar e recolher usam a mesma cor de foco de teclado que o restante do tema selecionado.
 
@@ -30,7 +30,9 @@ para priorizar leitura e envio; voltar a uma área mais alta retoma a mesma cena
 
 Os motores vêm em dois grupos, **Your setup** (os
 CLIs do Claude Code e do Codex, cada um *Signed in*, *Installed* ou *Not installed*: o Vults só olha
-se o CLI e o arquivo de login dele estão lá, nunca os lê; depois, cada agente que fala ACP e está
+pergunta ao próprio CLI, `claude auth status` ou `codex login status`, e lê só se ele tem login,
+usando como reserva se o arquivo de login existe; **Sign in** ao lado de um sem login abre um
+terminal com o login do próprio CLI, que o Vults nunca vê; depois, cada agente que fala ACP e está
 instalado aqui, como OpenCode, Qwen Code, Copilot CLI ou Kimi Code, que usa o próprio modelo e pede
 um card antes de cada ferramenta que escreve ou roda) e **Vults harness** (a API, *Ready* com uma chave ou um modelo local),
 com **Engines in Settings ›** embaixo. **New** (**+** na ilha) começa uma conversa nova; a anterior fica na lista (veja

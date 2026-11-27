@@ -438,6 +438,40 @@ impl Provider {
     }
 }
 
+/// Whether the CLI says it is signed in (`claude auth status`, `codex login status`), asked of the
+/// CLI itself so a keychain login or an API key counts too; none when it can't say in time. Only
+/// `loggedIn` is read: nothing about the account is kept.
+pub async fn signed_in(provider: Provider) -> Option<bool> {
+    let args: &[&str] = match provider {
+        Provider::Claude => &["auth", "status"],
+        Provider::Codex => &["login", "status"],
+        Provider::ClaudeApi | Provider::Acp(_) => return None,
+    };
+    let program = if provider == Provider::Claude {
+        "claude"
+    } else {
+        "codex"
+    };
+    let mut cmd = process::command(program);
+    cmd.envs(vults_agents::shell_env())
+        .args(args)
+        .stdin(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .kill_on_drop(true);
+    let out = tokio::time::timeout(std::time::Duration::from_secs(8), cmd.output())
+        .await
+        .ok()?
+        .ok()?;
+    let text = String::from_utf8_lossy(&out.stdout);
+    match provider {
+        Provider::Claude => serde_json::from_str::<serde_json::Value>(&text)
+            .ok()?
+            .get("loggedIn")?
+            .as_bool(),
+        _ => Some(out.status.success() && text.contains("Logged in")),
+    }
+}
+
 /// What the chat calls an ACP agent (`OpenCode`, `Qwen Code`…).
 pub fn acp_title(key: &str) -> Option<&'static str> {
     acp::agent(key).map(|a| a.title)

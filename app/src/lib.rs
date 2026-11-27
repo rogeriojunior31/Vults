@@ -205,6 +205,7 @@ pub fn run() {
             chat::chat_pick_files,
             chat::chat_reset,
             chat::chat_switch_engine,
+            chat::chat_sign_in,
             chat::chat_models,
             chat::chat_conversations,
             chat::specialist_chat_conversations,

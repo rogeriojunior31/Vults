@@ -3684,6 +3684,13 @@ body.still #island .inner:has(.main > .chat) .need-strip.top { animation: none; 
 .engine-dot.codex {
   background: var(--agent-codex);
 }
+.chat-setup-notice { margin: 10px 0 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--float); }
+.chat-setup-notice[hidden] { display: none; }
+.chat-setup-notice p { margin: 0 0 8px; color: var(--fg); font: var(--text-s)/1.5 var(--font); }
+.chat-setup-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.engine-line { display: flex; align-items: stretch; gap: 4px; }
+.engine-line > :first-child { flex: 1; min-width: 0; }
+.engine-line > .engine-sign-in { flex: none; width: auto; padding: 0 10px; color: var(--fg); }
 .engine-dot.acp {
   background: var(--fg-dim);
 }

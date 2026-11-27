@@ -862,6 +862,7 @@ export const Bridge = {
   chatDecide: (id: string, answer: ChatAnswer) => invoke<void>("chat_decide", { id, answer }),
   chatStop: () => invoke<void>("chat_stop"),
   chatReset: (provider: ChatProvider | null, generation?: number) => invoke<{ provider: ChatProvider; generation: number }>("chat_reset", { provider, generation }),
+  chatSignIn: (provider: "claude" | "codex") => invoke<void>("chat_sign_in", { provider }),
   chatSwitchEngine: (provider: ChatProvider, generation?: number) => invoke<OpenedConversation>("chat_switch_engine", { provider, generation }),
   chatCurrent: () => invoke<OpenedConversation | null>("chat_current"),
   chatDraft: () => invoke<ChatDraft>("chat_draft"),

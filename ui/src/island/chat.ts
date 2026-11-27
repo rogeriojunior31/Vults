@@ -85,6 +85,8 @@ export interface ChatBackend {
   setAccess?: (access: ChatAccess) => Promise<void>;
   /** Settings' Chat page, where more access is given. */
   openSettings?: () => void;
+  /** Opens a terminal running the engine's own sign-in. */
+  signIn?: (provider: "claude" | "codex") => Promise<void>;
   /** The environment new conversations start in: the user's own setup, or a clean one. */
   setNative?: (on: boolean) => Promise<void>;
   /** Whether each CLI engine is installed and signed in, for the engine menu. */
@@ -356,7 +358,9 @@ export class ChatPanel {
   private readonly greeting = el("h2", { class: "chat-greeting" });
   private readonly profileNotice = el("p", { class: "chat-profile-notice" });
   private readonly caption = el("p", { class: "chat-caption" });
-  private readonly intro = el("div", { class: "chat-intro" }, this.greeting, this.caption);
+  /** The empty chat's engine not ready: what to do, with its own sign-in a click away. */
+  private readonly setupNotice = el("div", { class: "chat-setup-notice" });
+  private readonly intro = el("div", { class: "chat-intro" }, this.greeting, this.caption, this.setupNotice);
   private readonly suggestions = el("div", { class: "suggestions" });
   private readonly replySuggestions = el("div", { class: "reply-chips" });
   private readonly apiNotice = el("p");
@@ -1011,6 +1015,43 @@ export class ChatPanel {
     } else this.draft(id === "explain" ? t("Explain your last reply more simply.") : t("What should I check next?"));
   }
 
+  /** In an empty chat, says when its engine can't answer yet: not installed, or not signed in. */
+  private paintSetupNotice(): void {
+    const p = this.provider;
+    const state = p === "claude" || p === "codex" ? this.engines?.[p] : undefined;
+    const show = !this.opts.specialist && !this.messages.length && !this.busy && !!state && state !== "signed-in";
+    this.setupNotice.hidden = !show;
+    if (!show || (p !== "claude" && p !== "codex")) { this.setupNotice.replaceChildren(); return; }
+    const name = this.engineName(p);
+    const text = el("p", {
+      text: state === "missing"
+        ? t("{engine} isn't installed on this computer. Install it, then pick it again here.", { engine: name })
+        : t("{engine} is installed but not signed in. Sign in once, in its own terminal, and Zeca can use it.", { engine: name }),
+    });
+    const signIn = state === "installed" && this.backend.signIn
+      ? el("button", { class: "btn", text: t("Sign in"), onclick: () => {
+          this.backend.signIn?.(p).then(() => this.refreshEngines(), () => {
+            this.messages.push({ who: "note", text: t("Could not open a terminal. Run {command} in your own terminal.", { command: p === "claude" ? "claude auth login" : "codex login" }) });
+            this.paint();
+          });
+        } })
+      : null;
+    const check = el("button", { class: "btn", text: t("Check again"), onclick: () => this.refreshEngines() });
+    this.setupNotice.replaceChildren(text, el("div", { class: "chat-setup-actions" }, ...(signIn ? [signIn] : []), check));
+  }
+
+  /** Reads the engines' state again (after a sign-in in the terminal, or on opening). */
+  private refreshEngines(): void {
+    const asked = ++this.enginesAsked;
+    void this.backend.engines?.().then((e) => {
+      if (asked !== this.enginesAsked) return;
+      this.engines = e;
+      this.paintOffers();
+      this.paintHead();
+      this.changed();
+    }, () => {});
+  }
+
   private paintOffers(): void {
     this.greeting.textContent = this.opts.specialist ? this.recipientName() : this.offers?.greeting ?? t("Ask Zeca");
     const api = t("Ask anything, or drop a file on the island. This chat only talks: it can't run commands or open your project.");
@@ -1024,6 +1065,7 @@ export class ChatPanel {
     }
     this.apiNotice.textContent = api;
     this.apiNotice.hidden = this.provider !== "api" || !!this.opts.specialist;
+    this.paintSetupNotice();
     this.intro.hidden = this.compact && (this.messages.length > 0 || this.busy);
     const questions = this.compact || this.opts.specialist ? [] : this.offers?.suggestions ?? (this.provider === "api" ? [] : SUGGESTIONS.map(q => ({ id: q, text: t(q), session: null })));
     this.offerButtons(this.suggestions, questions.map(q => ({ id: q.id, text: q.text })), id => this.chooseSuggestion(id));
@@ -1398,6 +1440,7 @@ export class ChatPanel {
     }
     if (open === this.open) return;
     this.open = open;
+    if (open && !this.engines && !this.opts.specialist) this.refreshEngines();
     this.closeMentions();
     this.paintDrop();
     this.menuOpen = false;
@@ -2682,7 +2725,23 @@ export class ChatPanel {
       );
       if (p === "api")
         b.title = t("{provider} through its API. It only talks: no commands, no edits. Change it in Settings → Chat & voice.", { provider: this.api.label });
-      return this.choice(b, `engine:${p}`, p === this.provider);
+      const chosen = this.choice(b, `engine:${p}`, p === this.provider);
+      // Installed but not signed in: its own sign-in opens in a terminal, between the user and the CLI.
+      if (state === "installed" && (p === "claude" || p === "codex") && this.backend.signIn) {
+        const signIn = el("button", {
+          class: "menu-item engine-sign-in",
+          text: t("Sign in"),
+          onclick: () => {
+            this.backend.signIn?.(p).then(
+              () => { this.engines = null; },
+              () => { this.messages.push({ who: "note", text: t("Could not open a terminal. Run {command} in your own terminal.", { command: p === "claude" ? "claude auth login" : "codex login" }) }); this.paint(); },
+            );
+          },
+        });
+        signIn.title = t("Opens a terminal with {engine}'s own sign-in. Vults never sees your login.", { engine: this.engineName(p) });
+        return el("div", { class: "engine-line" }, chosen, signIn);
+      }
+      return chosen;
     };
     const providers = this.providers();
     const harness = providers.filter((p) => p === "api");

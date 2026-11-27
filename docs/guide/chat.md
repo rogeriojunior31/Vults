@@ -30,7 +30,9 @@ resumes the same scene.
 
 Its engines come in two groups, **Your
 setup** (the Claude Code and Codex CLIs, each *Signed in*, *Installed* or *Not installed*: Vults only
-looks whether the CLI and its login file are there, never reads them; then every agent that speaks
+asks the CLI itself, `claude auth status` or `codex login status`, and reads only whether it is
+signed in, falling back to whether its login file is there; **Sign in** beside one that is not opens
+a terminal with that CLI's own sign-in, which Vults never sees; then every agent that speaks
 ACP and is installed here, such as OpenCode, Qwen Code, Copilot CLI or Kimi Code, which uses its
 own model and asks a card before each tool that writes or runs) and **Vults harness** (the
 API, *Ready* with a key or a local model), with **Engines in Settings ›** under them. **New** (**+** on the island) starts a fresh conversation; the one before stays in the list (see

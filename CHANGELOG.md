@@ -19,6 +19,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Added
 
+- **Zeca's chat, easy setup**: the engine menu asks Claude Code and Codex whether they are signed in (a keychain login or an API key counts), **Sign in** opens a terminal with the CLI's own sign-in, and an empty chat says when its engine is not installed or not signed in, with **Sign in** and **Check again**.
 - **Zeca's chat**: OpenCode, Qwen Code, Copilot CLI, Kimi Code and every other installed agent that speaks ACP can run the chat, beside Claude Code and Codex.
 - **Zeca's chat**: switch between Claude Code, Codex and the API in the middle of a conversation; the other engine takes it over with what was said so far.
 - **Zeca's chat**: choose **Your setup** or **Clean** per conversation, from the chat itself; a clean Codex now runs in a home of its own, without your config, MCP servers, skills or `AGENTS.md`.
