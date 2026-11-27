@@ -1152,7 +1152,7 @@ pub fn set_dictation_microphone<R: tauri::Runtime>(
     save(&next).map_err(|_| "Could not save the dictation microphone.")?;
     apply_change(&app, &mut saved, |settings| *settings = next);
     drop(saved);
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     crate::questions::invalidate_capture(&app);
     let _ = app.emit("settings", serde_json::json!({ "dictationMicrophone": device }));
     Ok(())
@@ -1868,11 +1868,11 @@ pub fn edit(app: &AppHandle, change: impl FnOnce(&mut Settings)) -> Result<(), S
     let changed = apply_change(app, &mut s, change);
     let result = save(&s).map_err(|e| format!("can't save the settings: {e}"));
     drop(s);
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     if changed {
         crate::questions::invalidate_capture(app);
     }
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(any(target_os = "linux", windows)))]
     let _ = changed;
     result
 }

@@ -39,7 +39,7 @@ mod phone;
 mod policies;
 mod pricing;
 mod profiles;
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 mod questions;
 pub mod realtime;
 mod recall;
@@ -134,7 +134,7 @@ pub unsafe fn widen_cli_path() {
 /// Runs this binary as Zeca's MCP server when asked (`vults --zeca-mcp`, M7): true when it did.
 pub fn serve_mcp_if_asked() -> bool {
     let argument = std::env::args().nth(1);
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     if argument.as_deref() == Some(mcp::QUESTIONS_ARG) {
         mcp::stdio::run(true);
         return true;
@@ -178,19 +178,19 @@ pub fn run() {
             #[cfg(windows)]
             windows_drop::file_drop_hover,
             runtime::current_view,
-            #[cfg(target_os = "linux")]
+            #[cfg(any(target_os = "linux", windows))]
             questions::text_question_status,
-            #[cfg(target_os = "linux")]
+            #[cfg(any(target_os = "linux", windows))]
             questions::question_agents_set,
-            #[cfg(target_os = "linux")]
+            #[cfg(any(target_os = "linux", windows))]
             questions::install::question_install_status,
-            #[cfg(target_os = "linux")]
+            #[cfg(any(target_os = "linux", windows))]
             questions::install::question_install_preview,
-            #[cfg(target_os = "linux")]
+            #[cfg(any(target_os = "linux", windows))]
             questions::install::question_install_apply,
-            #[cfg(target_os = "linux")]
+            #[cfg(any(target_os = "linux", windows))]
             questions::text_question_action,
-            #[cfg(target_os = "linux")]
+            #[cfg(any(target_os = "linux", windows))]
             questions::text_question_depart,
             runtime::step_diff,
             runtime::workspace_diff,
@@ -1520,7 +1520,7 @@ fn nest_tab_set(window: tauri::Webview, tab: String) -> Result<(), String> {
     if window.label() != NEST || !valid_nest_tab(&tab) {
         return Err("Invalid Nest navigation state.".into());
     }
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     questions::depart(window.app_handle(), NEST);
     realtime::controls::depart(window.app_handle());
     *NEST_TAB.lock().map_err(|e| e.to_string())? = Some(tab);
@@ -1552,7 +1552,7 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
 }
 
 fn show_nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full: Option<bool>) {
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     {
         questions::depart(app, ISLAND);
         questions::depart(app, NEST);
@@ -1661,7 +1661,7 @@ fn show_nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, 
                             let _ = app2.emit("nest-full", w.is_fullscreen().unwrap_or(false));
                             // Minimized, the Nest is out of sight: the island comes back (ADR 0006).
                             if minimized {
-                                #[cfg(target_os = "linux")]
+                                #[cfg(any(target_os = "linux", windows))]
                                 questions::depart(&app2, NEST);
                                 meetings::cancel(&app2);
                                 realtime::controls::depart(&app2);
@@ -1671,7 +1671,7 @@ fn show_nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, 
                     }
                     tauri::WindowEvent::Focused(focused) => nest_holds(&app2, Some(*focused), None),
                     tauri::WindowEvent::Destroyed => {
-                        #[cfg(target_os = "linux")]
+                        #[cfg(any(target_os = "linux", windows))]
                         questions::depart(&app2, NEST);
                         meetings::cancel(&app2);
                         realtime::controls::depart(&app2);
@@ -2000,7 +2000,7 @@ fn dictation_status(app: AppHandle) -> Option<serde_json::Value> {
     }
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 fn question_surface(app: &AppHandle) -> &'static str {
     let nest = NEST_IN.lock().is_ok_and(|state| state.1);
     if nest && question_visible(app, NEST) {
@@ -2011,7 +2011,7 @@ fn question_surface(app: &AppHandle) -> &'static str {
         ""
     }
 }
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 fn question_visible(app: &AppHandle, surface: &str) -> bool {
     match surface {
         NEST => {

@@ -5,14 +5,27 @@ use std::process::{Command as ProcessCommand, Stdio};
 use tokio::sync::mpsc;
 
 const FIXTURE: &str = "questions::tests::question_process_fixture";
+// The MCP client's end: a Unix socket the relay connects to, or on Windows the relay's own stdio,
+// passed down through the agent it runs under.
+#[cfg(unix)]
+type McpWrite = std::os::unix::net::UnixStream;
+#[cfg(unix)]
+type McpRead = std::os::unix::net::UnixStream;
+#[cfg(windows)]
+type McpWrite = std::process::ChildStdin;
+#[cfg(windows)]
+type McpRead = std::process::ChildStdout;
 #[test]
 fn question_process_fixture() {
     let Ok(role) = std::env::var("VULTS_QUESTION_TEST_ROLE") else {
         return;
     };
     if role == "agent" || role == "external-wrapper" {
-        let status = ProcessCommand::new(std::env::current_exe().unwrap())
-            .args(["--exact", FIXTURE])
+        let mut relay = ProcessCommand::new(std::env::current_exe().unwrap());
+        relay.args(["--exact", FIXTURE]);
+        #[cfg(unix)]
+        relay.stdin(Stdio::null()).stdout(Stdio::null());
+        let status = relay
             .env(
                 "VULTS_QUESTION_TEST_ROLE",
                 if role == "external-wrapper" {
@@ -21,22 +34,25 @@ fn question_process_fixture() {
                     "relay"
                 },
             )
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
             .stderr(Stdio::null())
             .status()
             .unwrap();
         std::process::exit(i32::from(!status.success()));
     }
-    let stream =
-        std::os::unix::net::UnixStream::connect(std::env::var_os("VULTS_QUESTION_TEST_MCP").unwrap())
-            .unwrap();
+    #[cfg(unix)]
+    let (input, output) = {
+        let stream =
+            std::os::unix::net::UnixStream::connect(std::env::var_os("VULTS_QUESTION_TEST_MCP").unwrap())
+                .unwrap();
+        (stream.try_clone().unwrap(), stream)
+    };
+    #[cfg(windows)]
+    let (input, output) = (std::io::stdin(), std::io::stdout());
     let (tx, rx) = std::sync::mpsc::sync_channel(16);
-    let input = stream.try_clone().unwrap();
     std::thread::spawn(move || crate::mcp::stdio::read(std::io::BufReader::new(input), tx));
     crate::mcp::stdio::serve(
         rx,
-        stream,
+        output,
         std::path::Path::new("/"),
         Some(std::env::var_os("VULTS_QUESTION_TEST_SOCKET").unwrap().into()),
         || true,
@@ -47,8 +63,8 @@ fn question_process_fixture() {
 struct Fixture {
     dir: std::path::PathBuf,
     child: std::process::Child,
-    socket: std::os::unix::net::UnixStream,
-    reader: std::io::BufReader<std::os::unix::net::UnixStream>,
+    socket: McpWrite,
+    reader: Option<std::io::BufReader<McpRead>>,
     rx: mpsc::Receiver<super::Command>,
     server: tokio::task::JoinHandle<std::io::Result<()>>,
 }
@@ -57,21 +73,38 @@ impl Fixture {
         Self::with_external(false).await
     }
     async fn with_external(external: bool) -> Self {
-        use std::os::unix::fs::DirBuilderExt;
         let dir = std::env::temp_dir().join(format!(
             "vults-q-{}-{}",
             std::process::id(),
             crate::traces::new_id()
         ));
-        std::fs::DirBuilder::new().mode(0o700).create(&dir).unwrap();
+        #[allow(unused_mut)]
+        let mut private = std::fs::DirBuilder::new();
+        #[cfg(unix)]
+        std::os::unix::fs::DirBuilderExt::mode(&mut private, 0o700);
+        private.create(&dir).unwrap();
         vults_store::Store::open(&dir).unwrap();
+        #[cfg(unix)]
         let question_path = dir.join("questions.sock");
+        #[cfg(windows)]
+        let question_path = std::path::PathBuf::from(format!(
+            "{}-test-{}",
+            transport::path().unwrap().display(),
+            dir.file_name().unwrap().to_string_lossy()
+        ));
         let mcp_path = dir.join("mcp.sock");
+        #[cfg(unix)]
         let listener = std::os::unix::net::UnixListener::bind(&mcp_path).unwrap();
         let (tx, rx) = mpsc::channel(16);
         let server = tokio::spawn(transport::serve(question_path.clone(), tx));
-        let child = ProcessCommand::new(std::env::current_exe().unwrap())
-            .args(["--exact", FIXTURE])
+        let mut agent = ProcessCommand::new(std::env::current_exe().unwrap());
+        agent.args(["--exact", FIXTURE]);
+        #[cfg(unix)]
+        agent.stdin(Stdio::null()).stdout(Stdio::null());
+        #[cfg(windows)]
+        agent.stdin(Stdio::piped()).stdout(Stdio::piped());
+        #[allow(unused_mut)]
+        let mut child = agent
             .env(
                 "VULTS_QUESTION_TEST_ROLE",
                 if external { "external-wrapper" } else { "agent" },
@@ -79,15 +112,20 @@ impl Fixture {
             .env("VULTS_QUESTION_TEST_EXTERNAL", if external { "yes" } else { "" })
             .env("VULTS_QUESTION_TEST_MCP", mcp_path)
             .env("VULTS_QUESTION_TEST_SOCKET", &question_path)
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
             .stderr(Stdio::null())
             .spawn()
             .unwrap();
-        let (socket, _) = listener.accept().unwrap();
-        socket.set_read_timeout(Some(Duration::from_secs(4))).unwrap();
-        socket.set_write_timeout(Some(Duration::from_secs(4))).unwrap();
-        let reader = std::io::BufReader::new(socket.try_clone().unwrap());
+        #[cfg(unix)]
+        let (socket, reader) = {
+            let (socket, _) = listener.accept().unwrap();
+            socket.set_read_timeout(Some(Duration::from_secs(4))).unwrap();
+            socket.set_write_timeout(Some(Duration::from_secs(4))).unwrap();
+            let reader = socket.try_clone().unwrap();
+            (socket, reader)
+        };
+        #[cfg(windows)]
+        let (socket, reader) = (child.stdin.take().unwrap(), child.stdout.take().unwrap());
+        let reader = Some(std::io::BufReader::new(reader));
         let mut fixture = Self {
             dir,
             child,
@@ -108,9 +146,16 @@ impl Fixture {
         self.socket.flush().unwrap();
     }
     fn read(&mut self) -> Value {
-        let mut line = String::new();
-        self.reader.read_line(&mut line).unwrap();
-        serde_json::from_str(&line).unwrap()
+        loop {
+            let mut line = String::new();
+            self.reader.as_mut().unwrap().read_line(&mut line).unwrap();
+            // On Windows the relay answers on its stdout, which the test harness also writes to.
+            if cfg!(windows) && !line.starts_with(['{', '[']) {
+                assert!(!line.is_empty(), "the relay closed its stdout");
+                continue;
+            }
+            return serde_json::from_str(&line).unwrap();
+        }
     }
     async fn next(&mut self) -> super::Command {
         tokio::time::timeout(Duration::from_secs(4), self.rx.recv())
@@ -159,6 +204,7 @@ impl Fixture {
 }
 impl Drop for Fixture {
     fn drop(&mut self) {
+        #[cfg(unix)]
         let _ = self.socket.shutdown(std::net::Shutdown::Both);
         let _ = self.child.kill();
         let _ = self.child.wait();
@@ -301,7 +347,10 @@ async fn a_lost_stdout_ack_is_consumed_and_never_reported_as_sent() {
     let (work, action) = Fixture::action(&mut hub, &token, "send", "Consumed reply");
     let (connection, records) = work.unwrap();
     assert!(persist_at(fixture.dir.clone(), records).await);
+    // The client stops reading: the relay's reply can no longer be written.
+    #[cfg(unix)]
     fixture.socket.shutdown(std::net::Shutdown::Read).unwrap();
+    fixture.reader = None;
     hub.handle(
         super::Command::Audited(connection, true),
         crate::ISLAND,

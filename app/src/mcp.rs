@@ -9,21 +9,21 @@
 //! Nest, and Claude Code asks the user before each tool call, as for any MCP tool.
 
 use std::io::Write;
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", windows)))]
 use std::io::{BufRead, Read};
 use std::path::{Path, PathBuf};
 
 use serde_json::{Value, json};
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 pub(crate) mod stdio;
 
 /// The argument that runs this binary as the server.
 pub const ARG: &str = "--zeca-mcp";
 /// The server's name in the MCP config: Claude Code shows its tools as `mcp__vults-zeca__<tool>`.
 pub const NAME: &str = "vults-zeca";
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 pub const QUESTIONS_ARG: &str = "--questions-mcp";
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 pub const QUESTIONS_NAME: &str = "vults-questions";
 /// The protocol versions this server speaks, newest first: a client asking for another gets the
 /// newest.
@@ -258,7 +258,7 @@ fn all_tools() -> Value {
     ])
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 fn questions_on(external: bool) -> bool {
     let pid = std::fs::read_to_string(flock_file())
         .ok()
@@ -279,14 +279,14 @@ fn questions_on(external: bool) -> bool {
 fn offered_tools() -> Value {
     #[allow(unused_mut)]
     let mut tools = tools(memory_on());
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     if let Some(tools) = tools.as_array_mut() {
         tools.extend(question_tools(questions_on(false)));
     }
     tools
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 fn question_tools(enabled: bool) -> Vec<Value> {
     let mut tools = Vec::new();
     if enabled {
@@ -302,7 +302,7 @@ fn question_tools(enabled: bool) -> Vec<Value> {
     tools
 }
 /// External setup never exposes the chat's flock, journal or memory operations.
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 fn question_answer(msg: &Value, enabled: bool) -> Option<Value> {
     if let Some(batch) = msg.as_array() {
         let replies: Vec<_> = batch.iter().filter_map(|m| question_answer(m, enabled)).collect();
@@ -451,12 +451,12 @@ fn answer(msg: &Value, folder: &Path) -> Option<Value> {
 /// Runs the server on stdin and stdout until the client closes stdin. The conversation's folder is
 /// the one Claude Code started it in.
 pub fn run() {
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     stdio::run(false);
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(any(target_os = "linux", windows)))]
     run_legacy();
 }
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", windows)))]
 fn run_legacy() {
     let folder = std::env::current_dir().unwrap_or_default();
     let mut input = std::io::stdin().lock();
@@ -528,7 +528,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     fn external_discovery_is_empty_when_off_and_never_exposes_chat_tools() {
         let list = json!({"jsonrpc":"2.0","id":1,"method":"tools/list"});
         assert_eq!(

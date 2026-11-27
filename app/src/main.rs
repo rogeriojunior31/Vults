@@ -21,7 +21,7 @@ fn main() {
     }
     // Servers this build doesn't have: an MCP client that starts one gets a quiet exit, never a
     // second app (the single-instance hand-off would open Settings in the running one).
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(any(target_os = "linux", windows)))]
     if matches!(
         std::env::args().nth(1).as_deref(),
         Some("--specialist-mcp" | "--questions-mcp")

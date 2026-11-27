@@ -1,5 +1,5 @@
 # Voz
-<!-- source: ca1904c21195 -->
+<!-- source: 6e577f6ab28b -->
 
 Três jeitos de usar a voz além do [ditado](dictation.md): comandos que controlam o bando e o
 computador, uma conversa falada com o Zeca e respostas faladas à pergunta de um agente. A voz
@@ -80,7 +80,8 @@ recuperado** te dá o que você disse como um rascunho editável que não é env
 Um agente pode te fazer uma pergunta em texto e esperar a resposta no Quick ou no Nest. Digite, ou
 segure a tecla de ditado mostrada na pergunta e fale; as palavras entram no rascunho para você
 revisar. Só **Enviar resposta** (ou Enter no editor) envia. A pergunta expira em dois minutos, e um
-card de permissão sempre vem primeiro.
+card de permissão sempre vem primeiro. No Windows você digita a resposta: ditar numa pergunta por
+enquanto só funciona no Linux.
 
 O Claude Code que o Vults inicia pode perguntar sozinho. Para o seu próprio Claude Code ou Codex:
 

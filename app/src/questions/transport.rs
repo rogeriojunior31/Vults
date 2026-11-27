@@ -1,4 +1,5 @@
-//! Private same-user Unix transport, never the hook/permission socket.
+//! Private same-user transport (a Unix socket, or a named pipe on Windows), never the
+//! hook/permission endpoint.
 use super::Command;
 use serde::{Deserialize, Serialize};
 use std::io;
@@ -8,8 +9,7 @@ use std::sync::{
     atomic::{AtomicBool, AtomicU64, Ordering},
 };
 use std::time::{Duration, Instant};
-use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
-use tokio::net::{UnixListener, UnixStream};
+use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader};
 use tokio::sync::{Semaphore, mpsc, oneshot};
 use vults_peer::requester::Requester;
 const LIMIT: u64 = 32 * 1024;
@@ -27,10 +27,88 @@ struct Response {
     error: Option<String>,
 }
 
+#[cfg(unix)]
+type Socket = std::os::unix::net::UnixStream;
+#[cfg(windows)]
+type Socket = std::fs::File;
+
 pub(crate) fn path() -> io::Result<PathBuf> {
-    let vults_ipc::Endpoint::Unix(path) = vults_ipc::Endpoint::for_current_user()?;
-    Ok(path.with_extension("questions.sock"))
+    #[cfg(unix)]
+    {
+        let vults_ipc::Endpoint::Unix(path) = vults_ipc::Endpoint::for_current_user()?;
+        Ok(path.with_extension("questions.sock"))
+    }
+    #[cfg(windows)]
+    {
+        let vults_ipc::Endpoint::Pipe(name) = vults_ipc::Endpoint::for_current_user()?;
+        Ok(PathBuf::from(format!("{name}-questions")))
+    }
 }
+
+static NEXT: AtomicU64 = AtomicU64::new(1);
+
+fn spawn_connection<S>(socket: S, proof: Requester, slots: &Arc<Semaphore>, tx: &mpsc::Sender<Command>)
+where
+    S: AsyncRead + AsyncWrite + Send + 'static,
+{
+    let Ok(permit) = slots.clone().try_acquire_owned() else {
+        return;
+    };
+    let connection = NEXT.fetch_add(1, Ordering::Relaxed);
+    let tx = tx.clone();
+    tokio::spawn(async move {
+        let _permit = permit;
+        let _ = connection_run(socket, proof, connection, &tx).await;
+        let _ = tx.send(Command::Disconnect(connection)).await;
+    });
+}
+
+/// Like the hook's pipe: a name another process holds is waited for (this app's previous run may
+/// still be closing), and a client that is not this user's, or not this program, is dropped.
+#[cfg(windows)]
+pub(crate) async fn serve(path: PathBuf, tx: mpsc::Sender<Command>) -> io::Result<()> {
+    use tokio::net::windows::named_pipe::ServerOptions;
+    let slots = Arc::new(Semaphore::new(8));
+    let create = |first| {
+        ServerOptions::new()
+            .first_pipe_instance(first)
+            .reject_remote_clients(true)
+            .create(&path)
+    };
+    let mut wait = Duration::from_millis(100);
+    let mut server = loop {
+        match create(true) {
+            Ok(server) => break server,
+            Err(_) if !tx.is_closed() => {
+                tokio::time::sleep(wait).await;
+                wait = (wait * 2).min(Duration::from_secs(5));
+            }
+            Err(e) => return Err(e),
+        }
+    };
+    loop {
+        if tx.is_closed() {
+            return Ok(());
+        }
+        if server.connect().await.is_err() {
+            tokio::time::sleep(POLL).await;
+            continue;
+        }
+        let next = loop {
+            match create(false) {
+                Ok(next) => break next,
+                Err(_) if !tx.is_closed() => tokio::time::sleep(POLL).await,
+                Err(e) => return Err(e),
+            }
+        };
+        let socket = std::mem::replace(&mut server, next);
+        if let Some(proof) = Requester::pipe(&socket) {
+            spawn_connection(socket, proof, &slots, &tx);
+        }
+    }
+}
+
+#[cfg(unix)]
 pub(crate) async fn serve(path: PathBuf, tx: mpsc::Sender<Command>) -> io::Result<()> {
     use std::os::unix::fs::{DirBuilderExt, PermissionsExt};
     let dir = path.parent().ok_or(io::ErrorKind::InvalidInput)?;
@@ -44,34 +122,26 @@ pub(crate) async fn serve(path: PathBuf, tx: mpsc::Sender<Command>) -> io::Resul
     if std::fs::symlink_metadata(&path).is_ok() {
         std::fs::remove_file(&path)?;
     }
-    let listener = UnixListener::bind(&path)?;
+    let listener = tokio::net::UnixListener::bind(&path)?;
     std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600))?;
     let slots = Arc::new(Semaphore::new(8));
-    static NEXT: AtomicU64 = AtomicU64::new(1);
     loop {
         let (socket, _) = listener.accept().await?;
-        let Ok(permit) = slots.clone().try_acquire_owned() else {
+        if slots.available_permits() == 0 {
             continue;
-        };
-        let Some(proof) = Requester::socket(&socket) else {
-            continue;
-        };
-        let connection = NEXT.fetch_add(1, Ordering::Relaxed);
-        let tx = tx.clone();
-        tokio::spawn(async move {
-            let _permit = permit;
-            let _ = connection_run(socket, proof, connection, &tx).await;
-            let _ = tx.send(Command::Disconnect(connection)).await;
-        });
+        }
+        if let Some(proof) = Requester::socket(&socket) {
+            spawn_connection(socket, proof, &slots, &tx);
+        }
     }
 }
 async fn connection_run(
-    socket: UnixStream,
+    socket: impl AsyncRead + AsyncWrite,
     proof: Requester,
     connection: u64,
     tx: &mpsc::Sender<Command>,
 ) -> io::Result<()> {
-    let (read, mut write) = socket.into_split();
+    let (read, mut write) = tokio::io::split(socket);
     let mut reader = BufReader::new(read.take(LIMIT));
     let mut line = String::new();
     tokio::time::timeout(Duration::from_secs(2), reader.read_line(&mut line)).await??;
@@ -137,7 +207,7 @@ async fn connection_run(
 /// One blocking relay worker; closing on cancellation prevents late text from being reused.
 pub(crate) struct RelayReply {
     pub text: String,
-    socket: std::os::unix::net::UnixStream,
+    socket: Socket,
 }
 impl RelayReply {
     pub(crate) fn acknowledge(&mut self) -> io::Result<()> {
@@ -151,14 +221,10 @@ pub(crate) fn ask(
     question: String,
     cancelled: Arc<AtomicBool>,
 ) -> Result<RelayReply, String> {
-    use std::io::{Read, Write};
+    use std::io::Write;
     let failed =
         || "The question connection ended. Ask a new question; this reply is never retried.".to_string();
-    let mut socket = std::os::unix::net::UnixStream::connect(path).map_err(|_| failed())?;
-    socket.set_read_timeout(Some(POLL)).map_err(|_| failed())?;
-    socket
-        .set_write_timeout(Some(Duration::from_secs(1)))
-        .map_err(|_| failed())?;
+    let mut socket = connect(path).ok_or_else(failed)?;
     let mut bytes = serde_json::to_vec(&Request { request, question }).map_err(|_| failed())?;
     bytes.push(b'\n');
     socket.write_all(&bytes).map_err(|_| failed())?;
@@ -169,7 +235,7 @@ pub(crate) fn ask(
         if cancelled.load(Ordering::Acquire) || Instant::now() >= deadline {
             return Err(failed());
         }
-        match socket.read(&mut buffer) {
+        match read_some(&mut socket, &mut buffer) {
             Ok(0) => break,
             Ok(n) => {
                 response.extend_from_slice(&buffer[..n]);
@@ -193,4 +259,79 @@ pub(crate) fn ask(
         (None, Some(error)) => Err(error),
         _ => Err(failed()),
     }
+}
+
+#[cfg(unix)]
+fn connect(path: &Path) -> Option<Socket> {
+    let socket = std::os::unix::net::UnixStream::connect(path).ok()?;
+    socket.set_read_timeout(Some(POLL)).ok()?;
+    socket.set_write_timeout(Some(Duration::from_secs(1))).ok()?;
+    Some(socket)
+}
+
+#[cfg(unix)]
+fn read_some(socket: &mut Socket, buffer: &mut [u8]) -> io::Result<usize> {
+    use std::io::Read;
+    socket.read(buffer)
+}
+
+#[cfg(windows)]
+fn connect(path: &Path) -> Option<Socket> {
+    use std::os::windows::fs::OpenOptionsExt;
+    const ERROR_PIPE_BUSY: i32 = 231;
+    /// SECURITY_IDENTIFICATION: a server that is not ours can never act as this user.
+    const IDENTIFICATION: u32 = 0x0001_0000;
+    for _ in 0..20 {
+        match std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .security_qos_flags(IDENTIFICATION)
+            .open(path)
+        {
+            Ok(pipe) => return vults_peer::pipe_server_is_same_user(&pipe).then_some(pipe),
+            // Between two connections the next instance may not be open yet.
+            Err(e) if e.raw_os_error() == Some(ERROR_PIPE_BUSY) => std::thread::sleep(POLL / 4),
+            Err(_) => return None,
+        }
+    }
+    None
+}
+
+/// A pipe read has no timeout: what waits is peeked first, so a cancellation is seen within POLL.
+#[cfg(windows)]
+fn read_some(socket: &mut Socket, buffer: &mut [u8]) -> io::Result<usize> {
+    use std::io::Read;
+    use std::os::windows::io::AsRawHandle;
+    #[link(name = "kernel32")]
+    unsafe extern "system" {
+        fn PeekNamedPipe(
+            pipe: *mut std::ffi::c_void,
+            buffer: *mut u8,
+            size: u32,
+            read: *mut u32,
+            available: *mut u32,
+            left: *mut u32,
+        ) -> i32;
+    }
+    let mut available = 0u32;
+    // SAFETY: an open pipe handle, no buffer to fill, one valid out-pointer.
+    let peeked = unsafe {
+        PeekNamedPipe(
+            socket.as_raw_handle(),
+            std::ptr::null_mut(),
+            0,
+            std::ptr::null_mut(),
+            &mut available,
+            std::ptr::null_mut(),
+        )
+    };
+    if peeked == 0 {
+        // A closed server end is the end of the reply, as a socket's 0 would be.
+        return Ok(0);
+    }
+    if available == 0 {
+        std::thread::sleep(POLL);
+        return Err(io::ErrorKind::TimedOut.into());
+    }
+    socket.read(buffer)
 }
