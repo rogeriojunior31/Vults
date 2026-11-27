@@ -69,6 +69,14 @@ impl Snapshot {
 }
 
 #[cfg(target_os = "linux")]
+impl Snapshot {
+    /// Linux launchers exec the tool in their own process: nothing stays between.
+    fn is_launcher(&self) -> bool {
+        false
+    }
+}
+
+#[cfg(target_os = "linux")]
 fn shell_name(name: &str) -> bool {
     name != "busybox" && super::unix::SHELLS.contains(&name)
 }
@@ -94,8 +102,8 @@ fn parse(stat: &str, pid: u32) -> Option<(String, u32, u64)> {
 #[derive(Clone, Debug)]
 pub struct Requester {
     chain: Vec<Snapshot>,
-    /// Verified shells between the client and whoever started it: on Windows an npm `.cmd` shim
-    /// runs the CLI under `cmd.exe`. Always empty on Linux.
+    /// Verified wrappers between the client and whoever started it: on Windows an npm `.cmd` shim
+    /// runs the CLI under `cmd.exe`, a mise shim under `mise.exe`. Always empty on Linux.
     above: Vec<Snapshot>,
 }
 
@@ -153,15 +161,16 @@ impl Requester {
         None
     }
 
-    /// Up to two verified shells right above the client, oldest last; none past a stale parent.
+    /// Up to three verified shells or version-manager launchers (an npm `.cmd` shim, a mise shim and
+    /// `mise.exe`) right above the client, oldest last; none past a stale parent.
     fn shells_above(chain: &[Snapshot], read: &mut impl FnMut(u32) -> Option<Snapshot>) -> Vec<Snapshot> {
         let mut above: Vec<Snapshot> = Vec::new();
         let Some(mut child) = chain.last().cloned() else {
             return above;
         };
-        while above.len() < 2 {
+        while above.len() < 3 {
             let Some(parent) = read(child.parent) else { break };
-            if !parent.is_shell()
+            if !(parent.is_shell() || parent.is_launcher())
                 || parent.process.started > child.process.started
                 || chain
                     .iter()

@@ -113,6 +113,15 @@ impl Snapshot {
     }
 }
 
+impl Snapshot {
+    /// mise's shims stay alive as parents of the tool they start (`shims\claude.exe` runs
+    /// `mise.exe`, which runs the real `claude.exe`). Not a proof of anything by itself: the chain
+    /// still has to end at whoever started it, as `launched_by` checks.
+    pub(super) fn is_launcher(&self) -> bool {
+        self.name == "mise.exe" || self.executable.contains(r"\mise\shims\")
+    }
+}
+
 fn system_directory() -> Option<String> {
     let mut buffer = [0u16; 260];
     // SAFETY: the buffer's length is passed; the result is the number of characters written.
@@ -200,5 +209,29 @@ mod tests {
         // A shell born after the client reused a dead parent's id: not its parent.
         let late = Requester::with(30, read(250)).unwrap();
         assert!(late.above.is_empty());
+    }
+
+    #[test]
+    fn a_mise_shim_and_mise_itself_lead_back_to_the_app() {
+        let process = |pid: u32, parent: u32, image: &str| Snapshot {
+            process: Process {
+                pid,
+                started: u64::from(pid),
+            },
+            parent,
+            name: image.rsplit('\\').next().unwrap().into(),
+            executable: image.into(),
+        };
+        let proof = Requester::with(50, |pid| match pid {
+            50 => Some(process(50, 40, r"c:\vults\vults.exe")),
+            40 => Some(process(40, 30, r"c:\mise\installs\claude\latest\claude.exe")),
+            30 => Some(process(30, 20, r"c:\scoop\apps\mise\current\bin\mise.exe")),
+            20 => Some(process(20, 7, r"c:\users\me\appdata\local\mise\shims\claude.exe")),
+            _ => None,
+        })
+        .unwrap();
+        assert_eq!(proof.client().pid, 40);
+        assert_eq!(proof.above.len(), 2);
+        assert_eq!(proof.above.last().map(|s| s.parent), Some(7));
     }
 }
