@@ -2221,14 +2221,20 @@ fn the_editor_comes_from_the_terminal() {
     assert_eq!(
         view::editor(&term(&[
             ("TERM_PROGRAM", "vscode"),
-            ("VSCODE_GIT_ASKPASS_NODE", r"C:\Users\me\cursor-tools\Microsoft VS Code\Code.exe"),
+            (
+                "VSCODE_GIT_ASKPASS_NODE",
+                r"C:\Users\me\cursor-tools\Microsoft VS Code\Code.exe"
+            ),
         ])),
         Some("VS Code")
     );
     assert_eq!(
         view::editor(&term(&[
             ("TERM_PROGRAM", "vscode"),
-            ("VSCODE_GIT_ASKPASS_NODE", r"C:\Users\me\AppData\Local\Programs\cursor\Cursor.exe"),
+            (
+                "VSCODE_GIT_ASKPASS_NODE",
+                r"C:\Users\me\AppData\Local\Programs\cursor\Cursor.exe"
+            ),
         ])),
         Some("Cursor")
     );

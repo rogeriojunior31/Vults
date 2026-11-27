@@ -489,7 +489,12 @@ mod tests {
                             "args": { "questions": [{ "question": "Which database?" }] } } }),
                 ))
                 .unwrap();
-            assert_eq!(u.event, AgentEvent::Question { message: "Which database?".into() });
+            assert_eq!(
+                u.event,
+                AgentEvent::Question {
+                    message: "Which database?".into()
+                }
+            );
         }
         let bare = Antigravity
             .parse(&event(
@@ -497,7 +502,12 @@ mod tests {
                 json!({ "conversationId": "c1", "toolCall": { "name": "ask_question", "args": {} } }),
             ))
             .unwrap();
-        assert_eq!(bare.event, AgentEvent::Question { message: String::new() });
+        assert_eq!(
+            bare.event,
+            AgentEvent::Question {
+                message: String::new()
+            }
+        );
     }
 
     #[test]

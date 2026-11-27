@@ -580,11 +580,13 @@ pub(crate) fn editor(t: &Terminal) -> Option<&'static str> {
         .and_then(|p| p.rsplit(['/', '\\']).next())
         .unwrap_or_default()
         .to_ascii_lowercase();
-    Some(if binary.starts_with("cursor") || env("CURSOR_TRACE_ID").is_some() {
-        "Cursor"
-    } else {
-        "VS Code"
-    })
+    Some(
+        if binary.starts_with("cursor") || env("CURSOR_TRACE_ID").is_some() {
+            "Cursor"
+        } else {
+            "VS Code"
+        },
+    )
 }
 
 /// What `platform::jump` can act on: a multiplexer's pane (herdr, tmux, kitty/wezterm with their

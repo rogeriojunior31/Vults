@@ -2474,7 +2474,12 @@ pub fn place_top_center(win: &tauri::WebviewWindow) {
         let x = origin.x + (screen.width - f64::from(width)) / 2.0;
         // A taskbar or app bar at the top of the screen keeps its strip: the island hangs below it.
         #[cfg(windows)]
-        let top = monitor.work_area().position.to_logical::<f64>(scale).y.max(origin.y);
+        let top = monitor
+            .work_area()
+            .position
+            .to_logical::<f64>(scale)
+            .y
+            .max(origin.y);
         #[cfg(not(windows))]
         let top = origin.y;
         let position = tauri::LogicalPosition::new(x, top);
