@@ -1,7 +1,7 @@
 # Vults UI rules
 
 Use these rules for UI changes and new prototypes. The production components and
-the shared theme define the visual baseline. ADRs define behavior and authority;
+the shared theme define the visual baseline. CLAUDE.md defines behavior and authority;
 this document defines how the UI presents them.
 
 ## Identity and theme
@@ -87,7 +87,7 @@ truth when that theme changes. Keep `--agent-*` colors as agent identity.
   context and details, rather than enlarging every control.
 - Preserve selected session, area, filters, source, conversation and unsent draft
   across layout changes. A resize does not create a conversation or execution.
-- Honor the current registered capabilities and size rules in ADR 0006. The
+- Honor the current registered capabilities and size rules. The
   paired widths (560/680/760 logical px) are an optional shared Mini/Quick preference.
   Default keeps Mini 340 x 38 and Quick 440 CSS px internally (492 in Chat), with a
   1.14 UI zoom inside the fixed 880 x 640 logical-pixel overlay. Bound content by the

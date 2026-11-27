@@ -40,7 +40,7 @@ body:
     id: rules
     attributes:
       label: Rules that never bend
-      description: If this touches one of them, it starts with a new ADR (docs/adr/).
+      description: Say which, if any.
       options:
         - label: It never blocks an agent, answers permissions only from a click, writes agent configs only after a backup, a diff and a click, and keeps secrets in the keyring with no telemetry.
           required: true

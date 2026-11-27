@@ -42,4 +42,3 @@ listens to your voice. He is optional: turn him off and the flock works without 
 - [Adding an agent](contributing/agents.md)
 - [Adding a connector](contributing/connectors.md)
 - [Animations](contributing/animations.md)
-- [Decisions (ADRs)](adr/README.md)

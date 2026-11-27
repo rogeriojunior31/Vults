@@ -26,11 +26,11 @@ one; `scripts/check-layers.sh` checks it in CI (tests may reach further).
 | base | `brand`, `secrets` | The name, the keyring |
 
 Only `app` wires the layers together: Connect never calls into Experience, and Core knows neither.
-That keeps a new surface cheap (it draws `State::view` and sends intents, [ADR 0006](../adr/0006-surfaces.md))
-and keeps Zeca optional ([ADR 0005](../adr/0005-zeca.md)): he uses Chat, Voice and
+That keeps a new surface cheap (it draws `State::view` and sends intents)
+and keeps Zeca optional: he uses Chat, Voice and
 Connect, and none of them knows about him. His body is in Experience; his brain is the `zeca`
 crate in Connect, which reads the flock but never answers a permission
-([ADR 0005](../adr/0005-zeca.md)).
+.
 
 | Crate | Role | Must not use |
 |---|---|---|
@@ -44,9 +44,9 @@ crate in Connect, which reads the flock but never answers a permission
 | `agent-config` | Safe edits of agent configs (JSON, TOML with its comments kept, whole plugin files): strict read, diff, fingerprint, backup, atomic write | Tauri |
 | `store` | The local database: one `vults.sqlite` (bundled SQLite), numbered migrations, the history of turns, the append-only audit log, the consents (never deleted), traces, Zeca's conversations (with what each read from outside and its frozen context), the paired phones and the highest counter each signed with, Zeca's journal and daily summaries with their full-text and vector recall, the memory proposals waiting for a yes, his nights, what the agents cost by day and roost, and text-only dictation history with independent daily/app totals (migration 21), recorded under the chosen retention, plus user-maintained dictionary/replacements/snippets (migration 22) independent of history retention | Tauri, async, the network |
 | `chat` | Chat through the `claude` and `codex` CLIs, with permission requests, or an API: Anthropic or an OpenAI-compatible cloud with the user's key, or a local Ollama / LM Studio | Tauri |
-| `zeca` | Zeca's brain (ADR 0005): a read-only view of the flock, his memory as a git repository of small Markdown files of facts, each with a hard limit (each write a commit) | `core` (so nothing in it can build an `Intent`), Tauri |
-| `link` | A paired phone's link (ADR 0002): pairing by QR, envelopes sealed with X25519 and XChaCha20-Poly1305 (a relay sees only ciphertext), answers signed by the phone's Keystore keys and checked before `core`'s ledger redeems them | IO, the network, Tauri |
-| `relay` | The phone's relay (ADR 0002): an axum server that stores and forwards sealed envelopes by box, capped and dropped after 10 minutes, and the client both ends use, each request through the app's network gate; it depends only on `link` | Tauri, `core` |
+| `zeca` | Zeca's brain: a read-only view of the flock, his memory as a git repository of small Markdown files of facts, each with a hard limit (each write a commit) | `core` (so nothing in it can build an `Intent`), Tauri |
+| `link` | A paired phone's link: pairing by QR, envelopes sealed with X25519 and XChaCha20-Poly1305 (a relay sees only ciphertext), answers signed by the phone's Keystore keys and checked before `core`'s ledger redeems them | IO, the network, Tauri |
+| `relay` | The phone's relay: an axum server that stores and forwards sealed envelopes by box, capped and dropped after 10 minutes, and the client both ends use, each request through the app's network gate; it depends only on `link` | Tauri, `core` |
 | `evals` | Evals with cassettes (dev only, never in the app): policy classes, redaction, the prompts sent to models, recorded streams replayed for injection | being linked into the app |
 | `spike` | The spike kit (dev only, never in the app): a fake model, a fake app on the hook's socket and a terminal for TUIs, to record a real agent's hooks without an account; `scripts/spike.sh` runs it per agent | being linked into the app |
 | `secrets` | The OS keyring (Secret Service, Credential Manager), keyed by the bundle id | Tauri, files |
@@ -104,9 +104,9 @@ start-up. Speaker analysis and summaries are separate opt-ins.
 
 Invariants every change keeps, each with a test:
 
-- No voice path reaches `Intent::Decide` or `DecideAlways` (ADR 0002).
+- No voice path reaches `Intent::Decide` or `DecideAlways`.
 - Audio stays in memory except a meeting's temporary files; no wake word, no always-on microphone
-  (ADR 0004).
+ .
 - Every model call on audio or text goes through the gate, with its own switch, budget and trace.
 - A late or replaced ticket never executes or delivers anything.
 - Spoken text never becomes shell or tmux command text, and Enter is never sent.
@@ -116,7 +116,7 @@ semantic turn model, meeting model artifacts and speaker evaluation) are in `doc
 
 ## Meaning in core, look in the surface
 
-The view says what things mean, so every surface agrees ([ADR 0006](../adr/0006-surfaces.md)).
+The view says what things mean, so every surface agrees.
 Each session carries its `attention`, an ordered level (`quiet` < `info` < `done` < `failed` <
 `needs-you`), and the view carries the most of them; `card` marks the session whose card is first
 in line and still waits on it. The island only chooses the look: which sound a level makes, and
@@ -129,7 +129,7 @@ surface subscribes to those through window-scoped helpers in `bridge.ts`
 (`getCurrentWebviewWindow().listen`) to stay out of them.
 
 The Nest's window holds two webviews, the Nest's and Settings', one shown at a time under the same
-header (ADR 0006). Commands check the label of the webview that called: the calls only Settings
+header. Commands check the label of the webview that called: the calls only Settings
 may make are refused from the Nest's, which shows agents' text.
 
 `ended` lists the cards that left the line most recently, each with its `outcome`: answered here
@@ -150,14 +150,14 @@ A permission request keeps its connection open. The server only waits for a huma
 loop has taken the request and `core` has queued its card (`Effect::AckPermission`). If the app is
 stuck or not listening, the agent gets its answer (silence, so it asks in the terminal) within
 800 ms instead of two minutes. The island opens on a queued card and stays open until it is
-answered; no presence mode may hide it once acknowledged ([ADR 0006](../adr/0006-surfaces.md)).
+answered; no presence mode may hide it once acknowledged.
 
 ## Why only `core` produces a decision
 
 `core::reduce` turns a `PermissionRequested` event into pending state, and only a human's click
 turns pending state into a `RespondPermission` effect: `Intent::Decide` (Allow, Deny) or
 `Intent::DecideAlways`, which also saves a rule. A saved rule answers only a request that matches
-it exactly: the same agent, folder, tool and target ([ADR 0002](../adr/0002-permissions.md)). A question
+it exactly: the same agent, folder, tool and target. A question
 (`QuestionAsked`) waits the same way, and only an `Intent::Answer` that fits its questions turns it
 into an `AnswerQuestion` effect. A test feeds
 every other input in every order and checks none of them answers.
@@ -175,7 +175,7 @@ until the content-free audit is durable, while continuing to process revocation 
 acknowledges after flushing the MCP response; failure/lost acknowledgement never reuses consumed text.
 Permission cards take priority. Only the owning island/Nest webview can edit or confirm; lock,
 navigation, departure, expiry and disconnect invalidate pending work and late completions.
-The question-draft rule in [ADR 0002](../adr/0002-permissions.md) (a dictated draft is sent only by a click)
+The question-draft rule (a dictated draft is sent only by a click)
 is implemented by a physical-key-only local recording bound to the live question token and recording
 id. `vults_dictate` aliases the same typed `ask_user` exchange. Capture uses the existing microphone
 and cached local transcriber, with admission/lifetime guards and no provider, download, clipboard or
@@ -215,12 +215,12 @@ agent would), a command and the end. Pass your own JSONL file (one hook JSON per
 ## Decisions
 
 Why the app is built this way (Rust only, the safety rules, one core for every surface, Zeca
-optional, rules before models) is in the [decision records](../adr/README.md).
+optional, rules before models) is in the decision records.
 
 ## Documentation
 
 `docs/` is the source for the docs on the website
 ([rogeriojunior31.github.io/en/docs/vults](https://rogeriojunior31.github.io/en/docs/vults/)),
 published on each release tag; `docs/site.json` holds the name and summary the website shows. Pages start with a
-`# H1`, use relative links, and keep images in `docs/assets/`. `docs/adr/` holds the decision records. `docs/dev/` is internal and not
+`# H1`, use relative links, and keep images in `docs/assets/`. `docs/dev/` is internal and not
 published; `docs/pt-br/` holds the Brazilian Portuguese translation (see CONTRIBUTING).

@@ -2,7 +2,7 @@
 
 **What is left, and nothing else.** One line per task, most urgent first inside each section. A
 finished task is deleted from here in the PR that finishes it, and that PR adds its line to
-[CHANGELOG.md](../../CHANGELOG.md). Why a rule holds lives in the [ADRs](../adr/README.md).
+[CHANGELOG.md](../../CHANGELOG.md).
 
 `P0` blocks the next release · `P1` next · `P2` after · `P3` later or only if decided.
 Size: `S` up to a day · `M` a few days · `L` a week or more (split before starting).
@@ -91,7 +91,7 @@ CHANGELOG line. Every config write follows rule 3.
 - [ ] FF9b · Verify against real sessions: Claude plan-ready card, session name from `/rename`, Antigravity questions, wrapper-started sessions · P2 · S each
 - [ ] NEW-P2 · Cline CLI, Kiro CLI, a recorded real Cursor session, Amp, Pi, Hermes live turn · P2 · M each
 - [ ] NEW-P3 · Lossless YAML writer then Goose; Crush, Grok Build, Muse Code; ACP rows for Goose, Auggie, Cline, Hermes · P3 · M each
-- [ ] G1/G2 · An open reply for any tool (`--reply vults`, fixed allow/deny JSON, rules keyed by tool name, protocol VERSION 9). Decide first; the retired proposal is ADR 0027 at the archive commit · P3 · L
+- [ ] G1/G2 · An open reply for any tool (`--reply vults`, fixed allow/deny JSON, rules keyed by tool name, protocol VERSION 9). Decide first · P3 · L
 - [ ] QW · Qwen `write_file` diff into hunks · P3 · S
 - [ ] F4 · Public issues per agent from *Adding an agent*, on the maintainer's go · P3 · S
 
@@ -133,7 +133,7 @@ CHANGELOG line. Every config write follows rule 3.
 ## Settings and distribution
 
 - [ ] FF4.5 · What's new after an update, 1 to 4 items per version, four languages, a CI check · P2 · M
-- [ ] UPD · Signed updater with channels, after a signing key exists (ADR 0004) · P2 · L
+- [ ] UPD · Signed updater with channels, after a signing key exists · P2 · L
 - [ ] LANG · More UI languages; Arabic needs a right-to-left pass first · P3 · M each
 - [ ] PKG · AppImage, Flatpak, macOS CI, Windows code signing · P3
 - [ ] X7 · macOS beta · P3 · L
@@ -152,11 +152,11 @@ CHANGELOG line. Every config write follows rule 3.
 - FF10 · Screen capture for agents (Screenshot portal to the clipboard): yes or no
 - FF11 · Zeca reacts to the machine: yes or no on tone
 - X9-GNOME · Ship a GNOME Shell extension or not
-- Wake word stays declined; reopening it is an edit to ADR 0004
+- Wake word stays declined
 
 ## How to work a task
 
-1. Read `CLAUDE.md`, `docs/contributing/architecture.md` and the ADRs the task touches.
+1. Read `CLAUDE.md`, `docs/contributing/architecture.md` and the rules that never bend.
 2. One branch, one PR per task; tests first; docs, UI strings in four languages and pt-BR docs in
    the same PR.
 3. Run *Before every commit* from `CLAUDE.md`, then a review pass.

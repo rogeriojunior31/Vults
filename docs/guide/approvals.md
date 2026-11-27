@@ -199,7 +199,7 @@ When Claude Code finishes planning, its card shows the whole plan. **Allow** sta
 session asking as before; **Allow and accept edits** starts it and lets that session edit files
 without asking until it ends, the choice Claude Code's own terminal offers. Its commands still come
 as cards, destructive ones included, and the audit log keeps the choice as its own line
-([ADR 0002](../adr/0002-permissions.md)). **Deny** keeps it planning. **Change plan…** opens a box
+. **Deny** keeps it planning. **Change plan…** opens a box
 for what to change: **Send to Claude** (or Ctrl+Enter) turns the plan down with your words, and
 Claude reads them and plans again, as with its own terminal's "tell Claude what to change". The
 audit log records that you sent it back, never what you wrote.

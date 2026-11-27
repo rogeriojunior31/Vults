@@ -96,7 +96,7 @@ replace its tokens, asset rules or interaction conventions.
 - README.md and README.pt-br.md: product introduction, feature map and release
   qualifications.
 - docs/guide/ and docs/pt-br/guide/: documented user workflows.
-- docs/contributing/architecture.md and docs/adr/: capabilities, ownership and technical
+- docs/contributing/architecture.md: capabilities, ownership and technical
   constraints.
 - ui/src/character/ and docs/assets/: existing character renderers and captures.
   Historical captures may predate the current navigation and spacing.
