@@ -320,10 +320,16 @@ fn tray_menu(app: &AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
 #[cfg(not(target_os = "linux"))]
 const TRAY_ID: &str = "main";
 
-/// A frame as Tauri's image: its 32 px drawing, which Windows scales for the tray.
+/// A frame as Tauri's image, the drawing the tray's size shows sharpest: 24 px is exact at 150 %,
+/// 32 px at 200 % and halved at 100 %; 22 px is the nearest at 125 %.
 #[cfg(windows)]
 fn tray_image(frame: &Frame) -> Option<tauri::image::Image<'static>> {
-    let (pixels, width, height) = vults_platform::windows_tray::rgba(frame[2])?;
+    let drawing = match vults_platform::windows_tray::icon_size() {
+        17..=22 => frame[0],
+        23..=28 => frame[1],
+        _ => frame[2],
+    };
+    let (pixels, width, height) = vults_platform::windows_tray::rgba(drawing)?;
     Some(tauri::image::Image::new_owned(pixels, width, height))
 }
 

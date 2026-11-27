@@ -205,7 +205,7 @@ fn process_is_same_user(pid: u32) -> bool {
 }
 
 /// The user SID behind a process handle. `process` is borrowed, never closed.
-unsafe fn token_sid(process: HANDLE) -> Option<String> {
+pub(crate) unsafe fn token_sid(process: HANDLE) -> Option<String> {
     let mut token = HANDLE::default();
     // SAFETY (whole body): every out-pointer is valid, the buffer is sized by the first
     // GetTokenInformation call, and every handle and allocation is released before returning.

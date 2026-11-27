@@ -1,18 +1,27 @@
-//! A same-user, per-turn MCP relay for host-owned specialist tools.
+//! A same-user, per-turn MCP relay for host-owned specialist tools: a Unix socket, or on Windows a
+//! named pipe whose name carries the user's SID and whose both ends check the other runs as us.
 use crate::{Approver, Delta, tools};
 use serde_json::{Value, json};
 use std::path::{Path, PathBuf};
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
+#[cfg(unix)]
 use tokio::net::UnixListener;
+#[cfg(windows)]
+use tokio::net::windows::named_pipe::{NamedPipeServer, ServerOptions};
 const LIMIT: u64 = 1024 * 1024;
 
 pub(crate) struct Service {
+    #[cfg(unix)]
     listener: UnixListener,
+    /// The first pipe instance, taken by `serve`; later ones are made as clients connect.
+    #[cfg(windows)]
+    listener: std::sync::Mutex<Option<NamedPipeServer>>,
     path: PathBuf,
     pub config: PathBuf,
 }
 impl Drop for Service {
     fn drop(&mut self) {
+        #[cfg(unix)]
         let _ = std::fs::remove_file(&self.path);
         let _ = std::fs::remove_file(&self.config);
     }
@@ -20,40 +29,64 @@ impl Drop for Service {
 impl Service {
     pub(crate) fn bind() -> Result<Self, String> {
         use std::io::Write;
-        use std::os::unix::fs::{DirBuilderExt, OpenOptionsExt, PermissionsExt};
         static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-        let root = std::env::var_os("XDG_RUNTIME_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(std::env::temp_dir)
-            .join(format!("vults-tools-{}", vults_peer::current_uid()));
-        std::fs::DirBuilder::new()
-            .recursive(true)
-            .mode(0o700)
-            .create(&root)
-            .map_err(|_| "Could not prepare the specialist tool service.")?;
-        if !vults_peer::is_private_dir(&root) {
-            return Err("The specialist tool service directory is not private.".into());
-        }
-        let path = root.join(format!(
-            "{}-{}.sock",
+        let name = format!(
+            "{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
-        ));
-        let listener =
-            UnixListener::bind(&path).map_err(|_| "Could not start the specialist tool service.")?;
-        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600))
-            .map_err(|_| "Could not protect the specialist tool service.")?;
-        let config = path.with_extension("json");
+        );
+        #[cfg(unix)]
+        let (listener, path, root) = {
+            use std::os::unix::fs::{DirBuilderExt, PermissionsExt};
+            let root = std::env::var_os("XDG_RUNTIME_DIR")
+                .map(PathBuf::from)
+                .unwrap_or_else(std::env::temp_dir)
+                .join(format!("vults-tools-{}", vults_peer::current_uid()));
+            std::fs::DirBuilder::new()
+                .recursive(true)
+                .mode(0o700)
+                .create(&root)
+                .map_err(|_| "Could not prepare the specialist tool service.")?;
+            if !vults_peer::is_private_dir(&root) {
+                return Err("The specialist tool service directory is not private.".into());
+            }
+            let path = root.join(format!("{name}.sock"));
+            let listener =
+                UnixListener::bind(&path).map_err(|_| "Could not start the specialist tool service.")?;
+            std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600))
+                .map_err(|_| "Could not protect the specialist tool service.")?;
+            (listener, path, root)
+        };
+        #[cfg(windows)]
+        let (listener, path, root) = {
+            let sid = vults_peer::current_user_sid().ok_or("Could not start the specialist tool service.")?;
+            let path = PathBuf::from(format!("{}-tools-{name}", vults_protocol::pipe_name(&sid)));
+            // first_pipe_instance: a name another process made first is never served on.
+            let listener = ServerOptions::new()
+                .first_pipe_instance(true)
+                .reject_remote_clients(true)
+                .create(&path)
+                .map_err(|_| "Could not start the specialist tool service.")?;
+            // The user's own temp folder, which only they (and administrators) can read.
+            let root = std::env::temp_dir().join(format!("vults-tools-{sid}"));
+            std::fs::create_dir_all(&root).map_err(|_| "Could not prepare the specialist tool service.")?;
+            (std::sync::Mutex::new(Some(listener)), path, root)
+        };
+        let config = root.join(format!("{name}.json"));
         let service = Self {
             listener,
             path,
             config,
         };
         let value = json!({"mcpServers":{"vults-specialist":{"command":std::env::current_exe().map_err(|_|"The specialist tool executable is unavailable.")?,"args":["--specialist-mcp",service.path]}}});
-        let mut file = std::fs::OpenOptions::new()
-            .create_new(true)
-            .write(true)
-            .mode(0o600)
+        let mut options = std::fs::OpenOptions::new();
+        options.create_new(true).write(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            options.mode(0o600);
+        }
+        let mut file = options
             .open(&service.config)
             .map_err(|_| "Could not prepare specialist tools.")?;
         file.write_all(value.to_string().as_bytes())
@@ -68,16 +101,42 @@ impl Service {
         out: &tokio::sync::mpsc::Sender<Delta>,
     ) {
         let mut steps = 0usize;
+        #[cfg(windows)]
+        let Some(mut server) = self.listener.lock().ok().and_then(|mut first| first.take()) else {
+            return;
+        };
         loop {
-            let Ok((stream, _)) = self.listener.accept().await else {
-                return;
+            #[cfg(unix)]
+            let stream = {
+                let Ok((stream, _)) = self.listener.accept().await else {
+                    return;
+                };
+                if !stream
+                    .peer_cred()
+                    .is_ok_and(|c| c.uid() == vults_peer::current_uid())
+                {
+                    continue;
+                }
+                stream
             };
-            if !stream
-                .peer_cred()
-                .is_ok_and(|c| c.uid() == vults_peer::current_uid())
-            {
-                continue;
-            }
+            #[cfg(windows)]
+            let stream = {
+                if server.connect().await.is_err() {
+                    return;
+                }
+                // The next instance before this client is served, so a second call finds one.
+                let Ok(next) = ServerOptions::new()
+                    .reject_remote_clients(true)
+                    .create(&self.path)
+                else {
+                    return;
+                };
+                let stream = std::mem::replace(&mut server, next);
+                if !vults_peer::pipe_client_is_same_user(&stream) {
+                    continue;
+                }
+                stream
+            };
             let mut reader = BufReader::new(stream.take(LIMIT + 1));
             let mut line = Vec::new();
             let read = tokio::time::timeout(
@@ -128,9 +187,9 @@ impl Service {
     }
 }
 
-fn relay(path: &Path, request: &Value) -> Result<Value, String> {
-    use std::io::{BufRead, Read, Write};
-    let mut stream = std::os::unix::net::UnixStream::connect(path)
+#[cfg(unix)]
+fn connect(path: &Path) -> Result<std::os::unix::net::UnixStream, String> {
+    let stream = std::os::unix::net::UnixStream::connect(path)
         .map_err(|_| "The specialist turn is no longer active.")?;
     stream
         .set_read_timeout(Some(crate::DECISION_TIMEOUT + std::time::Duration::from_secs(30)))
@@ -138,6 +197,38 @@ fn relay(path: &Path, request: &Value) -> Result<Value, String> {
     stream
         .set_write_timeout(Some(std::time::Duration::from_secs(5)))
         .map_err(|_| "Could not contact specialist tools.")?;
+    Ok(stream)
+}
+
+/// A pipe has no read timeout: the wait ends when the turn's service closes its end.
+#[cfg(windows)]
+fn connect(path: &Path) -> Result<std::fs::File, String> {
+    use std::os::windows::fs::OpenOptionsExt;
+    const ERROR_PIPE_BUSY: i32 = 231;
+    /// SECURITY_IDENTIFICATION: a server that is not ours can never act as this user.
+    const IDENTIFICATION: u32 = 0x0001_0000;
+    for _ in 0..50 {
+        match std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .security_qos_flags(IDENTIFICATION)
+            .open(path)
+        {
+            Ok(pipe) if vults_peer::pipe_server_is_same_user(&pipe) => return Ok(pipe),
+            Ok(_) => return Err("The specialist tool service is not this user's.".into()),
+            // Between two calls the next instance may not be open yet.
+            Err(e) if e.raw_os_error() == Some(ERROR_PIPE_BUSY) => {
+                std::thread::sleep(std::time::Duration::from_millis(100));
+            }
+            Err(_) => break,
+        }
+    }
+    Err("The specialist turn is no longer active.".into())
+}
+
+fn relay(path: &Path, request: &Value) -> Result<Value, String> {
+    use std::io::{BufRead, Read, Write};
+    let mut stream = connect(path)?;
     let mut request = request.to_string();
     request.push('\n');
     stream
@@ -291,9 +382,14 @@ mod tests {
             assert_eq!(outside.lock().unwrap().as_deref(), Some("github_issue_close"));
             assert!(matches!(rx.try_recv().unwrap(), Delta::Permission { .. }));
             drop(service);
+            // A pipe has no file to look for: the relay below finds it gone.
+            #[cfg(unix)]
             assert!(!socket.exists());
             assert!(!config.exists());
-            assert!(relay(&socket, &json!({"list":true})).is_err());
+            // The runtime closes a dropped pipe once it sees its cancelled connect.
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+            let gone = tokio::task::spawn_blocking(move || relay(&socket, &json!({"list":true})));
+            assert!(gone.await.unwrap().is_err());
         }
     }
     #[tokio::test]
@@ -313,7 +409,12 @@ mod tests {
         let (tx, mut rx) = tokio::sync::mpsc::channel(8);
         let approver = Pending(std::sync::Mutex::new(None));
         let client = async {
+            #[cfg(unix)]
             let mut stream = tokio::net::UnixStream::connect(&service.path).await.unwrap();
+            #[cfg(windows)]
+            let mut stream = tokio::net::windows::named_pipe::ClientOptions::new()
+                .open(&service.path)
+                .unwrap();
             stream.write_all(b"{\"name\":\"github_issue_close\",\"arguments\":{\"repository\":\"org/repo\",\"number\":7}}\n").await.unwrap();
             assert!(matches!(rx.recv().await, Some(Delta::Permission { .. })));
             drop(stream);

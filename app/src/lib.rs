@@ -39,7 +39,7 @@ mod phone;
 mod policies;
 mod pricing;
 mod profiles;
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 mod questions;
 pub mod realtime;
 mod recall;
@@ -121,10 +121,20 @@ fn layer_spec(label: &str) -> Option<vults_platform::linux::LayerSpec> {
     }
 }
 
+/// See [`paths::widen_cli_path`].
+///
+/// # Safety
+/// Call first thing in `main`, before any other thread exists.
+#[cfg(windows)]
+pub unsafe fn widen_cli_path() {
+    // SAFETY: forwarded from the caller.
+    unsafe { paths::widen_cli_path() }
+}
+
 /// Runs this binary as Zeca's MCP server when asked (`vults --zeca-mcp`, M7): true when it did.
 pub fn serve_mcp_if_asked() -> bool {
     let argument = std::env::args().nth(1);
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     if argument.as_deref() == Some(mcp::QUESTIONS_ARG) {
         mcp::stdio::run(true);
         return true;
@@ -168,19 +178,19 @@ pub fn run() {
             #[cfg(windows)]
             windows_drop::file_drop_hover,
             runtime::current_view,
-            #[cfg(target_os = "linux")]
+            #[cfg(any(target_os = "linux", windows))]
             questions::text_question_status,
-            #[cfg(target_os = "linux")]
+            #[cfg(any(target_os = "linux", windows))]
             questions::question_agents_set,
-            #[cfg(target_os = "linux")]
+            #[cfg(any(target_os = "linux", windows))]
             questions::install::question_install_status,
-            #[cfg(target_os = "linux")]
+            #[cfg(any(target_os = "linux", windows))]
             questions::install::question_install_preview,
-            #[cfg(target_os = "linux")]
+            #[cfg(any(target_os = "linux", windows))]
             questions::install::question_install_apply,
-            #[cfg(target_os = "linux")]
+            #[cfg(any(target_os = "linux", windows))]
             questions::text_question_action,
-            #[cfg(target_os = "linux")]
+            #[cfg(any(target_os = "linux", windows))]
             questions::text_question_depart,
             runtime::step_diff,
             runtime::workspace_diff,
@@ -447,6 +457,11 @@ pub fn run() {
             #[cfg(windows)]
             if let tauri::WindowEvent::ScaleFactorChanged { scale_factor, .. } = event {
                 runtime::refresh_windows_region(win.app_handle(), win.label(), *scale_factor);
+                // Windows keeps the top-left corner when it rescales: a centred or docked surface
+                // is placed again (the layout poll sees rectangles, not scales).
+                if SURFACES.contains(&win.label()) {
+                    place_surfaces(win.app_handle());
+                }
             }
             if matches!(event, tauri::WindowEvent::Destroyed) && win.label() == dictation_overlay::LABEL {
                 dictation_overlay::reset(win.app_handle());
@@ -519,6 +534,16 @@ pub fn run() {
                 vults_platform::windows_displays::on_monitors_changed(move || {
                     place_surfaces(&app);
                     let _ = app.emit("monitors", ());
+                });
+                // As on Linux, a video, a game or a presentation in full screen hides the corner
+                // widget; it comes back on top when they leave.
+                let app = handle.clone();
+                vults_platform::windows_displays::on_full_screen_changed(move |full| {
+                    if let Some(win) = app.get_webview_window(WIDGET) {
+                        let _ = app.run_on_main_thread(move || {
+                            let _ = win.set_always_on_top(!full);
+                        });
+                    }
                 });
             }
             #[cfg(target_os = "linux")]
@@ -612,6 +637,13 @@ fn init_surface(app: &AppHandle, label: &str) {
     }
     #[cfg(not(target_os = "linux"))]
     {
+        #[cfg(windows)]
+        if let Ok(hwnd) = win.hwnd() {
+            vults_platform::windows_surface::set_tool_window(hwnd.0 as isize);
+            // Nothing takes a click until the page has measured what it draws (its first layout
+            // sets the real region): a transparent window would catch them all meanwhile.
+            vults_platform::windows_surface::set_region(hwnd.0 as isize, (0, 0, 0, 0), 1.0);
+        }
         runtime::place_top_center(&win);
         let _ = win.show();
     }
@@ -623,6 +655,10 @@ pub fn place_surfaces(app: &AppHandle) {
     {
         panel::apply(app);
         widget::apply(app);
+        // It follows the island's monitor; queued after the island's own placement.
+        if let Some(win) = app.get_webview_window(dictation_overlay::LABEL) {
+            let _ = app.run_on_main_thread(move || dictation_overlay::place(&win));
+        }
     }
     #[cfg(target_os = "linux")]
     for label in SURFACES {
@@ -1484,7 +1520,7 @@ fn nest_tab_set(window: tauri::Webview, tab: String) -> Result<(), String> {
     if window.label() != NEST || !valid_nest_tab(&tab) {
         return Err("Invalid Nest navigation state.".into());
     }
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     questions::depart(window.app_handle(), NEST);
     realtime::controls::depart(window.app_handle());
     *NEST_TAB.lock().map_err(|e| e.to_string())? = Some(tab);
@@ -1516,7 +1552,7 @@ fn nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full:
 }
 
 fn show_nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, full: Option<bool>) {
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     {
         questions::depart(app, ISLAND);
         questions::depart(app, NEST);
@@ -1625,7 +1661,7 @@ fn show_nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, 
                             let _ = app2.emit("nest-full", w.is_fullscreen().unwrap_or(false));
                             // Minimized, the Nest is out of sight: the island comes back (ADR 0006).
                             if minimized {
-                                #[cfg(target_os = "linux")]
+                                #[cfg(any(target_os = "linux", windows))]
                                 questions::depart(&app2, NEST);
                                 meetings::cancel(&app2);
                                 realtime::controls::depart(&app2);
@@ -1635,7 +1671,7 @@ fn show_nest_window(app: &AppHandle, nest: Option<&str>, section: Option<&str>, 
                     }
                     tauri::WindowEvent::Focused(focused) => nest_holds(&app2, Some(*focused), None),
                     tauri::WindowEvent::Destroyed => {
-                        #[cfg(target_os = "linux")]
+                        #[cfg(any(target_os = "linux", windows))]
                         questions::depart(&app2, NEST);
                         meetings::cancel(&app2);
                         realtime::controls::depart(&app2);
@@ -1964,7 +2000,7 @@ fn dictation_status(app: AppHandle) -> Option<serde_json::Value> {
     }
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 fn question_surface(app: &AppHandle) -> &'static str {
     let nest = NEST_IN.lock().is_ok_and(|state| state.1);
     if nest && question_visible(app, NEST) {
@@ -1975,7 +2011,7 @@ fn question_surface(app: &AppHandle) -> &'static str {
         ""
     }
 }
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 fn question_visible(app: &AppHandle, surface: &str) -> bool {
     match surface {
         NEST => {

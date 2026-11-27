@@ -340,6 +340,36 @@ fn always_also_answers_the_same_request_waiting_again() {
     assert_eq!(s.sessions[&key("a")].status, Status::Working);
 }
 
+/// Windows reports one folder as `c:\p`, `C:/p` or `C:\p\`: it stays one folder, and an Always
+/// rule made in one spelling answers the others.
+#[test]
+fn a_windows_folder_in_any_spelling_is_one_folder() {
+    let at = |session: &str, cwd: &str, event: AgentEvent| {
+        let Input::Agent(mut u) = agent(session, event) else {
+            unreachable!()
+        };
+        u.cwd = Some(cwd.into());
+        Input::Agent(u)
+    };
+    let mut s = State::default();
+    let now = Instant::now();
+    visible(&mut s, at("a", r"c:\Work\Site\", requested_event("r1")), now);
+    assert_eq!(s.sessions[&key("a")].cwd.as_deref(), Some(r"C:\Work\Site"));
+    visible(
+        &mut s,
+        Input::User(Intent::DecideAlways { request: rid("r1") }),
+        now,
+    );
+    assert_eq!(s.rules.len(), 1);
+    // Another session, the same folder spelled otherwise: the rule answers it at once.
+    let effects = visible(&mut s, at("b", "C:/Work/Site", requested_event("r2")), now);
+    assert!(effects.contains(&Effect::RespondPermission {
+        request: rid("r2"),
+        decision: Decision::Allow
+    }));
+    assert_eq!(s.sessions[&key("b")].project, s.sessions[&key("a")].project);
+}
+
 fn destructive(session: &str, id: &str) -> Input {
     agent(
         session,

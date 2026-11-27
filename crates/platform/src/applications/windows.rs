@@ -97,6 +97,34 @@ fn ordinary(path: &Path) -> bool {
     fs::symlink_metadata(path)
         .is_ok_and(|metadata| metadata.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT.0 == 0)
 }
+/// `%NAME%` replaced by this user's variable, as the shell expands a shortcut's target; none when
+/// one is unset (that shortcut is skipped) or a `%` is left open.
+fn expand(text: &str) -> Option<String> {
+    expand_with(text, |name| std::env::var(name).ok())
+}
+
+fn expand_with(text: &str, var: impl Fn(&str) -> Option<String>) -> Option<String> {
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+    while let Some(open) = rest.find('%') {
+        out.push_str(&rest[..open]);
+        let after = &rest[open + 1..];
+        let close = after.find('%')?;
+        let name = &after[..close];
+        if name.is_empty()
+            || !name
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '(' | ')'))
+        {
+            return None;
+        }
+        out.push_str(&var(name)?);
+        rest = &after[close + 1..];
+    }
+    out.push_str(rest);
+    Some(out)
+}
+
 fn canonical_local(path: &Path) -> Option<PathBuf> {
     if !local(path) {
         return None;
@@ -163,15 +191,17 @@ fn snapshot(roots: &[PathBuf], path: &Path) -> Option<Launcher> {
     // Loading from the retained bytes avoids shell link resolution, repair and network searches.
     let stream = unsafe { SHCreateMemStream(Some(&bytes)) }?;
     unsafe { link.cast::<IPersistStream>().ok()?.Load(&stream).ok()? };
-    let executable = PathBuf::from(wide_text(|out| unsafe {
+    // The raw path keeps `%windir%` and `%ProgramFiles%`, as about half of Windows' own shortcuts
+    // hold them: expanded here, or those apps (PowerShell, Remote Desktop) can't be opened by name.
+    let executable = PathBuf::from(expand(&wide_text(|out| unsafe {
         link.GetPath(out, std::ptr::null_mut(), SLGP_RAWPATH.0 as u32)
-    })?);
+    })?)?);
     let executable = canonical_local(&executable)?;
     if !executable.extension()?.eq_ignore_ascii_case("exe") || !executable.is_file() {
         return None;
     }
     let arguments = wide_text(|out| unsafe { link.GetArguments(out) })?;
-    let directory = wide_text(|out| unsafe { link.GetWorkingDirectory(out) })?;
+    let directory = expand(&wide_text(|out| unsafe { link.GetWorkingDirectory(out) })?)?;
     let directory = if directory.is_empty() {
         executable.parent()?.to_path_buf()
     } else {
@@ -248,7 +278,30 @@ fn inventory(roots: &[PathBuf], allowed: &dyn Fn() -> bool) -> Vec<Application> 
     apps
 }
 pub fn installed() -> Vec<Application> {
-    let mut apps = worker(|allowed| Ok(inventory(&roots(), allowed))).unwrap_or_default();
+    // The last list read to the end: a slow disk or a scan can cut one at its deadline, and the
+    // names it missed would answer "unknown". Opening one checks its shortcut again anyway.
+    static LAST: std::sync::Mutex<Vec<Application>> = std::sync::Mutex::new(Vec::new());
+    let read = worker(|allowed| {
+        let apps = inventory(&roots(), allowed);
+        Ok((apps, !allowed()))
+    });
+    let mut apps = match read {
+        Ok((apps, false)) => {
+            *LAST.lock().unwrap_or_else(|e| e.into_inner()) = apps.clone();
+            apps
+        }
+        Ok((mut apps, true)) => {
+            let last = LAST.lock().unwrap_or_else(|e| e.into_inner());
+            let missing: Vec<Application> = last
+                .iter()
+                .filter(|old| !apps.iter().any(|app| app.id == old.id))
+                .cloned()
+                .collect();
+            apps.extend(missing);
+            apps
+        }
+        Err(_) => LAST.lock().unwrap_or_else(|e| e.into_inner()).clone(),
+    };
     apps.extend(packaged::installed());
     apps
 }

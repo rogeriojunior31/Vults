@@ -33,7 +33,12 @@ is not installed.
 
 **Settings → Agents**, under *What each agent can do*, shows each built-in agent: whether its CLI is on the `PATH` and its
 version, whether its hooks are in and current (and, for Codex, trusted), and what it can do with
-Vults. **Check again** asks anew; the answer is kept ten minutes.
+Vults. **Check again** asks anew; the answer is kept ten minutes. On Windows, Vults also looks in
+the usual per-user CLI folders that exist, after your `PATH`: `%USERPROFILE%\.local\bin`
+(Claude Code's installer), `%APPDATA%\npm`, `%LOCALAPPDATA%\pnpm`, `%USERPROFILE%\.bun\bin`,
+mise's `shims`, Scoop's `shims` and winget's `Links`, and in the PATH Windows saved since you
+signed in. A CLI that only your shell profile adds (`mise activate`) is then found when Vults
+starts from the Start menu; one installed while Vults runs is found after a restart.
 
 | | Permissions | Questions | Diffs | Stopping a turn | Sandbox | Started from Vults |
 |---|---|---|---|---|---|---|

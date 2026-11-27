@@ -35,7 +35,7 @@ fn main() {
     let previous = (args.event.as_deref() == Some(protocol::STATUS_LINE_EVENT))
         .then(|| chain::previous_file(args.agent_name.as_deref()))
         .flatten()
-        .and_then(|file| chain::start(&file, &raw));
+        .and_then(|file| chain::start(&file, &raw, args.agent_name.as_deref()));
     let event = read
         .then(|| {
             build_event(&args, &raw, std::env::current_dir().ok(), |var| {
@@ -222,7 +222,12 @@ fn connect() -> Option<std::fs::File> {
     };
     let deadline = std::time::Instant::now() + limits::CONNECT_TIMEOUT;
     loop {
-        match std::fs::OpenOptions::new().read(true).write(true).open(&name) {
+        let mut options = std::fs::OpenOptions::new();
+        options.read(true).write(true);
+        // SECURITY_IDENTIFICATION: a server that took the name first can learn who we are, never
+        // act as us (the same-user check comes only after the open).
+        std::os::windows::fs::OpenOptionsExt::security_qos_flags(&mut options, 0x0001_0000);
+        match options.open(&name) {
             Ok(file) => return vults_peer::pipe_server_is_same_user(&file).then_some(file),
             Err(err)
                 if err.raw_os_error() == Some(ERROR_PIPE_BUSY) && std::time::Instant::now() < deadline =>

@@ -336,6 +336,14 @@ pub async fn continue_session(app: AppHandle, cwd: String, words: String) -> Sai
     if Path::new(&c.cwd).starts_with(crate::paths::data_dir().join("worktrees")) {
         return ("That session can't be continued from here.", None);
     }
+    // A continued Claude Code session runs in its sandbox (docs/safety.md), and Claude Code has
+    // none on native Windows: it would refuse every command, so it is not started at all.
+    if cfg!(windows) && c.key.agent == vults_protocol::AgentKind::Claude {
+        return (
+            "On Windows, Vults can't continue a Claude Code session: it runs one only in Claude Code's sandbox, which Windows lacks. Tell it in its terminal.",
+            None,
+        );
+    }
     let engine = match c.key.agent {
         vults_protocol::AgentKind::Codex => vults_chat::Provider::Codex,
         vults_protocol::AgentKind::Claude => vults_chat::Provider::Claude,

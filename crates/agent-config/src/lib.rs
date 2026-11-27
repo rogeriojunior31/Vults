@@ -221,7 +221,7 @@ fn replace(path: &Path, bytes: &[u8], now: SystemTime, backups: Backups) -> Resu
     };
     // A config kept in a dotfiles repo is often a symlink: renaming over the link would turn
     // it into a plain file and the repo copy would silently stop getting our changes.
-    let target = std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
+    let target = std::fs::canonicalize(path).map_or_else(|_| path.to_path_buf(), plain_drive_path);
     if let Some(dir) = target.parent() {
         std::fs::create_dir_all(dir).map_err(write_err)?;
     }
@@ -229,6 +229,15 @@ fn replace(path: &Path, bytes: &[u8], now: SystemTime, backups: Backups) -> Resu
     let backup = back_up(&target, original.is_some(), now, backups).map_err(write_err)?;
     write_file(&target, bytes, original.as_ref()).map_err(write_err)?;
     Ok(backup)
+}
+
+/// Windows' `canonicalize` gives `\\?\C:\…`: the backup path the user is shown, and every path
+/// built from it, reads as `C:\…`. A UNC one keeps its prefix (its plain form means another thing).
+fn plain_drive_path(path: PathBuf) -> PathBuf {
+    match path.to_str().and_then(|p| p.strip_prefix(r"\\?\")) {
+        Some(rest) if rest.as_bytes().get(1) == Some(&b':') => PathBuf::from(rest),
+        _ => path,
+    }
 }
 
 /// A temp file's name beside `target`, never the same twice: two writes at once, from this
@@ -269,8 +278,24 @@ pub(crate) fn write_file(
             }
         }
     }
+    // Windows refuses to rename over a read-only file; the new one keeps the attribute (copied
+    // from the original), so only the old one loses it, and gets it back if the rename fails.
+    #[cfg(windows)]
+    #[allow(clippy::permissions_set_readonly_false)]
+    let unlocked = original.is_some_and(|m| m.permissions().readonly())
+        && std::fs::metadata(target).is_ok_and(|m| {
+            // On Windows this clears only the read-only attribute.
+            let mut writable = m.permissions();
+            writable.set_readonly(false);
+            std::fs::set_permissions(target, writable).is_ok()
+        });
     std::fs::rename(&temp, target).inspect_err(|_| {
         let _ = std::fs::remove_file(&temp);
+        #[cfg(windows)]
+        if unlocked && let Ok(mut locked) = std::fs::metadata(target).map(|m| m.permissions()) {
+            locked.set_readonly(true);
+            let _ = std::fs::set_permissions(target, locked);
+        }
     })
 }
 
@@ -498,6 +523,29 @@ mod tests {
         let mut v = v.clone();
         v["model"] = json!("opus");
         v
+    }
+
+    /// Windows refuses a rename over a read-only file: the write goes through and stays read-only.
+    #[cfg(windows)]
+    #[test]
+    fn a_read_only_config_is_written_and_stays_read_only() {
+        let path = temp("read-only");
+        std::fs::write(&path, b"{}").unwrap();
+        let mut locked = std::fs::metadata(&path).unwrap().permissions();
+        locked.set_readonly(true);
+        std::fs::set_permissions(&path, locked).unwrap();
+        let original = std::fs::metadata(&path).unwrap();
+        write_file(&path, br#"{"a":1}"#, Some(&original)).unwrap();
+        assert_eq!(std::fs::read(&path).unwrap(), br#"{"a":1}"#);
+        let after = std::fs::metadata(&path).unwrap().permissions();
+        assert!(after.readonly());
+        #[allow(clippy::permissions_set_readonly_false)]
+        {
+            let mut open = after;
+            open.set_readonly(false);
+            std::fs::set_permissions(&path, open).unwrap();
+        }
+        std::fs::remove_dir_all(path.parent().unwrap()).unwrap();
     }
 
     #[test]

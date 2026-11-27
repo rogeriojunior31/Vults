@@ -12,17 +12,31 @@ fn main() {
         );
         return;
     }
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     if std::env::args().nth(1).as_deref() == Some("--specialist-mcp") {
         if let Some(path) = std::env::args_os().nth(2) {
             vults_chat::specialist_mcp_main(std::path::Path::new(&path));
         }
         return;
     }
+    // Servers this build doesn't have: an MCP client that starts one gets a quiet exit, never a
+    // second app (the single-instance hand-off would open Settings in the running one).
+    #[cfg(not(any(target_os = "linux", windows)))]
+    if matches!(
+        std::env::args().nth(1).as_deref(),
+        Some("--specialist-mcp" | "--questions-mcp")
+    ) {
+        return;
+    }
 
     // Disable native telemetry before any runtime can create an uploader or persistent ID.
     // SAFETY: process entry, before the MCP server, Tauri, GTK or application worker threads.
     unsafe { std::env::set_var("ORT_DISABLE_TELEMETRY", "1") };
+    // SAFETY: as above, no other thread exists yet.
+    #[cfg(windows)]
+    unsafe {
+        vults_app::widen_cli_path()
+    };
     // Zeca's MCP server for the chat's Claude Code: no window, no Tauri.
     if vults_app::serve_mcp_if_asked() {
         return;

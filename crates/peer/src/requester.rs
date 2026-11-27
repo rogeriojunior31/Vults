@@ -1,6 +1,12 @@
-//! Linux MCP requester identity from kernel credentials and a live, same-user process chain.
+//! MCP requester identity from the OS's own view of the peer and a live, same-user process chain:
+//! kernel credentials and `/proc` on Linux, the pipe's client and process handles on Windows.
+#[cfg(target_os = "linux")]
 use std::os::fd::AsRawFd;
+#[cfg(target_os = "linux")]
 use std::os::unix::fs::MetadataExt;
+
+#[cfg(windows)]
+mod windows;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Process {
@@ -8,14 +14,21 @@ pub struct Process {
     pub started: u64,
 }
 
+/// What the process runs: device and inode on Linux, the lowercased image path on Windows.
+#[cfg(target_os = "linux")]
+type Executable = (u64, u64);
+#[cfg(windows)]
+type Executable = String;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct Snapshot {
     process: Process,
     parent: u32,
     name: String,
-    executable: (u64, u64),
+    executable: Executable,
 }
 
+#[cfg(target_os = "linux")]
 impl Snapshot {
     fn read(pid: u32) -> Option<Self> {
         let dir = format!("/proc/{pid}");
@@ -55,10 +68,20 @@ impl Snapshot {
     }
 }
 
+#[cfg(target_os = "linux")]
+impl Snapshot {
+    /// Linux launchers exec the tool in their own process: nothing stays between.
+    fn is_launcher(&self) -> bool {
+        false
+    }
+}
+
+#[cfg(target_os = "linux")]
 fn shell_name(name: &str) -> bool {
     name != "busybox" && super::unix::SHELLS.contains(&name)
 }
 
+#[cfg(target_os = "linux")]
 fn parse(stat: &str, pid: u32) -> Option<(String, u32, u64)> {
     let open = stat.find('(')?;
     if stat.get(..open)?.trim().parse::<u32>().ok()? != pid {
@@ -79,6 +102,9 @@ fn parse(stat: &str, pid: u32) -> Option<(String, u32, u64)> {
 #[derive(Clone, Debug)]
 pub struct Requester {
     chain: Vec<Snapshot>,
+    /// Verified wrappers between the client and whoever started it: on Windows an npm `.cmd` shim
+    /// runs the CLI under `cmd.exe`, a mise shim under `mise.exe`. Always empty on Linux.
+    above: Vec<Snapshot>,
 }
 
 impl Requester {
@@ -88,6 +114,7 @@ impl Requester {
     }
 
     /// The connected relay must be this executable, not merely a process claiming its name.
+    #[cfg(target_os = "linux")]
     pub fn socket(socket: &impl AsRawFd) -> Option<Self> {
         if !crate::peer_is_same_user(socket) {
             return None;
@@ -111,14 +138,51 @@ impl Requester {
                 return None;
             }
             let process = read(current)?;
+            // A Windows parent id outlives its process: one born after its child is someone else.
+            if cfg!(windows)
+                && chain
+                    .last()
+                    .is_some_and(|child| process.process.started > child.process.started)
+            {
+                return None;
+            }
             let shell = process.is_shell();
             current = process.parent;
             chain.push(process);
             if !shell {
-                return Some(Self { chain });
+                let above = if cfg!(windows) {
+                    Self::shells_above(&chain, &mut read)
+                } else {
+                    Vec::new()
+                };
+                return Some(Self { chain, above });
             }
         }
         None
+    }
+
+    /// Up to three verified shells or version-manager launchers (an npm `.cmd` shim, a mise shim and
+    /// `mise.exe`) right above the client, oldest last; none past a stale parent.
+    fn shells_above(chain: &[Snapshot], read: &mut impl FnMut(u32) -> Option<Snapshot>) -> Vec<Snapshot> {
+        let mut above: Vec<Snapshot> = Vec::new();
+        let Some(mut child) = chain.last().cloned() else {
+            return above;
+        };
+        while above.len() < 3 {
+            let Some(parent) = read(child.parent) else { break };
+            if !(parent.is_shell() || parent.is_launcher())
+                || parent.process.started > child.process.started
+                || chain
+                    .iter()
+                    .chain(&above)
+                    .any(|s| s.process.pid == parent.process.pid)
+            {
+                break;
+            }
+            above.push(parent.clone());
+            child = parent;
+        }
+        above
     }
 
     pub fn relay(&self) -> Process {
@@ -130,16 +194,21 @@ impl Requester {
 
     /// The caller is a direct child of the app, after verified shell wrappers.
     pub fn launched_by(&self, app_pid: u32) -> bool {
-        self.chain.last().is_some_and(|client| client.parent == app_pid) && self.is_current()
+        self.above
+            .last()
+            .or(self.chain.last())
+            .is_some_and(|top| top.parent == app_pid)
+            && self.is_current()
     }
 
     /// Recheck before publishing: PID reuse, executable changes and reparenting revoke it.
     pub fn is_current(&self) -> bool {
         self.chain
             .iter()
+            .chain(&self.above)
             .all(|s| Snapshot::read(s.process.pid).as_ref() == Some(s))
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, target_os = "linux"))]
 mod tests;

@@ -140,6 +140,10 @@ fn build(app: &AppHandle, corner: Corner) {
             return;
         }
     }
+    #[cfg(windows)]
+    if let Ok(hwnd) = win.hwnd() {
+        vults_platform::windows_surface::set_tool_window(hwnd.0 as isize);
+    }
     place_by_hand(&win, corner);
     let _ = win.show();
 }

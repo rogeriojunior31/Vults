@@ -106,6 +106,7 @@ const MEMORY_SAID = new Set([
   tk("That session is still open in its terminal: tell it there."),
   tk("Vults can't tell whether that session is still open: tell it in its terminal."),
   tk("That session can't be continued from here."),
+  tk("On Windows, Vults can't continue a Claude Code session: it runs one only in Claude Code's sandbox, which Windows lacks. Tell it in its terminal."),
   tk("Another session is being continued: wait for it, or /continue stop."),
   tk("Today's budget is spent: Vults starts no new session until tomorrow."),
   tk("Continuing this session; it shows in the flock:"),

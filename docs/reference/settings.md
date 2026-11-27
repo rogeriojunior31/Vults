@@ -27,6 +27,22 @@ persistent setting and requests no desktop grant. See [Diagnostics](../guide/dic
 | System keyring, service `io.github.rogeriojunior31.vults`, account `dictation-keyboard-restore-token` | The dictation RemoteDesktop keyboard restore token, when persistence is available; consumed once, rotated after a grant and removed when insertion is disabled. Never in a file or exposed to a webview |
 | `~/.local/state/vults/logs/` | The log: one file a day, the last five kept. It records what happened (event names, decisions, errors), never commands, paths or chat text |
 
+## Where things live (Windows)
+
+The same files, in other folders:
+
+| Path | What |
+|---|---|
+| `%APPDATA%\Vults\settings.json` | The app's settings |
+| `%LOCALAPPDATA%\Vults\` | Everything under `~/.local/share/vults/` on Linux: the hook relay (`bin\vults-hook.exe`), the database, the inbox, Zeca's memory, the voice models, the MCP files |
+| `%LOCALAPPDATA%\Vults\logs\` | The log |
+| `\\.\pipe\vults-<your SID>` | The pipe the hook talks to, open to your account only |
+| `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` | The entry **Start with the desktop** adds |
+| Windows Credential Manager, service `io.github.rogeriojunior31.vults` | The secrets (never in a file) |
+
+The app itself is in `%LOCALAPPDATA%\Programs\Vults\` (installed just for you) or
+`%ProgramFiles%\Vults\` (for everyone).
+
 Dictation's user-maintained dictionary, replacement rules and snippets share `vults.sqlite`
 (schema 22). They are preferences, separate from recorded transcripts: retention, transcript
 erasure and **Clear history** preserve them. Individual deletion removes the chosen entry.
@@ -206,10 +222,12 @@ Only when you click **Write the file**, after a dated backup and a diff you revi
 On Windows each agent hands its hooks to a different shell: Claude Code to Git Bash, Codex to the
 session's cmd or PowerShell, Antigravity, Droid, Kimi and Qwen to cmd, Cursor and Copilot to
 PowerShell. Each command is written for that shell. When the hook's path has no space, the
-command names it unquoted, with forward slashes, and reads the same to all three. Copilot's
+command names it unquoted, with forward slashes, and reads the same to all three; a path with a
+space (a user name such as `First Last`) is named by its short 8.3 form (`FIRSTL~1`) instead. Only
+on a drive that keeps no 8.3 names is it quoted, and Qwen Code started from cmd then cannot run
+it. Codex's command starts its own PowerShell only in that case. Copilot's
 entries also get a `powershell` command, the one Copilot runs on Windows, ending in `; exit 0`
-so that a hook that cannot start never denies a tool. Qwen Code started from cmd cannot run a
-hook whose path has a space.
+so that a hook that cannot start never denies a tool.
 
 Vults no longer supports Gemini CLI. While hooks an earlier Vults installed in
 `~/.gemini/settings.json` are still there, they send nothing, and **Settings → Agents** shows a

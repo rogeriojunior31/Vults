@@ -62,6 +62,9 @@ pub mod notifications;
 #[cfg(windows)]
 pub mod windows_displays;
 #[cfg(windows)]
+#[path = "windows/environment.rs"]
+pub mod windows_environment;
+#[cfg(windows)]
 pub mod windows_process;
 #[cfg(windows)]
 pub mod windows_session;

@@ -8,6 +8,21 @@ pub fn home() -> PathBuf {
 }
 
 /// A path to show: under $HOME it starts with `~`.
+/// A canonical path as the CLIs and people read it: on Windows `canonicalize` gives `\\?\C:\…`,
+/// which cmd can't start in and Claude Code doesn't match its folders against. Only a drive path
+/// loses the prefix (a `\\?\UNC\…` one keeps it: its plain form means something else).
+pub fn simplified(path: PathBuf) -> PathBuf {
+    let Some(text) = path.to_str() else {
+        return path;
+    };
+    match text.strip_prefix(r"\\?\") {
+        Some(rest) if rest.as_bytes().get(1) == Some(&b':') && rest.as_bytes().get(2) == Some(&b'\\') => {
+            PathBuf::from(rest)
+        }
+        _ => path,
+    }
+}
+
 pub fn shown(path: &std::path::Path) -> String {
     tilde(path, &home())
 }
@@ -81,6 +96,117 @@ pub fn agent_dirs() -> vults_agents::Dirs {
             .filter(|v| !v.is_empty())
             .or_else(|| shell.get(name).cloned())
     })
+}
+
+/// Started from the Start menu, the app has the PATH Explorer got at sign-in: a CLI that only a
+/// shell profile adds (`mise activate`), or one installed since, is missing, and the chat said
+/// Claude was not installed. The PATH Windows saved since (winget, `setx`) and the usual per-user
+/// CLI folders that exist go at the end, so the user's own PATH still wins. Every lookup and every
+/// child the app starts then sees them; a CLI installed while the app runs needs a restart.
+///
+/// # Safety
+/// Call first thing in `main`, before any other thread exists.
+#[cfg(windows)]
+pub unsafe fn widen_cli_path() {
+    let var = |name: &str| {
+        std::env::var_os(name)
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
+    };
+    let profile = var("USERPROFILE");
+    let local = var("LOCALAPPDATA");
+    let dirs = [
+        // Claude Code's own installer.
+        profile.as_ref().map(|p| p.join(".local").join("bin")),
+        var("APPDATA").map(|p| p.join("npm")),
+        local.as_ref().map(|p| p.join("pnpm")),
+        profile.as_ref().map(|p| p.join(".bun").join("bin")),
+        var("MISE_DATA_DIR")
+            .or_else(|| local.as_ref().map(|p| p.join("mise")))
+            .map(|p| p.join("shims")),
+        var("SCOOP")
+            .or_else(|| profile.as_ref().map(|p| p.join("scoop")))
+            .map(|p| p.join("shims")),
+    ];
+    // winget's links for CLIs it installs per user (`glab`, `gh` from some sources).
+    let winget = local
+        .as_ref()
+        .map(|p| p.join("Microsoft").join("WinGet").join("Links"));
+    let found = vults_platform::windows_environment::saved_path()
+        .into_iter()
+        .chain(dirs.into_iter().flatten())
+        .chain(winget)
+        .filter(|d| d.is_dir());
+    if let Some(path) = with_cli_dirs(std::env::var_os("PATH"), found) {
+        // SAFETY: the caller runs this before any other thread exists.
+        unsafe { std::env::set_var("PATH", path) };
+    }
+}
+
+/// `path` with each of `extra` it lacks appended; none when nothing changes.
+#[cfg(windows)]
+fn with_cli_dirs(
+    path: Option<std::ffi::OsString>,
+    extra: impl IntoIterator<Item = PathBuf>,
+) -> Option<std::ffi::OsString> {
+    // Windows paths ignore case and a trailing separator.
+    let key = |p: &std::path::Path| p.to_string_lossy().trim_end_matches(['\\', '/']).to_lowercase();
+    let mut dirs: Vec<PathBuf> = path
+        .as_deref()
+        .map(|p| std::env::split_paths(p).collect())
+        .unwrap_or_default();
+    let before = dirs.len();
+    for dir in extra {
+        if !dirs.iter().any(|d| key(d) == key(&dir)) {
+            dirs.push(dir);
+        }
+    }
+    (dirs.len() > before)
+        .then(|| std::env::join_paths(dirs).ok())
+        .flatten()
+}
+
+#[cfg(all(test, windows))]
+mod cli_path_tests {
+    use super::*;
+
+    #[test]
+    fn a_canonical_drive_path_loses_its_verbatim_prefix() {
+        assert_eq!(
+            simplified(r"\\?\C:\Users\me".into()),
+            PathBuf::from(r"C:\Users\me")
+        );
+        assert_eq!(
+            simplified(r"\\?\UNC\srv\share".into()),
+            PathBuf::from(r"\\?\UNC\srv\share")
+        );
+        assert_eq!(simplified(r"C:\x".into()), PathBuf::from(r"C:\x"));
+    }
+
+    #[test]
+    fn missing_cli_folders_join_the_end_once_and_the_users_path_wins() {
+        let path = Some(r"C:\Windows;C:\Users\me\AppData\Roaming\npm\".into());
+        let widened = with_cli_dirs(
+            path,
+            [
+                PathBuf::from(r"c:\users\me\appdata\roaming\NPM"),
+                PathBuf::from(r"C:\Users\me\AppData\Local\mise\shims"),
+            ],
+        )
+        .unwrap();
+        assert_eq!(
+            widened,
+            r"C:\Windows;C:\Users\me\AppData\Roaming\npm\;C:\Users\me\AppData\Local\mise\shims"
+        );
+        assert_eq!(
+            with_cli_dirs(Some(r"C:\Windows".into()), [PathBuf::from(r"C:\Windows\")]),
+            None
+        );
+        assert_eq!(
+            with_cli_dirs(None, [PathBuf::from(r"C:\tools")]).unwrap(),
+            r"C:\tools"
+        );
+    }
 }
 
 /// Asks the login shell now, so Settings never waits on it, and hands what it sets to the agents

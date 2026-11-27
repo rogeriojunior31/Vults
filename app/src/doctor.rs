@@ -5,7 +5,8 @@
 //! (checked under `unshare -n`); that is an observation of today's versions, not a guarantee.
 //!
 //! The `PATH` is the app's own, the one the chat runs its engines by: an agent a desktop launch
-//! can't see (a shell rc's PATH) shows as not installed though its hooks still work.
+//! can't see (a shell rc's PATH) shows as not installed though its hooks still work; on Windows
+//! the usual per-user CLI folders join it first (`paths::widen_cli_path`).
 
 pub(crate) mod dictation;
 

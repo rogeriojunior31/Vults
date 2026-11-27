@@ -1,5 +1,5 @@
 # Aprovando pela ilha
-<!-- source: 9ea02621358c -->
+<!-- source: 4bb074e9b526 -->
 
 Quando o Claude Code, o Codex, o OpenCode, o Qwen Code ou o Copilot CLI pede permissão para uma chamada de
 ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o
@@ -87,13 +87,17 @@ deny external
 ask tool WebFetch
 ```
 
-- `project` define a pasta em que ela vale (e abaixo dela); sem ele, vale em todo lugar. `agents`
+- `project` define a pasta em que ela vale (e abaixo dela); sem ele, vale em todo lugar. No Windows,
+  escreva `C:\Users\eu\site`, `C:/Users/eu/site` ou `~/site`: maiúsculas e barras não importam. `agents`
   limita a alguns agentes; sem ele, todo agente embutido.
 - `allow`, `deny` ou `ask`, depois uma classe (`read`, `read-external`, `write`, `external`),
   `command` e as palavras dele (um `*` no fim deixa vir mais palavras), ou `tool` e o nome exato de
   uma ferramenta (um shell ou uma ferramenta MCP só com `deny` ou `ask`).
 - Uma ação destrutiva (`rm`, um push forçado, um redirecionamento por cima de um arquivo) sempre
-  pergunta: nenhuma linha a responde.
+  pergunta: nenhuma linha a responde. No Windows, PowerShell e cmd também contam (`Remove-Item`,
+  `del`, `rd /s`, `Set-Content`, `Stop-Process`), e um comando do PowerShell com variáveis, blocos
+  de script, chamadas .NET ou redirecionamentos é lido como destrutivo, porque o Vults não
+  acompanha essa sintaxe.
 - Um deny vence um ask, e um ask vence um allow, entre todas as políticas que valem; um deny vence
   também um **Always allow** mais antigo. Uma linha `deny` ou `ask` cobre o que vier depois das
   palavras dela, com `*` ou não, e um comando que tem as duas primeiras palavras dela em qualquer
@@ -107,7 +111,7 @@ ask tool WebFetch
   `clone`). Também perguntam um comando com símbolo do shell, aspas, glob ou tab, um comando
   longo ou de várias linhas, e um card cujo alvo foi cortado. O **Always allow** continua cobrindo
   um comando exato.
-- Um allow só alcança a pasta da sessão: aquela em que o Vults a viu começar, nunca `/` nem a sua
+- Um allow só alcança a pasta da sessão: aquela em que o Vults a viu começar, nunca `/`, a raiz de um disco (`C:\`) nem a sua
   pasta pessoal, e nada depois que o agente saiu dela (uma sessão que o Vults viu pela primeira vez
   depois, após um reinício, não ganha allow). Um caminho fora dela, um que sobe (`..`), vários
   caminhos num alvo só ou uma escrita dentro de `.git` pergunta. As palavras de um comando permitido

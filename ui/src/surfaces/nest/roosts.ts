@@ -166,7 +166,8 @@ function roost(r: RoostView, backend: RoostsBackend, done: () => void, hold: (on
 }
 
 /** A folder's last part: the name the week counts a project by (`~/Projects/Vults-w2` → `Vults-w2`). */
-const base = (path: string) => path.replace(/\/+$/, "").split("/").pop() ?? path;
+// Either slash: a Windows folder is `C:\…`.
+const base = (path: string) => path.replace(/[\\/]+$/, "").split(/[\\/]/).pop() ?? path;
 
 /**
  * This week's time per project, as the prototype's bars draw it, the most first. The week counts a
@@ -183,7 +184,7 @@ function bars(week: WeekView | null, list: RoostView[]): HTMLElement | null {
     const mine = counted.filter((p) => folders.has(p.name.toLowerCase()));
     if (!mine.length) continue;
     for (const p of mine) taken.add(p.name);
-    const name = r.name.split("/").pop() ?? r.name;
+    const name = base(r.name);
     rows.push({ name: r.trees.length > 1 ? t("{name} · {n} wt", { name, n: r.trees.length }) : name, secs: mine.reduce((n, p) => n + p.secs, 0) });
   }
   for (const p of counted) if (!taken.has(p.name)) rows.push({ name: p.name, secs: p.secs });

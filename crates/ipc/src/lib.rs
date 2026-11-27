@@ -250,17 +250,39 @@ async fn serve_unix(
 async fn serve_pipe(name: String, incoming: mpsc::Sender<Incoming>, slots: Arc<Semaphore>) -> io::Result<()> {
     use tokio::net::windows::named_pipe::ServerOptions;
 
-    // first_pipe_instance: refuse to serve on a name somebody else already owns.
-    let mut server = ServerOptions::new().first_pipe_instance(true).create(&name)?;
+    use std::time::Duration;
+    // first_pipe_instance: refuse to serve on a name somebody else already owns. That may be this
+    // app's previous run still closing (an update, a restart): waited for, never given up on, or
+    // this run would see no hook event for its whole life.
+    let mut wait = Duration::from_millis(100);
+    let mut server = loop {
+        match ServerOptions::new().first_pipe_instance(true).create(&name) {
+            Ok(server) => break server,
+            Err(_) if !incoming.is_closed() => {
+                tokio::time::sleep(wait).await;
+                wait = (wait * 2).min(Duration::from_secs(5));
+            }
+            Err(e) => return Err(e),
+        }
+    };
     loop {
         if incoming.is_closed() {
             return Ok(());
         }
         if server.connect().await.is_err() {
-            tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+            tokio::time::sleep(Duration::from_millis(200)).await;
             continue;
         }
-        let connected = std::mem::replace(&mut server, ServerOptions::new().create(&name)?);
+        // The next instance before this client is served; one that fails to open is tried again
+        // (the client meanwhile waits in its buffer), never the end of the server.
+        let next = loop {
+            match ServerOptions::new().create(&name) {
+                Ok(next) => break next,
+                Err(_) if !incoming.is_closed() => tokio::time::sleep(Duration::from_millis(200)).await,
+                Err(e) => return Err(e),
+            }
+        };
+        let connected = std::mem::replace(&mut server, next);
         if !vults_peer::pipe_client_is_same_user(&connected) {
             continue;
         }

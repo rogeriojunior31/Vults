@@ -60,9 +60,101 @@ fn moved_from_legacy(secret: Secret) -> Result<Option<String>, String> {
 }
 
 pub fn set(secret: Secret, value: &str) -> Result<(), String> {
+    // Tests run against keyring's in-memory store, never the user's Credential Manager.
+    #[cfg(all(windows, not(test)))]
+    return windows::set_local(vults_brand::BUNDLE_ID, &secret.account(), value);
+    #[cfg(any(not(windows), test))]
     entry(secret)?
         .set_password(value)
         .map_err(|e| format!("keyring: {e}"))
+}
+
+/// keyring writes every Windows credential `CRED_PERSIST_ENTERPRISE`: on a domain account with a
+/// roaming profile it follows the user to every PC, and two desktops would share one phone's seal
+/// key and every API key. Written here `CRED_PERSIST_LOCAL_MACHINE`, in keyring's own shape (its
+/// target name, user name and UTF-16 blob), so keyring still reads and deletes it.
+#[cfg(windows)]
+mod windows {
+    use std::ffi::c_void;
+
+    #[repr(C)]
+    struct Credential {
+        flags: u32,
+        kind: u32,
+        target_name: *mut u16,
+        comment: *mut u16,
+        last_written: [u32; 2],
+        blob_size: u32,
+        blob: *mut u8,
+        persist: u32,
+        attribute_count: u32,
+        attributes: *mut c_void,
+        target_alias: *mut u16,
+        user_name: *mut u16,
+    }
+
+    #[link(name = "advapi32")]
+    unsafe extern "system" {
+        fn CredWriteW(credential: *const Credential, flags: u32) -> i32;
+    }
+
+    const CRED_TYPE_GENERIC: u32 = 1;
+    const CRED_PERSIST_LOCAL_MACHINE: u32 = 2;
+    /// CRED_MAX_CREDENTIAL_BLOB_SIZE.
+    const MAX_BLOB: usize = 5 * 512;
+
+    fn wide(text: &str) -> Vec<u16> {
+        text.encode_utf16().chain(Some(0)).collect()
+    }
+
+    pub(super) fn set_local(service: &str, account: &str, value: &str) -> Result<(), String> {
+        let mut blob: Vec<u8> = value.encode_utf16().flat_map(u16::to_le_bytes).collect();
+        if blob.len() > MAX_BLOB {
+            return Err("keyring: the secret is too long for Windows Credential Manager".into());
+        }
+        let (mut target, mut user) = (wide(&format!("{account}.{service}")), wide(account));
+        let (mut comment, mut alias) = (wide(vults_brand::NAME), wide(""));
+        let credential = Credential {
+            flags: 0,
+            kind: CRED_TYPE_GENERIC,
+            target_name: target.as_mut_ptr(),
+            comment: comment.as_mut_ptr(),
+            last_written: [0; 2],
+            blob_size: blob.len() as u32,
+            blob: blob.as_mut_ptr(),
+            persist: CRED_PERSIST_LOCAL_MACHINE,
+            attribute_count: 0,
+            attributes: std::ptr::null_mut(),
+            target_alias: alias.as_mut_ptr(),
+            user_name: user.as_mut_ptr(),
+        };
+        // SAFETY: every pointer is to a buffer alive until the call returns; Windows copies them.
+        let written = unsafe { CredWriteW(&credential, 0) } != 0;
+        let error = std::io::Error::last_os_error();
+        // The copy of the secret goes as soon as Windows has it.
+        blob.iter_mut().for_each(|b| *b = 0);
+        written.then_some(()).ok_or_else(|| format!("keyring: {error}"))
+    }
+
+    #[cfg(test)]
+    mod tests {
+        #[test]
+        fn a_local_credential_reads_back_through_keyring() {
+            use keyring::credential::CredentialApi;
+            let service = format!("{}.test-{}", vults_brand::BUNDLE_ID, std::process::id());
+            let account = "local-persist-check";
+            // keyring's own Windows credential, not its default store, which other tests mock.
+            let native = keyring::windows::WinCredential::new_with_target(None, &service, account).unwrap();
+            let written = super::set_local(&service, account, "secret \u{2713} \u{79d8}");
+            let read = native.get_password();
+            // Removed before any assert: a failing test leaves nothing in Credential Manager.
+            let _ = native.delete_credential();
+            written.unwrap();
+            assert_eq!(read.unwrap(), "secret \u{2713} \u{79d8}");
+            assert!(super::set_local(&service, account, &"x".repeat(1281)).is_err());
+            assert!(native.get_password().is_err(), "a refused secret writes nothing");
+        }
+    }
 }
 
 pub fn delete(secret: Secret) -> Result<(), String> {

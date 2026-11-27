@@ -132,6 +132,12 @@ fn persist(base: String, token: String) -> Result<Connection, String> {
     };
     let value = serde_json::to_string(&Credential::new(connection.clone(), token))
         .map_err(|_| "Could not save the Gitea connection.")?;
+    // Credential Manager holds at most 2 560 bytes (UTF-16): longer, it refuses with no reason.
+    if cfg!(windows) && value.encode_utf16().count() * 2 > 2560 {
+        return Err(
+            "This Gitea token is too long for Windows Credential Manager. Use a shorter token.".into(),
+        );
+    }
     vults_secrets::set(vults_secrets::Secret::Gitea, &value)
         .map_err(|_| "Could not save the Gitea connection.")?;
     *META.write().map_err(|_| "Could not save the Gitea connection.")? = Some(connection.clone());

@@ -33,6 +33,7 @@ const ERRORS = [
   tk("Check the Gitea URL and token in Settings."),
   tk("Could not read the Gitea connection."),
   tk("Could not save the Gitea connection."),
+  tk("This Gitea token is too long for Windows Credential Manager. Use a shorter token."),
   tk("The Gitea connection changed. Reload Settings and try again."),
   tk("Enter a valid HTTPS Gitea base URL without credentials, query or fragment."),
   tk("Enter a Gitea access token for this URL."),

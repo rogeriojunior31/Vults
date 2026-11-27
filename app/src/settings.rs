@@ -1152,7 +1152,7 @@ pub fn set_dictation_microphone<R: tauri::Runtime>(
     save(&next).map_err(|_| "Could not save the dictation microphone.")?;
     apply_change(&app, &mut saved, |settings| *settings = next);
     drop(saved);
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     crate::questions::invalidate_capture(&app);
     let _ = app.emit("settings", serde_json::json!({ "dictationMicrophone": device }));
     Ok(())
@@ -1795,15 +1795,30 @@ pub async fn monitors(app: AppHandle) -> Vec<Monitor> {
     }
     #[cfg(windows)]
     {
-        app.available_monitors()
+        // The saved choice stays the device name; people read the monitor's own (`DELL U2720Q`),
+        // with its number when two share one.
+        let friendly = vults_platform::windows_displays::friendly_names();
+        let names: Vec<String> = app
+            .available_monitors()
             .unwrap_or_default()
             .into_iter()
-            .filter_map(|m| {
-                let name = m.name()?.to_owned();
-                Some(Monitor {
-                    label: name.clone(),
-                    name,
-                })
+            .filter_map(|m| m.name().cloned())
+            .collect();
+        let shown = |name: &String| friendly.get(name).cloned().unwrap_or_else(|| name.clone());
+        names
+            .iter()
+            .map(|name| {
+                let label = shown(name);
+                let twins = names.iter().filter(|other| shown(other) == label).count();
+                let number = name.trim_start_matches(r"\\.\DISPLAY");
+                Monitor {
+                    label: if twins > 1 && friendly.contains_key(name) {
+                        format!("{label} ({number})")
+                    } else {
+                        label
+                    },
+                    name: name.clone(),
+                }
             })
             .collect()
     }
@@ -1853,11 +1868,11 @@ pub fn edit(app: &AppHandle, change: impl FnOnce(&mut Settings)) -> Result<(), S
     let changed = apply_change(app, &mut s, change);
     let result = save(&s).map_err(|e| format!("can't save the settings: {e}"));
     drop(s);
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     if changed {
         crate::questions::invalidate_capture(app);
     }
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(any(target_os = "linux", windows)))]
     let _ = changed;
     result
 }

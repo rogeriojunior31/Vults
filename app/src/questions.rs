@@ -6,10 +6,14 @@ use tokio::sync::oneshot;
 use vults_core::questions::{Owner, Revocation, Slot, Ticket};
 use vults_peer::requester::Requester;
 
+// Editing a question by dictation rides the Linux dictation worker; Windows answers are typed.
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 mod capture;
 pub(crate) mod install;
 pub(crate) mod transport;
-pub(crate) use capture::{admit_ordinary, cancel as cancel_capture, invalidate as invalidate_capture, key};
+pub(crate) use capture::invalidate as invalidate_capture;
+#[cfg(target_os = "linux")]
+pub(crate) use capture::{admit_ordinary, cancel as cancel_capture, key};
 #[derive(Debug, Default)]
 pub(crate) struct Active {
     live: std::sync::atomic::AtomicBool,
@@ -17,15 +21,51 @@ pub(crate) struct Active {
     access_changed: std::sync::Mutex<Option<Instant>>,
     route: std::sync::Mutex<capture::Routing>,
 }
+#[cfg(target_os = "linux")]
 pub(crate) fn active(app: &AppHandle) -> bool {
     app.try_state::<Active>()
         .is_some_and(|state| state.live.load(std::sync::atomic::Ordering::Acquire))
+}
+/// The OS's own random bytes, as the question token's nonce needs; false when none could be read.
+fn os_random(out: &mut [u8]) -> bool {
+    #[cfg(unix)]
+    {
+        std::fs::File::open("/dev/urandom")
+            .and_then(|mut f| std::io::Read::read_exact(&mut f, out))
+            .is_ok()
+    }
+    #[cfg(windows)]
+    {
+        #[link(name = "bcrypt")]
+        unsafe extern "system" {
+            fn BCryptGenRandom(
+                algorithm: *mut std::ffi::c_void,
+                buffer: *mut u8,
+                size: u32,
+                flags: u32,
+            ) -> i32;
+        }
+        const BCRYPT_USE_SYSTEM_PREFERRED_RNG: u32 = 2;
+        let Ok(size) = u32::try_from(out.len()) else {
+            return false;
+        };
+        // SAFETY: the buffer and its length come from the same slice; no algorithm handle is needed.
+        unsafe {
+            BCryptGenRandom(
+                std::ptr::null_mut(),
+                out.as_mut_ptr(),
+                size,
+                BCRYPT_USE_SYSTEM_PREFERRED_RNG,
+            ) == 0
+        }
+    }
 }
 const LEASE: Duration = Duration::from_secs(3);
 const UNAVAILABLE: &str = "The question is no longer available. Ask a new question; do not retry this reply.";
 
 type Answer = Result<String, String>;
 #[derive(Debug)]
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 pub(crate) enum Command {
     Open {
         connection: u64,
@@ -258,10 +298,7 @@ impl Questions {
                     return None;
                 }
                 let mut nonce = [0; 16];
-                if std::fs::File::open("/dev/urandom")
-                    .and_then(|mut f| std::io::Read::read_exact(&mut f, &mut nonce))
-                    .is_err()
-                {
+                if !os_random(&mut nonce) {
                     let _ = reply.send(Err(UNAVAILABLE.into()));
                     return None;
                 }

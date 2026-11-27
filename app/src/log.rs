@@ -8,6 +8,10 @@ use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 
 pub fn dir() -> PathBuf {
+    // Beside the rest of the app's data (`%LOCALAPPDATA%\Vults\logs`), where a user looks for it.
+    if cfg!(windows) {
+        return crate::paths::data_dir().join("logs");
+    }
     let base = std::env::var_os("XDG_STATE_HOME")
         .map(PathBuf::from)
         .unwrap_or_else(|| crate::paths::home().join(".local").join("state"));

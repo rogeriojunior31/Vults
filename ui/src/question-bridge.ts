@@ -48,8 +48,11 @@ export function connectQuestions(surface: "island" | "nest", mount: (card: HTMLE
   }
   Bridge.onTextQuestion(receive);
   let rebound = false;
-  void Bridge.shortcutKeys().then(keys => { if (!rebound) card.shortcut(keys.talk ?? ""); }, () => {});
-  Bridge.onShortcutKeys(keys => { rebound = true; card.shortcut(keys.talk ?? ""); });
+  // Dictating into a question rides the Linux dictation worker: Windows offers no key, only typing.
+  const dictates = !navigator.userAgent.includes("Windows");
+  const keyOf = (keys: { talk?: string }) => dictates ? keys.talk ?? "" : "";
+  void Bridge.shortcutKeys().then(keys => { if (!rebound) card.shortcut(keyOf(keys)); }, () => {});
+  Bridge.onShortcutKeys(keys => { rebound = true; card.shortcut(keyOf(keys)); });
   document.addEventListener("visibilitychange", () => { if (document.hidden) depart(); else void refresh(); });
   window.addEventListener("pagehide", depart);
   // A missing/destroyed renderer cannot keep a question alive through a stale event listener.

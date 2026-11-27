@@ -25,10 +25,10 @@ mod claude;
 mod claude_account;
 mod codex;
 mod codex_isolation;
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 mod mcp_tools;
 pub mod model_prices;
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 pub use mcp_tools::stdio as specialist_mcp_main;
 mod codex_server;
 pub mod consult_codex;
@@ -146,6 +146,41 @@ pub(crate) fn spawn_owned(cmd: &mut tokio::process::Command) -> std::io::Result<
 
 #[cfg(all(test, windows))]
 mod owned_child_tests;
+
+/// A system prompt in a file of its own, for as long as its CLI runs. On Windows it can't go on the
+/// command line: a `claude.cmd` from npm takes no argument with a line break (std refuses to spawn
+/// it), and Zeca's memory outgrows the 32 767 characters a command line holds. The file is in the
+/// user's own temp folder and goes with this value.
+#[cfg(windows)]
+pub(crate) struct PromptFile(pub(crate) std::path::PathBuf);
+
+#[cfg(windows)]
+impl PromptFile {
+    pub(crate) fn write(text: &str) -> Result<Self, String> {
+        use std::io::Write;
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static NEXT: AtomicU64 = AtomicU64::new(0);
+        let n = NEXT.fetch_add(1, Ordering::Relaxed);
+        let path = std::env::temp_dir().join(format!("vults-prompt-{}-{n}.md", std::process::id()));
+        let mut file = std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&path)
+            .map_err(|e| format!("Can't prepare the instructions: {e}"))?;
+        // Owned before the write, so a failed write removes the file too.
+        let prompt = Self(path);
+        file.write_all(text.as_bytes())
+            .map_err(|e| format!("Can't prepare the instructions: {e}"))?;
+        Ok(prompt)
+    }
+}
+
+#[cfg(windows)]
+impl Drop for PromptFile {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_file(&self.0);
+    }
+}
 
 /// A turn thinking this long (not counting time spent waiting for the user) is stuck.
 const TURN_TIMEOUT: Duration = Duration::from_secs(600);
@@ -1160,17 +1195,17 @@ impl Chat {
                 let Some(driver) = self.driver.as_mut() else {
                     return Err("This chat has no agent to run.".into());
                 };
-                #[cfg(target_os = "linux")]
+                #[cfg(any(target_os = "linux", windows))]
                 let service = if specialist {
                     Some(mcp_tools::Service::bind()?)
                 } else {
                     None
                 };
-                #[cfg(target_os = "linux")]
+                #[cfg(any(target_os = "linux", windows))]
                 if specialist {
                     driver.set_tool_service(service.as_ref().map(|s| s.config.clone()))?;
                 }
-                #[cfg(not(target_os = "linux"))]
+                #[cfg(not(any(target_os = "linux", windows)))]
                 if specialist && !self.tools.is_empty() {
                     return Err("Specialist GitHub tools currently require Linux.".into());
                 }
@@ -1185,7 +1220,7 @@ impl Chat {
                     running: Default::default(),
                     zeca_mcp: self.provider == Provider::Claude && self.spec.mcp_config.is_some(),
                 };
-                #[cfg(target_os = "linux")]
+                #[cfg(any(target_os = "linux", windows))]
                 if let Some(service) = service {
                     return tokio::select! {
                         result = driver.send(turn,&sink) => result,

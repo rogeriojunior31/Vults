@@ -137,10 +137,10 @@ pub fn microphones() -> Result<Vec<String>, String> {
     let mut names: Vec<String> = host
         .input_devices()
         .map_err(|_| "Could not list microphones.")?
-        .map(|device| device.to_string())
+        .filter_map(|device| name(&device))
         .collect();
-    if let Some(device) = host.default_input_device() {
-        names.push(device.to_string());
+    if let Some(name) = host.default_input_device().as_ref().and_then(name) {
+        names.push(name);
     }
     Ok(microphone_names(names))
 }
@@ -160,7 +160,7 @@ pub fn input_info(preferred: Option<&str>) -> Result<InputInfo, String> {
         .map_err(|_| "Could not read microphone format.")?;
     Ok(InputInfo {
         host: cpal::default_host().id().name().into(),
-        device: device.to_string(),
+        device: name(&device).unwrap_or_default(),
         rate: config.sample_rate(),
     })
 }
@@ -181,14 +181,33 @@ fn input_index(names: &[String], preferred: Option<&str>, default: Option<usize>
 
 fn input(preferred: Option<&str>) -> Result<cpal::Device, String> {
     let host = cpal::default_host();
-    let mut devices: Vec<_> = host.input_devices().map(|d| d.collect()).unwrap_or_default();
-    let default = host.default_input_device().map(|device| {
-        devices.push(device);
-        devices.len() - 1
-    });
-    let names: Vec<_> = devices.iter().map(ToString::to_string).collect();
+    // A device whose name can't be read (it just went away) is not offered.
+    let mut devices: Vec<(cpal::Device, String)> = host
+        .input_devices()
+        .map(|d| {
+            d.filter_map(|device| name(&device).map(|n| (device, n)))
+                .collect()
+        })
+        .unwrap_or_default();
+    let default = host
+        .default_input_device()
+        .and_then(|device| name(&device).map(|n| (device, n)))
+        .map(|pair| {
+            devices.push(pair);
+            devices.len() - 1
+        });
+    let names: Vec<String> = devices.iter().map(|(_, n)| n.clone()).collect();
     let index = input_index(&names, preferred, default).ok_or("no microphone found")?;
-    Ok(devices.swap_remove(index))
+    Ok(devices.swap_remove(index).0)
+}
+
+/// A device's name, or none when it can't be read: cpal's `Display` fails (and `to_string`
+/// would panic) when a device goes away between two calls, as a mic unplugged at the start does.
+fn name(device: &cpal::Device) -> Option<String> {
+    use std::fmt::Write;
+    let mut out = String::new();
+    write!(out, "{device}").ok()?;
+    Some(out)
 }
 
 type Chunks = mpsc::Receiver<Vec<f32>>;
@@ -226,9 +245,12 @@ fn open(
     }
     stream
         .play()
-        .map_err(|e| format!("can't start the microphone: {e}"))?;
+        .map_err(|e| blocked(&e).unwrap_or_else(|| format!("can't start the microphone: {e}")))?;
     Ok((stream, converter, rx))
 }
+
+/// What the error callback leaves when the device itself went away, not the stream failing.
+const GONE: &str = "\u{0}device gone";
 
 fn stream<T>(
     device: &cpal::Device,
@@ -272,11 +294,31 @@ where
                 }
             },
             move |error| {
-                *errors.lock().unwrap_or_else(|e| e.into_inner()) = Some(format!("microphone: {error}"));
+                let gone = matches!(
+                    error.kind(),
+                    cpal::ErrorKind::DeviceNotAvailable
+                        | cpal::ErrorKind::DeviceChanged
+                        | cpal::ErrorKind::StreamInvalidated
+                );
+                *errors.lock().unwrap_or_else(|e| e.into_inner()) = Some(if gone {
+                    GONE.into()
+                } else {
+                    format!("microphone: {error}")
+                });
             },
             None,
         )
-        .map_err(|e| format!("can't open the microphone: {e}"))
+        .map_err(|e| blocked(&e).unwrap_or_else(|| format!("can't open the microphone: {e}")))
+}
+
+/// Windows answers E_ACCESSDENIED (0x80070005, its text in the system's language) when its privacy
+/// settings keep desktop apps off the microphone: say where to turn it back on.
+fn blocked(error: &cpal::Error) -> Option<String> {
+    let denied = error.kind() == cpal::ErrorKind::PermissionDenied
+        || error.to_string().to_ascii_lowercase().contains("0x80070005");
+    (cfg!(windows) && denied).then(|| {
+        "Windows is blocking the microphone. Turn on Settings → Privacy & security → Microphone → Let desktop apps access your microphone.".into()
+    })
 }
 
 fn capture(
@@ -333,8 +375,13 @@ fn capture(
         }
     }
     drop(stream);
-    if let Some(error) = failed.lock().unwrap_or_else(|e| e.into_inner()).take() {
-        return Err(error);
+    match failed.lock().unwrap_or_else(|e| e.into_inner()).take() {
+        // The microphone went away (unplugged, or the default changed to a headset that just
+        // connected): what was said before is kept, as if the user had stopped there.
+        Some(error) if error == GONE && !audio.0.lock().unwrap_or_else(|e| e.into_inner()).is_empty() => {}
+        Some(error) if error == GONE => return Err("the microphone went away".into()),
+        Some(error) => return Err(error),
+        None => {}
     }
     for chunk in chunks.try_iter() {
         append(&converter.push(&chunk)?, &mut meter);

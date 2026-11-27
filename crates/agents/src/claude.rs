@@ -235,13 +235,23 @@ pub fn trusts(state: &Value, dir: &Path) -> bool {
     let Some(projects) = state.get("projects").and_then(Value::as_object) else {
         return false;
     };
-    dir.ancestors().any(|d| {
-        d.to_str()
-            .and_then(|k| projects.get(k))
-            .and_then(|p| p.get("hasTrustDialogAccepted"))
-            .and_then(Value::as_bool)
-            == Some(true)
-    })
+    // Claude Code keys Windows folders as `C:/Users/…`; the folder asked about may be `C:\…` or
+    // `\\?\C:\…` (a canonical path), in any case.
+    let key = |path: &str| {
+        let path = path.strip_prefix(r"\\?\").unwrap_or(path);
+        if cfg!(windows) {
+            path.replace('\\', "/").trim_end_matches('/').to_lowercase()
+        } else {
+            path.to_owned()
+        }
+    };
+    let trusted: Vec<String> = projects
+        .iter()
+        .filter(|(_, p)| p.get("hasTrustDialogAccepted").and_then(Value::as_bool) == Some(true))
+        .map(|(k, _)| key(k))
+        .collect();
+    dir.ancestors()
+        .any(|d| d.to_str().is_some_and(|d| trusted.contains(&key(d))))
 }
 
 #[cfg(test)]
@@ -591,6 +601,16 @@ mod tests {
             &json!({ "projects": { "/home/me/work": { "hasTrustDialogAccepted": "yes" } } }),
             Path::new("/home/me/work")
         ));
+    }
+
+    /// Claude Code keys `C:/Users/…`; a canonical folder is `\\?\C:\Users\…`.
+    #[cfg(windows)]
+    #[test]
+    fn a_windows_folder_is_trusted_in_any_spelling() {
+        let state = json!({ "projects": { "C:/Users/me/work": { "hasTrustDialogAccepted": true } } });
+        assert!(trusts(&state, Path::new(r"\\?\C:\Users\me\work\src")));
+        assert!(trusts(&state, Path::new(r"c:\users\me\WORK")));
+        assert!(!trusts(&state, Path::new(r"C:\Users\me\other")));
     }
 
     #[test]

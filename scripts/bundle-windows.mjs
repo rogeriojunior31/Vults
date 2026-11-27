@@ -1,6 +1,6 @@
 // Keep Tauri resources and published artifacts correct even with a short CARGO_TARGET_DIR.
 import { execFileSync, spawnSync } from 'node:child_process';
-import { copyFile, mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -16,6 +16,21 @@ const staged = join(root, 'target/release');
 await mkdir(staged, { recursive: true });
 const hook = join(release, 'vults-hook.exe'), stagedHook = join(staged, 'vults-hook.exe');
 if (hook.toLowerCase() !== stagedHook.toLowerCase()) await copyFile(hook, stagedHook);
+// ggml's shader generator runs many glslc at once and says nothing when one writes an empty .spv;
+// the link then fails on a missing symbol. Such a build of whisper-rs-sys is thrown away, so it is
+// generated again rather than failing every later build.
+const whisperBuilds = join(release, 'build/whisper-rs-sys');
+for (const hash of await readdir(whisperBuilds).catch(() => [])) {
+  const spv = join(whisperBuilds, hash, 'out/build/ggml/src/ggml-vulkan/vulkan-shaders.spv');
+  const empty = [];
+  for (const name of await readdir(spv).catch(() => [])) {
+    if (name.endsWith('.spv') && (await stat(join(spv, name))).size === 0) empty.push(name);
+  }
+  if (empty.length) {
+    console.warn(`Rebuilding whisper's Vulkan shaders: ${empty.join(', ')} came out empty.`);
+    await rm(join(whisperBuilds, hash), { recursive: true, force: true });
+  }
+}
 const result = spawnSync(process.execPath, [join(root, 'node_modules/@tauri-apps/cli/tauri.js'), 'build', '--config', 'app/tauri.bundle.windows.json', ...args], { cwd: root, stdio: 'inherit', windowsHide: true });
 if (result.error) throw result.error;
 if (result.status !== 0) process.exit(result.status ?? 1);

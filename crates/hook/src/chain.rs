@@ -35,8 +35,26 @@ pub struct Running {
     started: Instant,
 }
 
+/// The shell the saved command was written for. Claude Code runs status lines through Git Bash on
+/// Windows too; Antigravity's on Windows is a cmd command, and `sh` there is missing or misreads it.
+fn shell(command: &str, agent: Option<&str>) -> Command {
+    #[cfg(windows)]
+    if agent == Some("antigravity") {
+        use std::os::windows::process::CommandExt;
+        let mut cmd = Command::new("cmd");
+        // As cmd reads its own line: /s keeps the command's quotes as written. No window.
+        cmd.raw_arg(format!("/d /s /c \"{command}\""))
+            .creation_flags(0x0800_0000);
+        return cmd;
+    }
+    let _ = agent;
+    let mut sh = Command::new("sh");
+    sh.arg("-c").arg(command);
+    sh
+}
+
 /// Starts the saved command, if there is one, feeding it `input`.
-pub fn start(previous: &Path, input: &[u8]) -> Option<Running> {
+pub fn start(previous: &Path, input: &[u8], agent: Option<&str>) -> Option<Running> {
     let saved: Value = serde_json::from_slice(&std::fs::read(previous).ok()?).ok()?;
     let command = saved.get("command")?.as_str()?.trim();
     // Ours would run itself over and over.
@@ -46,10 +64,8 @@ pub fn start(previous: &Path, input: &[u8]) -> Option<Running> {
     {
         return None;
     }
-    let mut sh = Command::new("sh");
-    sh.arg("-c")
-        .arg(command)
-        .stdin(Stdio::piped())
+    let mut sh = shell(command, agent);
+    sh.stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::null());
     // A group of its own, so a timeout takes what the script started too (a hung git or curl).
@@ -119,7 +135,9 @@ mod tests {
     fn chain(name: &str, command: &str, input: &[u8], timeout: Duration) -> Vec<u8> {
         let saved = serde_json::json!({ "type": "command", "command": command, "padding": 0 });
         let path = sidecar(name, &saved.to_string());
-        start(&path, input).map(|r| r.finish(timeout)).unwrap_or_default()
+        start(&path, input, None)
+            .map(|r| r.finish(timeout))
+            .unwrap_or_default()
     }
 
     #[test]
@@ -172,12 +190,27 @@ mod tests {
         assert!(chain("empty", "true", b"{}", TIMEOUT).is_empty());
         // No sidecar, a broken one, no command, or our own command: nothing starts.
         let dir = std::env::temp_dir().join(format!("vults-chain-{}-none", std::process::id()));
-        assert!(start(&dir.join(PREVIOUS_FILE), b"{}").is_none());
-        assert!(start(&sidecar("broken", "{oops"), b"{}").is_none());
-        assert!(start(&sidecar("nocmd", r#"{"type":"command"}"#), b"{}").is_none());
-        assert!(start(&sidecar("blankcmd", r#"{"command":"  "}"#), b"{}").is_none());
+        assert!(start(&dir.join(PREVIOUS_FILE), b"{}", None).is_none());
+        assert!(start(&sidecar("broken", "{oops"), b"{}", None).is_none());
+        assert!(start(&sidecar("nocmd", r#"{"type":"command"}"#), b"{}", None).is_none());
+        assert!(start(&sidecar("blankcmd", r#"{"command":"  "}"#), b"{}", None).is_none());
         let ours = r#"{"command":"'/x/vults-hook' --agent claude --statusline"}"#;
-        assert!(start(&sidecar("ours", ours), b"{}").is_none());
+        assert!(start(&sidecar("ours", ours), b"{}", None).is_none());
+    }
+
+    /// Antigravity's own line on Windows is a cmd command, quotes and all.
+    #[cfg(windows)]
+    #[test]
+    fn antigravity_s_saved_line_runs_in_cmd() {
+        let saved = serde_json::json!({ "command": r#"echo "a b"& echo c"# });
+        let path = sidecar("antigravity-cmd", &saved.to_string());
+        let out = start(&path, b"{}", Some("antigravity"))
+            .map(|r| r.finish(TIMEOUT))
+            .unwrap_or_default();
+        assert_eq!(
+            String::from_utf8_lossy(&out).replace("\r\n", "\n"),
+            "\"a b\"\nc\n"
+        );
     }
 
     #[test]

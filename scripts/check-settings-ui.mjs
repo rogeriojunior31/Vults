@@ -4,6 +4,8 @@ import { fileURLToPath } from "node:url";
 import { build } from "vite";
 import { spawnSync } from "node:child_process";
 const initialRoute = process.env.VULTS_SETTINGS_INITIAL_ROUTE ?? "";
+// Settings tells the platform by the user agent; the run plays Windows while its bindings exist.
+Object.defineProperty(globalThis.navigator, "userAgent", { configurable: true, get: () => globalThis.settingsTestWindowsBindings ? "Mozilla/5.0 (Windows NT 10.0)" : "Mozilla/5.0 (X11; Linux x86_64)" });
 if (initialRoute) globalThis.settingsTestWindowsBindings = { requested: {}, defaults: {}, active: {}, conflicts: [] };
 const nodes = node => [node, ...node.children.flatMap(nodes)];
 class Element {

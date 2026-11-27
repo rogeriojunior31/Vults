@@ -27,6 +27,44 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Fixes
 
+- On Windows, agents can ask you a text question (`ask_user`): the Claude Code that Vults starts asks by itself, and Settings > Dictation > Agents sets it up for your own Claude Code or Codex. You type the answer; dictating into it is still Linux-only.
+- On Windows, a specialist with GitHub tools works in the chat instead of refusing every turn.
+- On Windows, the secrets Vults keeps in Credential Manager stay on this computer: on a domain account with a roaming profile they no longer follow you to other PCs (a secret saved before keeps roaming until it is saved again).
+- On Windows, `/continue` with a Claude Code session says it can't run there (Claude Code has no sandbox on native Windows, and a continued session runs only in one) instead of starting a session whose every command would fail. Codex sessions continue as before.
+- On Windows, the corner widget steps behind a full-screen video, game or presentation, as on Linux, and comes back on top when it ends.
+- On Windows, Settings names your monitors as they call themselves (`DELL U2720Q`) instead of `\\.\DISPLAY1`.
+- On Windows, Zeca in the tray is drawn at the size the tray shows, so it stays sharp at 125 % and 150 % scaling.
+- On Windows, a voice command finds an app even when the Start Menu read is cut short by a slow disk or a scan: the names it missed come from the last full read.
+- On Windows, an agent's session log made again under the same name is read from the start, so its tokens and cost are not counted from the old file's offset.
+- On Windows, media controls and voice media commands work with a player that holds several sessions (two windows, browser tabs): the one playing, or the one Windows shows, is used.
+- On Windows, the island's empty transparent window no longer catches clicks at the top of the screen while it starts.
+- On Windows, a Gitea token too long for Credential Manager says so instead of "Could not save the Gitea connection."
+- On Windows, changing a screen's scale puts the island, the widget and the dictation overlay back in place instead of shifting them off-centre.
+- Connecting a headset or unplugging the microphone mid-dictation keeps what you said so far instead of throwing the recording away.
+- On Windows, when the privacy settings keep desktop apps off the microphone, dictation says where to turn it back on instead of a bare error.
+- On Windows, installing hooks into an agent config you marked read-only works and keeps it read-only, and its backup path reads `C:\…` instead of `\\?\C:\…`.
+- On Windows, Settings no longer shows Linux-only rows (X11 recording keys, System Settings shortcuts) while its shortcut editor loads or fails, and **Talk with Zeca** says voice conversation is Linux-only instead of offering its setup.
+- On Windows, Qwen Code sends its sessions when your user name has a space, and Codex hooks no longer start a PowerShell on every tool call. **Settings → Agents** offers to update Codex's hooks once (the same diff and click).
+- On Windows, the island and the corner widget stay with you on every virtual desktop, and no longer show in Alt+Tab.
+- On Windows, folding the island after a chat or an answer gives the keyboard back to the window you were in, so your next keys reach the terminal again.
+- On Windows, the dictation overlay moves with the island when you pick another monitor or the screens change.
+- On Windows, requests Vults makes for you (connectors, web tools, voice model downloads, the phone's relay) go through the proxy set in Windows Settings, not only one from `HTTPS_PROXY`.
+- On Windows, Vults keeps receiving hook events after an update or restart while the old run was still closing; it used to hear none until it was restarted again.
+- On Windows, your own Antigravity status line keeps showing behind Vults: it runs in cmd, as it was written.
+- When Claude Code can't start a chat turn, Chat shows what it said (a missing Git Bash on Windows, say) instead of asking whether it is logged in.
+- Unplugging a microphone as dictation starts no longer crashes the recorder, and Settings still lists the others.
+- On Windows, voice commands open Start Menu apps whose shortcut names `%windir%` or `%ProgramFiles%` (PowerShell, Remote Desktop and about half of Windows' own).
+- On Windows, dictation types straight into Windows 11 Notepad instead of only copying.
+- On Windows, Chat reads a trusted project's Claude Code settings again, and attachments and specialist projects reach the CLI as plain `C:\…` paths.
+- On Windows, one folder is one project whatever its spelling (`c:` or `C:`, either slash, a trailing one): it no longer splits into two flocks, an **Always** rule answers it again, `/continue` finds its session, and a file a command wrote no longer shows twice.
+- On Windows, the log is in `%LOCALAPPDATA%\Vults\logs`, beside the rest of the app's data, and Settings and files lists where everything lives on Windows.
+- On Windows, a Codex specialist finds your Codex login when Vults starts from the Start menu.
+- On Windows, a diff card is titled by the file name instead of its whole path, and the Nest's week bars add a repository's worktrees up again.
+- On Windows, Chat, Zeca's sleep and the journal work with a `claude` or `codex` installed through npm: their instructions now go in a file (or on stdin) instead of the command line, where a `.cmd` takes no line break and a long memory outgrew the limit.
+- On Windows, destructive commands always ask again: Claude Code's PowerShell tool, `powershell -Command` and `cmd /c` were not read, so `Remove-Item -Recurse` could pass under Zeca's **Full access**. PowerShell syntax Vults can't follow now reads as destructive.
+- On Windows, your policies now hold: their folders (`C:\…`, any case or slash) were never matched, so a deny or ask did nothing and Zeca's chat with **Full access** went past them. A policy for a project now also denies or asks when a session's folder can't be read.
+- On Windows, Chat no longer says Claude is not installed when its CLI is only on a shell profile's PATH (mise, for one): Vults also looks in the usual per-user CLI folders.
+- The plan usage meters no longer vanish and come back: a read that carries only one window (Claude's statusLine, say) keeps the other until its reset.
 - Two instances starting together no longer fail when one is still migrating the database: start-up retries for a bounded time.
 
 ### Also in this release

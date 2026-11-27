@@ -96,17 +96,34 @@ pub struct Target {
 
 pub async fn pin(player: &str) -> Result<Target, String> {
     let manager = manager().await?;
-    let mut matching = manager
+    let matching: Vec<Session> = manager
         .GetSessions()
         .map_err(text)?
         .into_iter()
-        .filter(|session| session.SourceAppUserModelId().is_ok_and(|id| id == player));
-    let session = matching
-        .next()
-        .ok_or("The media player is no longer available.")?;
-    if matching.next().is_some() {
-        return Err("The media player has multiple sessions.".into());
-    }
+        .filter(|session| session.SourceAppUserModelId().is_ok_and(|id| id == player))
+        .collect();
+    // One app may hold several sessions (two windows, a browser's tabs): the one playing, or the
+    // one Windows itself shows as current. Any other choice could act on the wrong one.
+    let session = match matching.as_slice() {
+        [] => return Err("The media player is no longer available.".into()),
+        [only] => only.clone(),
+        many => {
+            let playing: Vec<&Session> = many
+                .iter()
+                .filter(|s| {
+                    s.GetPlaybackInfo()
+                        .and_then(|i| i.PlaybackStatus())
+                        .is_ok_and(|p| p == Playback::Playing)
+                })
+                .collect();
+            let current = manager.GetCurrentSession().ok().filter(|c| many.contains(c));
+            match (playing.as_slice(), current) {
+                ([one], _) => (*one).clone(),
+                ([], Some(current)) => current,
+                _ => return Err("The media player has multiple sessions.".into()),
+            }
+        }
+    };
     Ok(Target { manager, session })
 }
 
@@ -116,11 +133,10 @@ impl Target {
             let Ok(id) = self.session.SourceAppUserModelId() else {
                 return false;
             };
-            let matching: Vec<_> = sessions
-                .into_iter()
-                .filter(|session| session.SourceAppUserModelId().is_ok_and(|source| source == id))
-                .collect();
-            matching.len() == 1 && matching[0] == self.session
+            // The very session pinned, still there: a restarted player is another object.
+            sessions.into_iter().any(|session| {
+                session.SourceAppUserModelId().is_ok_and(|source| source == id) && session == self.session
+            })
         })
     }
 
