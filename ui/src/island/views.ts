@@ -152,6 +152,8 @@ function who(
     { class: "who" },
     el("span", { class: `dot ${s.agent}` }),
     el("span", { class: "name", text: s.project || agentName(s) }),
+    // The agent's own name for the session tells two in one folder apart; it gives way first.
+    s.title ? Object.assign(el("span", { class: "title", text: s.title }), { title: s.title }) : null,
     // Quick's session view names the agent under the project; the other cards keep the dot.
     el("span", { class: `agent ${s.agent}`, text: agentName(s) }),
     s.editor ? el("span", { class: "editor", text: s.editor }) : null,

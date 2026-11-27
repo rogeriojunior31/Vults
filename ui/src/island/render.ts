@@ -1686,7 +1686,7 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     const tags = wanting.map((s) => {
       const failed = s.status === "failed" || s.attention === "failed";
       const b = el("button", { class: `need-tag${failed ? " failed" : ""}`, onclick: () => toSession(s) }, el("i", { text: failed ? "×" : "!" }), el("span", { text: s.project || agentName(s) }));
-      b.title = [s.project || agentName(s), statusText(s)].join(" · ");
+      b.title = [s.project || agentName(s), s.title, statusText(s)].filter(Boolean).join(" · ");
       return el("span", { class: "need-chip" }, b,
         s.request ? skipButton(s.request, skipCard, t("Skip {project} for now", { project: s.project || agentName(s) })) : null);
     });

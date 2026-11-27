@@ -532,6 +532,8 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
             let _ = work;
             crate::questions::publish(&app, &mut questions);
         }
+        // The session's own title, once its event made the session known.
+        let mut titled = None;
         let input = match msg {
             Msg::RequestGone { id, reply } => {
                 if !waiting
@@ -877,6 +879,7 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     }
                     Some(report.input(session))
                 } else {
+                    titled = vults_agents::claude_title(&event);
                     parse(&event)
                 }
             }
@@ -1122,6 +1125,9 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     if matches!(u.event, core::AgentEvent::Stopped { .. } | core::AgentEvent::StopFailed { .. })
             );
             let effects = core::reduce(&mut state, input, now);
+            if let Some(titled) = titled {
+                core::reduce(&mut state, titled, now);
+            }
             if ended {
                 read_watched(&app, &state, &tx);
             }

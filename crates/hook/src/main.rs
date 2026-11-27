@@ -141,7 +141,43 @@ fn build_event(
     cwd: Option<std::path::PathBuf>,
     env: impl Fn(&str) -> Option<String>,
 ) -> Option<Event> {
-    vults_hook::build_event(args, raw, cwd, env, parent_pid(), new_id())
+    vults_hook::build_event(args, raw, cwd, env, parent_pid(), new_id()).map(|event| titled(event, raw))
+}
+
+/// A Claude Code event that may follow a new title carries it, read from the end of the session's
+/// transcript, whose path itself never leaves the hook.
+fn titled(mut event: Event, raw: &[u8]) -> Event {
+    use std::io::{Seek, SeekFrom};
+    if event.agent != protocol::AgentKind::Claude || !vults_hook::TITLE_EVENTS.contains(&event.event.as_str())
+    {
+        return event;
+    }
+    let raw = raw.strip_prefix(&[0xEF, 0xBB, 0xBF]).unwrap_or(raw);
+    let Some(path) = serde_json::from_slice::<serde_json::Value>(raw)
+        .ok()
+        .and_then(|p| p.get("transcript_path")?.as_str().map(std::path::PathBuf::from))
+    else {
+        return event;
+    };
+    // Only a regular file: opening a FIFO would block the agent (rule 1).
+    let Ok(meta) = std::fs::metadata(&path) else {
+        return event;
+    };
+    if !meta.is_file() {
+        return event;
+    }
+    let mut tail = Vec::new();
+    let read = std::fs::File::open(&path).and_then(|mut file| {
+        let from = meta.len().saturating_sub(vults_hook::TITLE_TAIL);
+        file.seek(SeekFrom::Start(from))?;
+        file.take(vults_hook::TITLE_TAIL).read_to_end(&mut tail)
+    });
+    if read.is_ok()
+        && let Some(title) = vults_hook::session_title(&tail)
+    {
+        event.payload["session_title"] = title.into();
+    }
+    event
 }
 
 #[cfg(any(unix, windows))]

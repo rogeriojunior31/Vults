@@ -61,7 +61,7 @@ const waits = (s: SessionView) => s.status === "approval" || s.status === "quest
 export { needsYou };
 
 /** What the search reads: the project, its roost and branch, the agent and what it is doing now. */
-const said = (s: SessionView) => [s.project, s.roost, s.branch, agentName(s), statusText(s), s.step].filter(Boolean).join(" ").toLowerCase();
+const said = (s: SessionView) => [s.project, s.title, s.roost, s.branch, agentName(s), statusText(s), s.step].filter(Boolean).join(" ").toLowerCase();
 
 const AGENT_COLOR: Record<AgentKind, string> = {
   claude: "var(--agent-claude)",
@@ -645,7 +645,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
     menuOn(b, s);
     b.style.setProperty("--bird-color", colorOf(s.agent));
     b.setAttribute("aria-pressed", String(front));
-    b.title = [s.project || agentName(s), s.branch, agentName(s), stateText(s)].filter(Boolean).join(" · ");
+    b.title = [s.project || agentName(s), s.title, s.branch, agentName(s), stateText(s)].filter(Boolean).join(" · ");
     // Two lines: the name and its state, then what it has done. What the agent did not report is
     // left out, not printed as "Not reported".
     const done = s.step_count === 0 && s.elapsed_ms == null && s.context_percent == null && s.context_tokens == null

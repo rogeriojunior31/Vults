@@ -177,6 +177,46 @@ pub fn status_line_payload(payload: &Map<String, Value>) -> Option<Map<String, V
     Some(kept)
 }
 
+/// Claude Code's events after which its session may have a new title.
+pub const TITLE_EVENTS: &[&str] = &["SessionStart", "UserPromptSubmit", "Stop"];
+/// How much of a transcript's end is read for its title: Claude Code writes it again only every
+/// 40 to 80 KB.
+pub const TITLE_TAIL: u64 = 256 * 1024;
+/// The longest title kept, in characters.
+const MAX_TITLE: usize = 120;
+
+/// A Claude Code session's title in the end of its transcript: the last `/rename` (`custom-title`)
+/// wins, else the last title Claude Code gave it (`ai-title`, all a VS Code session has). Only
+/// entries of that type count, never a line that merely mentions one.
+pub fn session_title(tail: &[u8]) -> Option<String> {
+    let mentions = |line: &[u8], word: &[u8]| line.windows(word.len()).any(|w| w == word);
+    let (mut custom, mut ai) = (None, None);
+    for line in tail.split(|b| *b == b'\n') {
+        if !mentions(line, b"custom-title") && !mentions(line, b"ai-title") {
+            continue;
+        }
+        let Ok(entry) = serde_json::from_slice::<Value>(line) else {
+            continue;
+        };
+        let text = |key: &str| {
+            let title: String = entry
+                .get(key)?
+                .as_str()?
+                .chars()
+                .filter(|c| !c.is_control())
+                .collect();
+            let title = title.trim();
+            (!title.is_empty()).then(|| title.chars().take(MAX_TITLE).collect::<String>())
+        };
+        match entry.get("type").and_then(Value::as_str) {
+            Some("custom-title") => custom = text("customTitle").or(custom),
+            Some("ai-title") => ai = text("aiTitle").or(ai),
+            _ => {}
+        }
+    }
+    custom.or(ai)
+}
+
 /// The tool's input exactly as the agent sent it.
 pub fn original_input(raw: &[u8]) -> Option<Value> {
     let raw = raw.strip_prefix(&[0xEF, 0xBB, 0xBF]).unwrap_or(raw);
@@ -412,6 +452,40 @@ pub fn cap_patch(hunks: &[Value]) -> (Vec<Value>, bool) {
 mod tests {
     #![allow(clippy::unwrap_used)]
     use super::*;
+
+    #[test]
+    fn a_session_is_named_by_its_last_rename_else_its_own_title() {
+        let line = |value: serde_json::Value| format!("{value}\n");
+        let custom =
+            |t: &str| line(serde_json::json!({"type":"custom-title","customTitle":t,"sessionId":"s"}));
+        let ai = |t: &str| line(serde_json::json!({"type":"ai-title","aiTitle":t,"sessionId":"s"}));
+        let user = |t: &str| line(serde_json::json!({"type":"user","message":{"content":t}}));
+        let title = |parts: &[String]| session_title(parts.concat().as_bytes());
+        assert_eq!(
+            title(&[ai("Fix login"), user("hi")]).as_deref(),
+            Some("Fix login")
+        );
+        assert_eq!(title(&[ai("Old"), ai("Fix login")]).as_deref(), Some("Fix login"));
+        // A rename wins over a later title Claude Code gave, and the last rename wins.
+        assert_eq!(
+            title(&[custom("First"), ai("Fix login"), custom("Billing"), ai("Other")]).as_deref(),
+            Some("Billing")
+        );
+        // A line that only mentions the type, a cut first line, or nothing: no title.
+        assert_eq!(
+            title(&[user("what is custom-title?"), user("and ai-title")]),
+            None
+        );
+        assert_eq!(session_title(b"le\":\"ai-title\",\"aiTitle\":\"Cut\"}\n"), None);
+        assert_eq!(title(&[]), None);
+        // Control characters go, blank titles count as none, long ones are cut.
+        assert_eq!(
+            title(&[ai("Fix\u{1b}[31m login\n")]).as_deref(),
+            Some("Fix[31m login")
+        );
+        assert_eq!(title(&[ai("Kept"), custom("   ")]).as_deref(), Some("Kept"));
+        assert_eq!(title(&[ai(&"x".repeat(500))]).unwrap().chars().count(), MAX_TITLE);
+    }
 
     fn build(raw: &[u8]) -> Option<Event> {
         let args = Args::parse(["--agent", "claude"].map(String::from).into_iter());

@@ -6076,3 +6076,25 @@ fn a_new_turn_or_a_gone_session_forgets_the_watched_terminal() {
     visible(&mut s, Input::Watched(Some(key("ghost"))), now);
     assert_eq!(s.watched, None);
 }
+
+#[test]
+fn a_session_keeps_the_agents_own_title_beside_its_folder() {
+    let mut s = State::default();
+    let now = Instant::now();
+    let titled = |id: &str, title: &str| Input::SessionTitled {
+        session: key(id),
+        title: title.into(),
+    };
+    // A title never makes a bird: the session must be known first.
+    reduce(&mut s, titled("s1", "Fix login"), now);
+    assert!(s.sessions.is_empty());
+    reduce(&mut s, agent("s1", AgentEvent::SessionStarted), now);
+    reduce(&mut s, titled("s1", "Fix login"), now);
+    let view = session_view(&s, "s1");
+    assert_eq!(view.title.as_deref(), Some("Fix login"));
+    assert_eq!(view.project, "vults", "the project stays the folder's");
+    reduce(&mut s, titled("s1", "Billing"), now);
+    assert_eq!(session_view(&s, "s1").title.as_deref(), Some("Billing"));
+    reduce(&mut s, titled("s1", "  "), now);
+    assert_eq!(session_view(&s, "s1").title, None);
+}

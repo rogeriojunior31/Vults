@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: d8357290327d -->
+<!-- source: 6c41ff355210 -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -348,6 +348,10 @@ pacotes que a sua distribuição atualiza (o AUR) não têm aviso de atualizaç�
 Clique num vult do bando para abrir aquela sessão; ela fica na frente até você escolher outra ou
 ela sair. Um card esperando ainda vem primeiro. Pelo teclado (**Ctrl+Alt+Space**), **↑** e **↓**
 passam de uma sessão a outra: em repouso o nome na caixa muda, numa sessão a próxima abre.
+
+O card de uma sessão do Claude Code mostra o título dela ao lado do projeto: o nome que você deu
+com `/rename`, ou então o que o próprio Claude Code deu. É ele que distingue duas sessões na mesma
+pasta, no card, na busca do Flock no Nest e nas menções a sessões no chat.
 
 ![Uma sessão aberta pelo bando: Flock para voltar, um ponto por sessão, o card dela e Open in Cursor](../../assets/island-session.png)
 

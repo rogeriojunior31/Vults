@@ -21,6 +21,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### New
 
+- A Claude Code session's card shows its title beside the project: your `/rename`, else the title Claude Code gave it. Two sessions in one folder are told apart in the card, the Flock search and the chat's session mentions.
 - **GitLab and Gitea connectors**, read-only, next to GitHub: GitLab.com merge requests and self-hosted Gitea pull requests with reviewers and changes asked, diff sizes, checks and pipelines of the default branch, and releases. Each has its own switch, budget and trace; the token lives in the keyring.
 - Zeca's API Chat and spoken replies can read the cached GitLab and Gitea snapshots, each off by default. A specialist reads only the repositories, host and account its grant names, and reconnecting or changing the account revokes it. No extra request is made.
 - **Five themes** in **Settings → General → Theme**: Dark (formerly Black, the default), Light and the SP Night trio, Noite Paulista, Garoa and Pico do Jaragua. Every control follows the theme, selects and focus rings included.

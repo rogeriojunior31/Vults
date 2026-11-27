@@ -311,6 +311,10 @@ Click a vult in the flock to open that session; it stays in front until you pick
 leaves. A waiting card still comes first. With the keyboard (**Ctrl+Alt+Space**), **↑** and **↓**
 move between sessions: at rest the boxed name moves, in a session the next one opens.
 
+A Claude Code session's card shows its title beside the project: the name you gave it with
+`/rename`, or else the one Claude Code gave it. Two sessions in the same folder are told apart by
+it, in the card, the Nest's Flock search and the chat's session mentions.
+
 ![A session opened from the flock: Flock to go back, a dot per session, its card and Open in Cursor](../assets/island-session.png)
 
 **Open terminal** on its card brings its terminal forward:

@@ -602,6 +602,11 @@ pub enum Input {
         pid: u32,
         alive: bool,
     },
+    /// The agent's own title for a session it already reported (never one of its own making).
+    SessionTitled {
+        session: SessionKey,
+        title: String,
+    },
     /// An owned driver's whole turn ended, including any still-waiting subagent cards.
     RunEnded(AgentUpdate),
     Agent(AgentUpdate),
@@ -782,6 +787,9 @@ pub enum Effect {
 pub struct Session {
     pub key: SessionKey,
     pub project: String,
+    /// The agent's own name for the session (Claude Code's `/rename`, else the title it gave it);
+    /// the island shows it with the project, which stays the folder's.
+    pub title: Option<String>,
     pub cwd: Option<String>,
     pub status: Status,
     pub activity: Option<Activity>,
@@ -1094,6 +1102,12 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
         }
         Input::Board { connector, rows } => {
             board::set(state, connector, rows);
+            Vec::new()
+        }
+        Input::SessionTitled { session, title } => {
+            if let Some(s) = state.sessions.get_mut(&session) {
+                s.title = Some(title).filter(|t| !t.trim().is_empty());
+            }
             Vec::new()
         }
         Input::SessionPresence { session, pid, alive } => {
@@ -1663,6 +1677,7 @@ fn on_agent(state: &mut State, update: AgentUpdate, now: Instant, run_ended: boo
     let session = state.sessions.entry(key.clone()).or_insert_with(|| Session {
         key: key.clone(),
         project: String::new(),
+        title: None,
         cwd: None,
         status: Status::Idle,
         activity: None,
