@@ -34,6 +34,7 @@ pub fn resumed(
             in_turn: false,
         })),
         crate::Provider::ClaudeApi => None,
+        crate::Provider::Acp(name) => acp(name, spec, session),
     }
 }
 

@@ -161,7 +161,7 @@ export interface UsageWindow {
 }
 
 /** Who the chat talks through: a CLI, or a provider's API with the user's key (or a local model). */
-export type ChatProvider = "claude" | "codex" | "api";
+export type ChatProvider = "claude" | "codex" | "api" | `acp:${string}`;
 /** The paired phone (L2) as Settings shows it. */
 export type PhoneDevice = { id: string; name: string; pairedAt: number; revoked: boolean };
 export type PhoneSettings = {
@@ -185,7 +185,7 @@ export type ModelChoice = { id: string; label: string; efforts: string[] };
 export type ChatPick = { model?: string | null; effort?: string | null };
 /** Each CLI engine of the chat: off the PATH, there, or there and signed in. */
 export type EngineState = "missing" | "installed" | "signed-in";
-export type ChatEngines = { claude: EngineState; codex: EngineState };
+export type ChatEngines = { claude: EngineState; codex: EngineState; acp?: { id: `acp:${string}`; title: string }[] };
 
 /** The API chat as the island sees it: usable now, and through whom. */
 export interface ApiStatus {

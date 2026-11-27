@@ -3684,6 +3684,9 @@ body.still #island .inner:has(.main > .chat) .need-strip.top { animation: none; 
 .engine-dot.codex {
   background: var(--agent-codex);
 }
+.engine-dot.acp {
+  background: var(--fg-dim);
+}
 .engine-name {
   flex: 0 1 auto;
   min-width: 0;

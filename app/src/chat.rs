@@ -1155,6 +1155,9 @@ async fn send(
     if let Ok(mut scope) = state.waiting.2.lock() {
         let agent = match chat.provider() {
             Provider::Codex => vults_core::AgentKind::Codex,
+            // An ACP agent is the one the policies know by its key (OpenCode, Qwen…), else Other.
+            Provider::Acp(key) => serde_json::from_value(serde_json::Value::String(key.into()))
+                .unwrap_or(vults_core::AgentKind::Other),
             // The API chat asks nothing; Claude Code is the agent the policies know whole.
             Provider::Claude | Provider::ClaudeApi => vults_core::AgentKind::Claude,
         };
@@ -1277,7 +1280,7 @@ fn engine_key(provider: Provider) -> Option<&'static str> {
     match provider {
         Provider::Claude => Some("claude"),
         Provider::Codex => Some("codex"),
-        Provider::ClaudeApi => None,
+        Provider::ClaudeApi | Provider::Acp(_) => None,
     }
 }
 
@@ -1302,7 +1305,7 @@ fn effort_fits(provider: Provider, model: Option<&str>, effort: vults_chat::Effo
     let known = match provider {
         Provider::Claude => Some(vults_chat::claude_models()),
         Provider::Codex => CODEX_MODELS.lock().ok().and_then(|m| m.clone()),
-        Provider::ClaudeApi => None,
+        Provider::ClaudeApi | Provider::Acp(_) => None,
     };
     known
         .and_then(|list| list.into_iter().find(|m| m.id == model))
@@ -1343,7 +1346,8 @@ pub async fn chat_models(provider: Provider) -> Result<Vec<vults_chat::ModelChoi
             }
             Ok(models)
         }
-        Provider::ClaudeApi => Ok(Vec::new()),
+        // An ACP agent picks its own model.
+        Provider::ClaudeApi | Provider::Acp(_) => Ok(Vec::new()),
     }
 }
 
@@ -1850,6 +1854,7 @@ fn engine_name(chat: &Chat) -> String {
         Provider::Claude => "claude".into(),
         Provider::Codex => "codex".into(),
         Provider::ClaudeApi => format!("api:{}", chat.api().0.id),
+        acp @ Provider::Acp(_) => acp.name(),
     }
 }
 
@@ -1858,6 +1863,12 @@ fn engine_label(engine: &str) -> String {
     match engine {
         "claude" => "Claude".into(),
         "codex" => "Codex".into(),
+        e if e.starts_with("acp:") => Provider::parse(e)
+            .and_then(|p| match p {
+                Provider::Acp(key) => vults_chat::acp_title(key),
+                _ => None,
+            })
+            .map_or_else(|| e.to_string(), str::to_string),
         e => e
             .strip_prefix("api:")
             .and_then(providers::find)
@@ -1870,7 +1881,7 @@ fn engine_provider(engine: &str) -> Option<Provider> {
         "claude" => Some(Provider::Claude),
         "codex" => Some(Provider::Codex),
         e if e.starts_with("api:") => Some(Provider::ClaudeApi),
-        _ => None,
+        e => Provider::parse(e),
     }
 }
 
@@ -3036,6 +3047,14 @@ pub async fn api_key_status(app: AppHandle) -> ApiStatus {
 pub struct Engines {
     claude: &'static str,
     codex: &'static str,
+    /// The ACP agents installed here (OpenCode, Qwen Code…), by key and title.
+    acp: Vec<AcpEngine>,
+}
+
+#[derive(serde::Serialize, Debug, PartialEq, Eq)]
+pub struct AcpEngine {
+    id: String,
+    title: &'static str,
 }
 
 #[tauri::command]
@@ -3056,12 +3075,20 @@ pub async fn chat_engines() -> Engines {
                 on_path("codex"),
                 &vults_agents::codex_home(&dirs).join("auth.json"),
             ),
+            acp: vults_chat::acp_installed()
+                .into_iter()
+                .map(|(key, title)| AcpEngine {
+                    id: format!("acp:{key}"),
+                    title,
+                })
+                .collect(),
         }
     })
     .await
     .unwrap_or(Engines {
         claude: "missing",
         codex: "missing",
+        acp: Vec::new(),
     })
 }
 

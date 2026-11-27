@@ -403,14 +403,66 @@ fn with_name(persona: &str, name: Option<&str>) -> String {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
-#[serde(rename_all = "lowercase")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Provider {
     Claude,
     Codex,
     /// A model through a provider's API (see [`providers`]), with the user's key.
-    #[serde(rename = "api")]
     ClaudeApi,
+    /// An agent that speaks ACP (`opencode`, `qwen`…), by its registry key.
+    Acp(&'static str),
+}
+
+impl Provider {
+    /// `claude`, `codex`, `api`, or `acp:<key>`: its name on the wire and in saved conversations.
+    pub fn name(self) -> String {
+        match self {
+            Self::Claude => "claude".into(),
+            Self::Codex => "codex".into(),
+            Self::ClaudeApi => "api".into(),
+            Self::Acp(key) => format!("acp:{key}"),
+        }
+    }
+
+    /// The provider a name stands for; an ACP key this version does not know reads as none.
+    pub fn parse(name: &str) -> Option<Self> {
+        match name {
+            "claude" => Some(Self::Claude),
+            "codex" => Some(Self::Codex),
+            "api" => Some(Self::ClaudeApi),
+            other => other
+                .strip_prefix("acp:")
+                .and_then(acp::agent)
+                .map(|a| Self::Acp(a.name)),
+        }
+    }
+}
+
+/// What the chat calls an ACP agent (`OpenCode`, `Qwen Code`…).
+pub fn acp_title(key: &str) -> Option<&'static str> {
+    acp::agent(key).map(|a| a.title)
+}
+
+/// The ACP agents installed here, by key and title, for the engine menu.
+pub fn acp_installed() -> Vec<(&'static str, &'static str)> {
+    acp::agents()
+        .iter()
+        .filter(|a| a.installed())
+        .map(|a| (a.name, a.title))
+        .collect()
+}
+
+impl Serialize for Provider {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(&self.name())
+    }
+}
+
+impl<'de> Deserialize<'de> for Provider {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let name = String::deserialize(d)?;
+        Self::parse(&name).ok_or_else(|| serde::de::Error::custom(format!("unknown engine: {name}")))
+    }
 }
 
 /// One chat turn: what the user typed and the files they dropped (already in our inbox).
@@ -976,6 +1028,7 @@ impl Chat {
             Provider::Claude => ("claude-code", None),
             Provider::Codex => ("codex", None),
             Provider::ClaudeApi => (self.api.0.id, Some(self.api.1.clone())),
+            Provider::Acp(key) => (key, None),
         }
     }
 
@@ -1245,7 +1298,11 @@ impl Chat {
             });
         }
         let name = self.name();
-        if matches!(self.provider, Provider::Claude | Provider::Codex) && self.driver.is_none() {
+        if matches!(
+            self.provider,
+            Provider::Claude | Provider::Codex | Provider::Acp(_)
+        ) && self.driver.is_none()
+        {
             self.driver = drivers::for_cli(self.provider, self.spec.clone());
         }
         let interrupter = self.driver.as_ref().map(|d| d.interrupter());
@@ -1281,6 +1338,7 @@ impl Chat {
             Provider::Claude => "Claude",
             Provider::Codex => "Codex",
             Provider::ClaudeApi => self.api.0.label,
+            Provider::Acp(key) => acp::agent(key).map_or(key, |a| a.title),
         }
     }
 
@@ -1293,7 +1351,7 @@ impl Chat {
     ) -> Result<(), String> {
         std::fs::create_dir_all(&self.spec.dir).map_err(|e| format!("Can't prepare the chat folder: {e}"))?;
         match self.provider {
-            Provider::Claude | Provider::Codex => {
+            Provider::Claude | Provider::Codex | Provider::Acp(_) => {
                 let specialist = self.is_specialist();
                 let Some(driver) = self.driver.as_mut() else {
                     return Err("This chat has no agent to run.".into());
@@ -1616,6 +1674,23 @@ mod tests {
         let mut chat = Chat::new(Provider::Codex, std::env::temp_dir());
         chat.set_handoff(Some(text));
         assert!(!chat.started());
+    }
+
+    #[test]
+    fn an_engine_reads_back_as_itself_and_an_unknown_acp_agent_as_none() {
+        for name in ["claude", "codex", "api"] {
+            assert_eq!(Provider::parse(name).map(Provider::name).as_deref(), Some(name));
+        }
+        let first = acp::agents().first().expect("the registry has ACP agents");
+        let acp = Provider::parse(&format!("acp:{}", first.name)).unwrap();
+        assert_eq!(acp, Provider::Acp(first.name));
+        assert_eq!(serde_json::to_value(acp).unwrap(), format!("acp:{}", first.name));
+        assert_eq!(
+            serde_json::from_value::<Provider>(serde_json::json!("claude")).unwrap(),
+            Provider::Claude
+        );
+        assert_eq!(Provider::parse("acp:an-agent-from-the-future"), None);
+        assert!(serde_json::from_value::<Provider>(serde_json::json!("gemini")).is_err());
     }
 
     #[test]

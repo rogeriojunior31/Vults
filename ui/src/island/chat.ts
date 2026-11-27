@@ -224,6 +224,9 @@ type Message =
 
 /** Every effort the CLIs share, as the picker names them. */
 /** How a CLI engine stands, as its menu row says it. */
+/** The agents the flock draws by name; any other ACP agent is drawn as "other". */
+const AGENT_KINDS = ["claude", "codex", "opencode", "qwen", "copilot"] as const;
+
 const ENGINE_STATE = { "signed-in": tk("Signed in"), installed: tk("Installed"), missing: tk("Not installed") } as const;
 
 const EFFORTS: Record<string, string> = {
@@ -837,7 +840,13 @@ export class ChatPanel {
 
   /** Which bird talks: the API chat is Claude too. */
   agent(): AgentKind {
-    return this.provider === "api" ? "claude" : this.provider;
+    if (this.provider === "api") return "claude";
+    // An ACP agent is the bird its registry key names when Vults knows it (opencode, qwen…).
+    if (this.provider.startsWith("acp:")) {
+      const key = this.provider.slice(4);
+      return (AGENT_KINDS as readonly string[]).includes(key) ? key as AgentKind : "other";
+    }
+    return this.provider as "claude" | "codex";
   }
 
   /** The app's cached plan windows; this never asks a provider or changes the conversation. */
@@ -924,10 +933,12 @@ export class ChatPanel {
 
   /** The engine as the island's pill names it. */
   private engineName(p: ChatProvider): string {
+    if (p.startsWith("acp:")) return this.engines?.acp?.find((a) => a.id === p)?.title ?? p.slice(4);
     return p === "api" ? this.api.label : p === "claude" ? "Claude Code" : "Codex";
   }
 
   private name(p: ChatProvider): string {
+    if (p.startsWith("acp:")) return this.engineName(p);
     return p === "api" ? this.api.label : p === "claude" ? "Claude" : "Codex";
   }
 
@@ -2212,9 +2223,13 @@ export class ChatPanel {
 
   /** The API choice only while a key is saved (or while its conversation is open). */
   private providers(): ChatProvider[] {
-    return this.api.ready || this.provider === "api"
-      ? ["claude", "codex", "api"]
-      : ["claude", "codex"];
+    // The ACP agents installed here join the CLIs (OpenCode, Qwen Code…), the current one always.
+    const acp: ChatProvider[] = (this.engines?.acp ?? []).map((a) => a.id);
+    if (this.provider.startsWith("acp:") && !acp.includes(this.provider)) acp.push(this.provider);
+    return [
+      "claude", "codex", ...acp,
+      ...(this.api.ready || this.provider === "api" ? ["api" as const] : []),
+    ];
   }
 
   private async loadSaved(): Promise<void> {
@@ -2642,7 +2657,7 @@ export class ChatPanel {
     // The engines first, as the prototype groups them: the user's own CLIs, then Vults' harness;
     // each says how it stands. Switching starts a new conversation, as the old switch did.
     const row = (p: ChatProvider) => {
-      const state = p === "api" ? null : this.engines?.[p];
+      const state = p === "api" ? null : p.startsWith("acp:") ? "installed" as const : this.engines?.[p as "claude" | "codex"];
       // The API row is ready with a key or a local model; once that is gone it says nothing.
       const word = p === "api" ? (this.api.ready ? t("Ready") : null) : state ? t(ENGINE_STATE[state]) : null;
       const b = el(
@@ -2661,7 +2676,7 @@ export class ChatPanel {
             this.changed();
           },
         },
-        el("span", { class: `engine-dot ${p === "api" ? "claude" : p}` }),
+        el("span", { class: `engine-dot ${p === "api" ? "claude" : p.startsWith("acp:") ? "acp" : p}` }),
         el("span", { text: this.engineName(p) }),
         word ? el("span", { class: `engine-state${state === "missing" ? " off" : ""}`, text: word }) : null,
       );
