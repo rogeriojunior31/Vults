@@ -453,11 +453,8 @@ pub fn set_phone_transport(window: tauri::Webview, app: AppHandle, transport: St
 pub fn set_phone_relay(window: tauri::Webview, app: AppHandle, url: String) -> Result<(), String> {
     crate::settings_page(&window)?;
     let url = url.trim().trim_end_matches('/').to_string();
-    let ok = (url.starts_with("https://") || url.starts_with("http://"))
-        && url.len() <= 300
-        && !url.chars().any(|c| c.is_whitespace() || c.is_control());
-    if !ok {
-        return Err("Give an address that starts with https://.".into());
+    if url.len() > 300 || !vults_link::pair::relay_url_ok(&url) {
+        return Err("Give an address that starts with https://, or http:// for one on this computer, a LAN or a tailnet.".into());
     }
     crate::settings::edit(&app, |s| s.phone_relay = Some(url))?;
     restart(&app);

@@ -159,12 +159,60 @@ impl std::fmt::Debug for Scanned {
     }
 }
 
+/// Whether a relay address may be used: https anywhere, plain http only to this machine, a LAN or
+/// a tailnet. Messages stay sealed either way, but box addresses travel in clear over http, and
+/// whoever learns one can make the relay drop its messages (docs/reference/relay.md).
+pub fn relay_url_ok(url: &str) -> bool {
+    if url.chars().any(|c| c.is_control() || c.is_whitespace()) {
+        return false;
+    }
+    if let Some(rest) = url.strip_prefix("https://") {
+        return !rest.is_empty();
+    }
+    let Some(rest) = url.strip_prefix("http://") else {
+        return false;
+    };
+    let authority = rest.split(['/', '?', '#']).next().unwrap_or_default();
+    let host = match authority.strip_prefix('[') {
+        Some(v6) => v6.split(']').next().unwrap_or_default(),
+        None => authority.rsplit_once(':').map_or(authority, |(h, _)| h),
+    };
+    private_host(&host.to_ascii_lowercase())
+}
+
+fn private_host(host: &str) -> bool {
+    use std::net::IpAddr;
+    match host.parse::<IpAddr>() {
+        Ok(IpAddr::V4(ip)) => {
+            let [a, b, ..] = ip.octets();
+            // 100.64.0.0/10: carrier-grade NAT, where Tailscale gives its addresses.
+            ip.is_loopback() || ip.is_private() || ip.is_link_local() || (a == 100 && (64..128).contains(&b))
+        }
+        Ok(IpAddr::V6(ip)) => {
+            let first = ip.segments()[0];
+            // fc00::/7 (unique local, the tailnet's fd7a:115c:a1e0::/48 too) and fe80::/10.
+            ip.is_loopback() || (first & 0xfe00) == 0xfc00 || (first & 0xffc0) == 0xfe80
+        }
+        Err(_) => {
+            host == "localhost"
+                || [
+                    ".localhost",
+                    ".local",
+                    ".lan",
+                    ".home.arpa",
+                    ".internal",
+                    ".ts.net",
+                ]
+                .iter()
+                .any(|suffix| host.ends_with(suffix) && host.len() > suffix.len())
+        }
+    }
+}
+
 /// The phone reads the QR.
 pub fn scan(qr: &str) -> Result<Scanned, Error> {
     let q: Qr = parse(qr.as_bytes())?;
-    let relay_ok = q.r.len() <= MAX_RELAY
-        && (q.r.starts_with("https://") || q.r.starts_with("http://"))
-        && !q.r.chars().any(char::is_control);
+    let relay_ok = q.r.len() <= MAX_RELAY && relay_url_ok(&q.r);
     if !relay_ok {
         return Err(Error::Malformed);
     }
@@ -261,6 +309,37 @@ mod tests {
     use super::*;
     use p256::ecdsa::SigningKey;
     use p256::elliptic_curve::Generate;
+
+    #[test]
+    fn plain_http_only_reaches_a_private_relay() {
+        for ok in [
+            "https://relay.example",
+            "http://127.0.0.1:8787",
+            "http://192.168.1.20:8787/",
+            "http://10.0.0.5",
+            "http://100.101.102.103:8787",
+            "http://[fd7a:115c:a1e0::1]:8787",
+            "http://[::1]:8787",
+            "http://desk.local:8787",
+            "http://desk.tail1234.ts.net",
+            "http://localhost:8787",
+        ] {
+            assert!(super::relay_url_ok(ok), "{ok}");
+        }
+        for bad in [
+            "http://relay.example",
+            "http://8.8.8.8",
+            "http://100.128.0.1",
+            "http://[2001:db8::1]",
+            "http://local",
+            "http://evil.com/.local",
+            "ftp://10.0.0.1",
+            "https://",
+            "http://10.0.0.1 x",
+        ] {
+            assert!(!super::relay_url_ok(bad), "{bad}");
+        }
+    }
 
     fn sec1(k: &SigningKey) -> Vec<u8> {
         k.verifying_key().to_sec1_point(false).as_bytes().to_vec()

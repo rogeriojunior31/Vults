@@ -1,5 +1,5 @@
 # O relay do telefone
-<!-- source: 30a0927269f7 -->
+<!-- source: 080cac83969d -->
 
 Um telefone pareado recebe os seus cards e envia as suas respostas por um relay: um servidor
 pequeno que guarda mensagens seladas até o outro lado lê-las. Esta página serve para rodar um, ou
@@ -45,9 +45,12 @@ cargo run --release -p vults-relay --bin vults-relay
 ```
 
 `VULTS_RELAY_ADDR` diz onde ele escuta (`0.0.0.0:8787` por padrão). Ele fala HTTP puro: coloque um
-proxy reverso com TLS na frente, ou acesse-o só por uma tailnet ou pela sua rede local. Um proxy na
-frente também deve limitar as conexões por endereço: os limites do próprio relay valem para o
-servidor inteiro.
+proxy reverso com TLS na frente, ou acesse-o só por uma tailnet ou pela sua rede local. Um endereço
+segura no máximo 64 conexões ao mesmo tempo; atrás de um proxy toda conexão vem do endereço do
+proxy, então use `VULTS_RELAY_PER_ADDRESS=0` ali e deixe o proxy limitar cada cliente. O Vults só
+aceita um relay em `http://` puro neste computador, numa rede local ou numa tailnet (endereços
+privados e de tailnet, `.local`, `.lan`, `.home.arpa`, `.internal`, `.ts.net`); fora disso ele
+precisa ser `https://`.
 
 <a id="limits"></a>
 
@@ -63,6 +66,7 @@ servidor inteiro.
 | Uma leitura esperando uma mensagem | 25 segundos |
 | Um pedido, com o corpo | 35 segundos |
 | Conexões ao mesmo tempo (as outras esperam a vez) | 1.000 |
+| Conexões de um endereço ao mesmo tempo (as outras são fechadas) | 64 |
 | Uma conexão que não envia nada | 60 segundos |
 
 ## HTTP

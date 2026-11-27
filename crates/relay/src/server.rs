@@ -38,6 +38,9 @@ pub struct Limits {
     pub connections: usize,
     /// A connection that sends nothing this long is closed.
     pub idle: Duration,
+    /// Connections one address may hold at once, so one host can't take every place (0: no cap,
+    /// for a relay behind a proxy, where every connection comes from the proxy's address).
+    pub per_address: usize,
 }
 
 impl Default for Limits {
@@ -51,6 +54,7 @@ impl Default for Limits {
             wait: Duration::from_secs(25),
             connections: 1000,
             idle: Duration::from_secs(60),
+            per_address: 64,
         }
     }
 }
@@ -288,6 +292,8 @@ pub async fn serve(listener: TcpListener, limits: Limits) -> std::io::Result<()>
         listener,
         open: Arc::new(Semaphore::new(limits.connections)),
         idle: limits.idle,
+        per_address: limits.per_address,
+        by_address: Arc::default(),
     };
     axum::serve(capped, router(relay)).await
 }
@@ -297,6 +303,45 @@ struct Capped {
     listener: TcpListener,
     open: Arc<Semaphore>,
     idle: Duration,
+    per_address: usize,
+    by_address: Arc<Mutex<HashMap<std::net::IpAddr, usize>>>,
+}
+
+/// One address's place, given back when its connection ends.
+struct Place {
+    by_address: Arc<Mutex<HashMap<std::net::IpAddr, usize>>>,
+    ip: std::net::IpAddr,
+}
+
+impl Drop for Place {
+    fn drop(&mut self) {
+        let mut held = self.by_address.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(n) = held.get_mut(&self.ip) {
+            *n -= 1;
+            if *n == 0 {
+                held.remove(&self.ip);
+            }
+        }
+    }
+}
+
+impl Capped {
+    /// A place for `ip`, or none when it already holds its share.
+    fn place(&self, ip: std::net::IpAddr) -> Option<Option<Place>> {
+        if self.per_address == 0 {
+            return Some(None);
+        }
+        let mut held = self.by_address.lock().unwrap_or_else(|e| e.into_inner());
+        let n = held.entry(ip).or_default();
+        if *n >= self.per_address {
+            return None;
+        }
+        *n += 1;
+        Some(Some(Place {
+            by_address: self.by_address.clone(),
+            ip,
+        }))
+    }
 }
 
 impl axum::serve::Listener for Capped {
@@ -311,8 +356,13 @@ impl axum::serve::Listener for Capped {
             };
             match self.listener.accept().await {
                 Ok((io, addr)) => {
+                    // Past its share, the connection is closed at once (dropped with its permit).
+                    let Some(place) = self.place(addr.ip()) else {
+                        continue;
+                    };
                     let quiet = Quiet {
                         io,
+                        _place: place,
                         _permit: permit,
                         idle: self.idle,
                         timer: Box::pin(tokio::time::sleep(self.idle)),
@@ -333,6 +383,7 @@ impl axum::serve::Listener for Capped {
 /// A connection that ends when it has sent nothing for `idle`, freeing its place.
 struct Quiet {
     io: TcpStream,
+    _place: Option<Place>,
     _permit: OwnedSemaphorePermit,
     idle: Duration,
     timer: Pin<Box<Sleep>>,
@@ -434,6 +485,40 @@ mod tests {
         r.read(A, seq, now);
         assert_eq!(r.post(&b, "x".repeat(11), now), StatusCode::SERVICE_UNAVAILABLE);
         assert_eq!(r.post(&b, "x".repeat(10), now), StatusCode::ACCEPTED);
+    }
+
+    #[tokio::test]
+    async fn one_address_holds_its_share_and_gets_it_back() {
+        let capped = Capped {
+            listener: TcpListener::bind("127.0.0.1:0").await.unwrap(),
+            open: Arc::new(Semaphore::new(10)),
+            idle: Duration::from_secs(60),
+            per_address: 2,
+            by_address: Arc::default(),
+        };
+        let (a, b): (std::net::IpAddr, std::net::IpAddr) =
+            ("10.0.0.1".parse().unwrap(), "10.0.0.2".parse().unwrap());
+        let first = capped.place(a).unwrap();
+        let second = capped.place(a).unwrap();
+        assert!(
+            capped.place(a).is_none(),
+            "a third from the same address is refused"
+        );
+        assert!(capped.place(b).is_some(), "another address still has room");
+        drop(first);
+        assert!(
+            capped.place(a).is_some(),
+            "a closed connection gives its place back"
+        );
+        drop(second);
+        let open = Capped {
+            per_address: 0,
+            ..capped
+        };
+        assert!(
+            (0..100).all(|_| open.place(a).is_some_and(|p| p.is_none())),
+            "0 means no cap"
+        );
     }
 
     #[test]

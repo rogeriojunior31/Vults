@@ -7,9 +7,17 @@ async fn main() -> std::io::Result<()> {
     let addr = std::env::var("VULTS_RELAY_ADDR").unwrap_or_else(|_| "0.0.0.0:8787".into());
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     eprintln!("vults-relay listening on {}", listener.local_addr()?);
+    // Behind a proxy every connection shares its address: 0 there, and the proxy limits instead.
+    let mut limits = vults_relay::server::Limits::default();
+    if let Some(n) = std::env::var("VULTS_RELAY_PER_ADDRESS")
+        .ok()
+        .and_then(|v| v.parse().ok())
+    {
+        limits.per_address = n;
+    }
     // As a container's first process, a SIGTERM nobody handles is ignored: stop on it.
     tokio::select! {
-        served = vults_relay::server::serve(listener, vults_relay::server::Limits::default()) => served,
+        served = vults_relay::server::serve(listener, limits) => served,
         () = stopped() => Ok(()),
     }
 }
