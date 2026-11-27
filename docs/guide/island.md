@@ -63,6 +63,8 @@ Turn him back on in the same place; no restart either way.
 
 ![The compact island: Zeca with the session in front, and vults with their badges](../assets/island-compact-flock.png)
 
+![Mini: the flock alone in the pill, five sessions, a finished one with a green dot and a failed one with a red square](../assets/island-mini.png)
+
 **Compact** (the presentation menu's **Mini**), the island is a small pill with no text, only the flock:
 Zeca on the left with the session in front, up to eight vults spread along the wire, and under it a
 hairline per plan showing its usage, in the usage meters' colors (amber from 70%, red from 90%).
@@ -381,6 +383,8 @@ behind another, see [More than one at a time](approvals.md#more-than-one-at-a-ti
 While the screen is locked (a desktop that says so through `org.freedesktop.ScreenSaver`, as Plasma
 and GNOME do), the island rests (no animation) and connectors stop checking. Agents and
 cards go on as usual.
+
+![Now on the island: a request that went back to its terminal and a failed session, each a click away](../assets/island-now.png)
 
 When you unlock, or leave *Paused*, a line says what happened meanwhile: *While you were away: 2
 finished, 1 failed, 1 waits for you for 12 min.* In *Island* it opens the island once; it stays until

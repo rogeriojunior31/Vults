@@ -27,6 +27,8 @@ persistent setting and requests no desktop grant. See [Diagnostics](../guide/dic
 | System keyring, service `io.github.rogeriojunior31.vults`, account `dictation-keyboard-restore-token` | The dictation RemoteDesktop keyboard restore token, when persistence is available; consumed once, rotated after a grant and removed when insertion is disabled. Never in a file or exposed to a webview |
 | `~/.local/state/vults/logs/` | The log: one file a day, the last five kept. It records what happened (event names, decisions, errors), never commands, paths or chat text |
 
+![Settings, General: width, theme and language, then sounds, volume, now playing, do not disturb and notifications](../assets/settings-general.png)
+
 ## Where things live (Windows)
 
 The same files, in other folders:

@@ -84,6 +84,8 @@ Never a prompt, a reply, a command, a file name or a path, and nothing leaves th
 The card shows one week, Monday to Sunday, by your local days: this week first, and **‹ ›** to go
 through the weeks the history keeps (12).
 
+![Activity's week: time with the flock, turns, lines changed and answers, the chart by day, turns by agent and Save as image](../assets/nest-activity.png)
+
 - **Time with your agents**: turns running side by side count once.
 - **Turns** and their steps, **lines** added and removed and the files they touched, **commands**,
   **answers** (allowed, denied, questions answered), and **turns failed**.

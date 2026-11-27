@@ -1,5 +1,5 @@
 # Aprovando pela ilha
-<!-- source: 67577f520f89 -->
+<!-- source: 15a23a60e821 -->
 
 Quando o Claude Code, o Codex, o OpenCode, o Qwen Code ou o Copilot CLI pede permissão para uma chamada de
 ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o
@@ -151,6 +151,8 @@ Cada linha começa pelo comando como foi pedido, depois quem decidiu (você, seu
 Always, uma política, o acesso total do chat, ou o próprio Vults), o agente e o projeto; **As
 recorded** mostra o texto guardado quando ele foi encurtado, como um lançador do PowerShell em volta
 do comando.
+
+![Settings, Approvals: a auditoria das respostas com seus filtros, um pedido que ninguém respondeu a tempo e, abaixo, as regras Always allowed e as Policies](../../assets/settings-approvals.png)
 
 <a id="more-than-one-at-a-time"></a>
 

@@ -1,5 +1,5 @@
 # Atividade
-<!-- source: 9bf749473a58 -->
+<!-- source: 7b5b87cb6986 -->
 
 Week compara os números com a semana anterior do calendário, mostra os turnos registrados por
 agente e identifica os meses e dias da semana na grade anual. Uma base de comparação ausente ou
@@ -97,6 +97,8 @@ sai deste computador ([Segurança](../safety.md)).
 
 O card mostra uma semana, de segunda a domingo, pelos seus dias locais: esta semana primeiro, e
 **‹ ›** para passar pelas semanas que o histórico guarda (12).
+
+![A semana em Activity: tempo com o bando, turnos, linhas alteradas e respostas, o gráfico por dia, turnos por agente e Save as image](../../assets/nest-activity.png)
 
 - **Tempo com os seus agentes**: turnos rodando lado a lado contam uma vez só.
 - **Turnos** e os passos deles, **linhas** adicionadas e removidas e os arquivos mexidos,

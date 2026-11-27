@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: 117279b6465e -->
+<!-- source: 340277f3eebd -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, o
 chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -105,6 +105,8 @@ sessão para a frente. Passe o mouse para ver projeto, branch, agente e estado c
 direito, a tecla de menu ou **Shift+F10** abre as ações rápidas existentes: terminal, pasta,
 Activity, último diff, foco, silenciar, fixar e esconder. Um card aguardando mantém a própria
 sessão na frente.
+
+![O Flock do Nest: cinco sessões no fio, a lista de sessões com seus filtros e o custo, o contexto, os passos recentes e os arquivos alterados da sessão escolhida](../../assets/nest-flock.png)
 
 Acima da lista, **All sessions**, **Needs you**, **Working**, **Failed** e **Quiet sessions**
 filtram as linhas. Quiet inclui sessões em repouso e aves sinalizadas por silêncio. As contagens
@@ -229,6 +231,8 @@ recusa. Um resultado atrasado preserva a digitação mais recente. Trocar de con
 microfone do chat e descarta transcrições atrasadas; o encaminhamento de um comando de voz não
 pode assumir uma conversa vazia criada depois.
 
+![O Chat no Nest: a saudação do Zeca com perguntas sugeridas, a lista de conversas e os seletores de modelo, acesso e pasta acima do campo de mensagem](../../assets/nest-chat.png)
+
 As ações **Perguntar ao Zeca** no Bando, nas Conexões e na paleta de comandos conferem o
 destinatário atual antes de acrescentar uma pergunta. Elas preservam o texto do rascunho, os
 anexos e a origem, incluindo texto digitado durante a preparação. Outro destinatário ou uma troca
@@ -263,6 +267,8 @@ Histórico e Auditoria mantêm suas buscas separadamente até você sair do Vult
 Voltar para Mini ou Quick aguarda o salvamento das buscas pendentes; reabrir o Nest
 restaura os filtros. **Limpar filtros** limpa apenas a busca daquela subseção.
 Uma restauração atrasada preserva qualquer texto digitado depois.
+
+![A semana em Activity: tempo com o bando, turnos, linhas alteradas e respostas, o gráfico por dia, turnos por agente e o resumo para salvar como imagem](../../assets/nest-activity.png)
 
 O que este computador guarda, só lido aqui:
 
@@ -302,6 +308,8 @@ Fechar e reabrir o Nest mantém o filtro de repositório, a subseção e o item 
 até você sair do Vults. Em uma janela estreita, o detalhe selecionado abre de novo;
 Voltar retorna à lista filtrada. Se o item desaparecer, a lista abre no lugar dele.
 Uma confirmação de merge ainda pendente é descartada ao fechar o Nest.
+
+![Connections ainda sem nada configurado: GitHub, GitLab e Gitea, cada um com o que mostra e Turn on in Settings](../../assets/nest-connections.png)
 
 O conector escolhido tem um único cabeçalho: a última sincronização (ou por que falhou),
 **↻ Refresh** para consultar de novo (no máximo uma vez por minuto) e **Manage connections** para
@@ -411,3 +419,5 @@ as transcrições ficam no Nest. Estatísticas abre Atividade > Ditado. Janelas 
 de página com rótulo; o conteúdo rola separadamente. Busca, detalhes, rascunhos e posição de leitura
 sobrevivem à troca de tamanho. Excluir transcrições mantém uso medido e preferências de Suas palavras.
 Veja o [processamento das suas palavras](dictation.md#your-words).
+
+![A página de histórico do Ditado: segure a tecla, fale e solte, a escolha do modelo de voz e o histórico pesquisável](../../assets/nest-dictation.png)

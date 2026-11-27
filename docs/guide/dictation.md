@@ -16,6 +16,8 @@ is [Meetings](meetings.md).
 3. Click in the app where you want the text, **hold Ctrl+Alt+V**, speak, and release.
 4. Wait for **Copied**, then paste (Ctrl+V, or Ctrl+Shift+V in a terminal).
 
+![Dictation's history page: hold Ctrl+Alt+F4, speak and release; without a voice model the page says so and offers one](../assets/nest-dictation.png)
+
 A short capsule at the bottom of the screen shows the microphone, the sound bands while you speak,
 and the result. It never takes focus or clicks, and it hides whenever a permission card appears.
 

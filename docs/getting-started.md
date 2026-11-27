@@ -73,6 +73,8 @@ Open **Set up agents…** from the tray icon and click **Install hooks…** next
 file that will change, the exact diff, and a **Write the file** button; a dated backup is taken
 first, and hooks from other tools are kept. **Remove hooks…** takes out only what Vults added.
 
+![Settings, Agents: each agent with the file Vults would change and Install hooks](assets/settings-agents.png)
+
 | Agent | File | After installing |
 |---|---|---|
 | Claude Code | `~/.claude/settings.json` | Nothing: new sessions report to the island |

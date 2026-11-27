@@ -134,6 +134,8 @@ change to an agent's config). Each row leads with the command as it was asked, t
 the project; **As recorded** shows the stored text when it was shortened, such as a PowerShell
 launcher around the command.
 
+![Settings, Approvals: the audit of answers with its filters, a request nobody answered in time, and the Always allowed rules and Policies below](../assets/settings-approvals.png)
+
 ## More than one at a time
 
 Requests wait in line, each for its own agent. The card shows the first one with **3 requests waiting**, under

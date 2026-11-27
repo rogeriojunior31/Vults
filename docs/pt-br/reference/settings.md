@@ -1,5 +1,5 @@
 # Configurações e arquivos
-<!-- source: 828ff104c459 -->
+<!-- source: 806539aa228e -->
 
 **Ditado > Diagnóstico** oferece um teste explícito de microfone de seis segundos,
 somente na memória, estado atual do áudio/desktop/modelos, contadores desde o início do app e tempos
@@ -30,6 +30,8 @@ retidos por etapa. Não acrescenta configuração persistente nem pede permissã
 | Chaveiro do sistema, serviço `io.github.rogeriojunior31.vults`, conta `<provider>-api-key` (`anthropic-api-key`, `openai-api-key`, …) | As chaves de API do chat, uma por provedor para o qual você deu uma (nunca em arquivo) |
 | Chaveiro do sistema, serviço `io.github.rogeriojunior31.vults`, conta `dictation-keyboard-restore-token` | O token de restauração de teclado RemoteDesktop do ditado, quando há persistência; consumido uma vez, renovado após uma autorização e removido ao desligar a inserção. Nunca fica em arquivo nem é exposto a uma webview |
 | `~/.local/state/vults/logs/` | O log: um arquivo por dia, os últimos cinco são mantidos. Ele registra o que aconteceu (nomes de eventos, decisões, erros), nunca comandos, caminhos ou texto do chat |
+
+![Settings, General: largura, tema e idioma, depois sons, volume, tocando agora, não perturbe e notificações](../../assets/settings-general.png)
 
 <a id="where-things-live-windows"></a>
 

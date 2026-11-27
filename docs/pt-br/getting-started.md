@@ -1,5 +1,5 @@
 # Primeiros passos
-<!-- source: 522e3c8c4d69 -->
+<!-- source: a494d77771f9 -->
 
 <a id="install"></a>
 
@@ -83,6 +83,8 @@ Abra **Set up agents…** pelo ícone da bandeja e clique em **Install hooks…*
 Você vê o arquivo que vai mudar, o diff exato e um botão **Write the file**; antes é feito um backup
 datado, e os hooks de outras ferramentas são mantidos. **Remove hooks…** tira só o que o Vults
 adicionou.
+
+![Settings, Agents: cada agente com o arquivo que o Vults alteraria e Install hooks](../assets/settings-agents.png)
 
 | Agente | Arquivo | Depois de instalar |
 |---|---|---|

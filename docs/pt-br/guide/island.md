@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 6c41ff355210 -->
+<!-- source: 593b874acc30 -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -72,6 +72,8 @@ Ligue-o de volta no mesmo lugar; sem reiniciar, nos dois casos.
 ## Compacta, aberta e escondida
 
 ![A ilha compacta: o Zeca com a sessão da frente, e vults com seus selos](../../assets/island-compact-flock.png)
+
+![Mini: só o bando na pílula, cinco sessões, uma terminada com um ponto verde e uma que falhou com um quadrado vermelho](../../assets/island-mini.png)
 
 **Compacta** (o **Mini** do menu de apresentação), a ilha é uma pequena pílula sem texto, só o bando:
 o Zeca à esquerda com a sessão da frente, até oito vults espalhados pelo fio e, embaixo, uma linha
@@ -423,6 +425,8 @@ atrás de outro, veja [Mais de um por vez](approvals.md#more-than-one-at-a-time)
 Com a tela bloqueada (num desktop que avisa pelo `org.freedesktop.ScreenSaver`, como o Plasma e o
 GNOME), a ilha descansa (sem animação) e os conectores param de verificar. Agentes e
 cards seguem como sempre.
+
+![Now na ilha: um pedido que voltou ao terminal e uma sessão que falhou, cada um a um clique](../../assets/island-now.png)
 
 Quando você desbloqueia, ou sai do *Paused*, uma linha diz o que aconteceu nesse meio-tempo: *While
 you were away: 2 finished, 1 failed, 1 waits for you for 12 min.* No *Island* ela abre a ilha uma vez;

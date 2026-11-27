@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: c97e86a6c767 -->
+<!-- source: 46d302306e04 -->
 
 Fale e suas palavras viram texto no aplicativo que você estava usando. Tudo roda neste computador:
 o modelo de fala é local, o áudio fica na memória e nada é enviado com Enter. O ditado funciona com
@@ -18,6 +18,8 @@ fica em [Reuniões](meetings.md).
    teclado** mostra as teclas realmente vinculadas.
 3. Clique no aplicativo onde quer o texto, **segure Ctrl+Alt+V**, fale e solte.
 4. Espere **Copiado** e cole (Ctrl+V, ou Ctrl+Shift+V num terminal).
+
+![A página de histórico do Ditado: segure Ctrl+Alt+F4, fale e solte; sem modelo de voz a página avisa e oferece um](../../assets/nest-dictation.png)
 
 Uma cápsula pequena na parte de baixo da tela mostra o microfone, as faixas de som enquanto você
 fala e o resultado. Ela nunca pega o foco nem cliques, e some sempre que aparece um card de permissão.
