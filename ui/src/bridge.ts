@@ -781,6 +781,7 @@ export const Bridge = {
   setPhoneListen: (addr: string) => invoke<void>("set_phone_listen", { addr }),
   phonePair: () => invoke<Pairing>("phone_pair"),
   phonePairCancel: () => invoke<void>("phone_pair_cancel"),
+  phonePairCopy: (text: string) => invoke<void>("phone_pair_copy", { text }),
   phoneRevoke: (id: string) => invoke<void>("phone_revoke", { id }),
   onPhone(cb: (e: PhoneEvent) => void): void {
     void listen<PhoneEvent>("phone", (e) => cb(e.payload));

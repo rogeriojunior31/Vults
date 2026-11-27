@@ -1,5 +1,5 @@
 # O telefone
-<!-- source: f8a16b4e8756 -->
+<!-- source: a4781412c48e -->
 
 Um telefone que você pareia pode responder aos cards que esperam por você enquanto está longe da
 mesa. Ele só decide: este computador continua fazendo o que você escolheu, e a ilha também mantém
@@ -29,7 +29,9 @@ cada um guardado no trace local ([Segurança](../safety.md)).
 Aperte **Pair**: um QR aparece por dois minutos. Escaneie com o telefone. O QR leva a chave pública
 deste computador, o endereço do relay e um segredo de uso único; só um telefone que o viu consegue
 parear, e ele pareia um telefone. Abaixo do QR, **The code's text, for the command-line test
-client** dá o mesmo código em texto. O telefone então aparece em **Paired phones**.
+client** dá o mesmo código em texto: **Show the code's text** mostra o texto, e **Copy** copia sem
+passar pelo histórico da área de transferência nem pela sincronização na nuvem, já que ele leva o
+segredo. O telefone então aparece em **Paired phones**.
 
 <a id="answering"></a>
 

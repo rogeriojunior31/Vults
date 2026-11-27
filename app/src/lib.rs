@@ -380,6 +380,7 @@ pub fn run() {
             phone::set_phone_listen,
             phone::phone_pair,
             phone::phone_pair_cancel,
+            phone::phone_pair_copy,
             phone::phone_revoke,
             settings::set_web_engine,
             settings::set_searxng_url,

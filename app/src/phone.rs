@@ -534,6 +534,31 @@ pub fn phone_pair_cancel(window: tauri::Webview, app: AppHandle) -> Result<(), S
     Ok(())
 }
 
+/// Settings → Phone → Copy: the pairing code's text, left out of clipboard history and cloud
+/// sync (it holds the one-time secret). The owner stays alive, or X11 would drop the text.
+#[tauri::command]
+pub async fn phone_pair_copy(window: tauri::Webview, text: String) -> Result<(), String> {
+    crate::settings_page(&window)?;
+    #[cfg(any(target_os = "linux", windows))]
+    {
+        static OWNER: Mutex<Option<vults_platform::clipboard::Clipboard>> = Mutex::new(None);
+        tauri::async_runtime::spawn_blocking(move || {
+            let mut owner = OWNER.lock().map_err(|_| "The clipboard is busy.".to_string())?;
+            if owner.is_none() {
+                *owner = Some(vults_platform::clipboard::Clipboard::new()?);
+            }
+            owner.as_mut().map_or(Ok(()), |c| c.copy(&text))
+        })
+        .await
+        .map_err(|e| e.to_string())?
+    }
+    #[cfg(not(any(target_os = "linux", windows)))]
+    {
+        let _ = text;
+        Err("Copying is not available here.".into())
+    }
+}
+
 /// Settings → Phone → Revoke: nothing it signs is taken from now on.
 #[tauri::command]
 pub async fn phone_revoke(window: tauri::Webview, app: AppHandle, id: String) -> Result<(), String> {

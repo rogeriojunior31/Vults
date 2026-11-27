@@ -215,11 +215,23 @@ function qrRow(qr: Pairing & { until: number }): HTMLElement {
       g.fillRect((margin + (i % qr.size)) * scale, (margin + Math.floor(i / qr.size)) * scale, scale, scale);
     }
   }
+  // The text holds the one-time secret: shown only on request, never selected by a click (a
+  // selection may reach PRIMARY), and copied with clipboard history and sync left out.
   const text = document.createElement("input");
   text.className = "field";
   text.readOnly = true;
-  text.value = qr.text;
-  text.addEventListener("focus", () => text.select());
+  text.hidden = true;
+  const copied = el("p", { class: "note" });
+  const reveal = button(t("Show the code's text"), () => {
+    text.value = qr.text;
+    text.hidden = false;
+    reveal.hidden = true;
+  });
+  const copy = button(t("Copy"), () =>
+    Bridge.phonePairCopy(qr.text)
+      .then(() => { copied.className = "note ok"; copied.textContent = t("Copied. Clipboard history leaves it out."); })
+      .catch((e) => { copied.className = "note error"; copied.textContent = failure(t("Could not copy the code's text."), e); }),
+  );
   return el(
     "div",
     { class: "row qr-row" },
@@ -229,7 +241,10 @@ function qrRow(qr: Pairing & { until: number }): HTMLElement {
       { class: "row-text" },
       (countdownLine = el("div", { class: "row-title", text: within(qr.until) })),
       el("div", { class: "row-about", text: t("The code's text, for the command-line test client:") }),
+      reveal,
       text,
+      copy,
+      copied,
       button(t("Cancel"), () => {
         stopPairing();
         void Bridge.phonePairCancel();
