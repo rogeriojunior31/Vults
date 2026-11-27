@@ -8,6 +8,20 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 - **Activity**: a day's bar, the busiest day and the grid count turns side by side once, as the week's total does (they added them up, so parallel agents showed more time per day than in the week).
 - **Activity**: a turn still running when Vults quits or updates is kept, ending at its last event, instead of being lost.
+- **Microphones**: a 24-bit microphone (and 8, 32 and 64-bit ones) opens for dictation, voice and meetings instead of failing.
+- **Windows**: the chat's engine menu finds `claude.exe` and npm's `claude.cmd`, so it no longer says Claude Code or Codex is missing.
+- **Windows**: the island hangs below a taskbar or app bar at the top of the screen.
+- **Windows**: a VS Code installed under a folder named after Cursor is no longer shown as Cursor.
+- **Phone**: the pairing code's text shows only on request, and **Copy** leaves it out of clipboard history and cloud sync.
+- **Phone relay**: plain `http://` only for a relay on this computer, a LAN or a tailnet; one address holds at most 64 connections (`VULTS_RELAY_PER_ADDRESS`, 0 behind a proxy).
+
+### Added
+
+- **A plan's card**: **Change plan…** sends the plan back with your words, and Claude plans again ([Approvals](docs/guide/approvals.md#a-plan)).
+- **Antigravity**: when it asks you something (`ask_question`), its bird waits for you with the question's sound and text.
+- **Claude Code in VS Code**: a session from the extension, locally or over Remote-SSH, shows as VS Code.
+- **Windows**: hook, question and tool pipes open only to you, administrators and SYSTEM; if another program holds the hook's pipe, a notification says agent events can't arrive.
+- **Windows**: the Nest's hidden page asks WebView2 to keep its memory low.
 
 ## 0.1.9 (2026-11-27)
 
