@@ -1883,6 +1883,33 @@ fn set_shown(webview: &tauri::Webview, on: bool) {
     {
         let _ = if on { webview.show() } else { webview.hide() };
     }
+    #[cfg(windows)]
+    low_memory(webview, !on);
+}
+
+/// Asks WebView2 to trim what a hidden webview holds, and to give it back once shown. Best effort:
+/// an older runtime without the setting is left as it is.
+#[cfg(windows)]
+fn low_memory(webview: &tauri::Webview, low: bool) {
+    use webview2_com::Microsoft::Web::WebView2::Win32::{
+        COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW, COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_NORMAL,
+        ICoreWebView2_19,
+    };
+    use windows_core::Interface;
+    let _ = webview.with_webview(move |p| {
+        let level = if low {
+            COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW
+        } else {
+            COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_NORMAL
+        };
+        let set = || -> windows_core::Result<()> {
+            let core = unsafe { p.controller().CoreWebView2()? }.cast::<ICoreWebView2_19>()?;
+            unsafe { core.SetMemoryUsageTargetLevel(level) }
+        };
+        if let Err(e) = set() {
+            tracing::debug!(error = %e, "webview memory target not set");
+        }
+    });
 }
 
 /// Whether the Nest is open and in sight: the island asks when it starts (ADR 0006).
