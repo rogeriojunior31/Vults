@@ -29,6 +29,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Fixes
 
+- A plan card shows the plan Claude Code asks to start, not just `ExitPlanMode`: its first line in the target and the whole plan below (up to 2,000 characters, marked when longer).
 - A Codex turn reviewed by Codex's own automatic reviewer (`auto_review`, `strict_auto_review`) no longer waits on a card: Codex decides it. Only a turn its rollout proves automatic skips the card.
 - Allowing Claude Code's plan from the island now leaves plan mode: the answer carries the plan back, as Claude Code requires, instead of a bare allow it ignored.
 - On Windows, a card answered in the agent's terminal goes away: when the agent ends the shell its hook ran under, the hook now ends too instead of waiting out its whole budget.

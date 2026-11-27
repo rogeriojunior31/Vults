@@ -345,6 +345,8 @@ const TARGET_FIELDS: &[&str] = &[
     "pattern",
     "prompt",
     "description",
+    // ExitPlanMode's: the plan Allow approves.
+    "plan",
 ];
 
 fn first_field<'a>(input: &'a serde_json::Value, fields: &[&'static str]) -> Option<(&'static str, &'a str)> {
@@ -409,6 +411,15 @@ const MAX_FULL: usize = 2_000;
 pub fn ask(tool: &str, input: &Value) -> Ask {
     let text = |k: &str| input.get(k).and_then(Value::as_str);
     let full = match (tool, text("command")) {
+        // The whole plan Allow approves, never only its first line.
+        ("ExitPlanMode", _) => text("plan")
+            .map(str::trim)
+            .filter(|plan| !plan.is_empty())
+            .map(|plan| match plan.char_indices().nth(MAX_FULL) {
+                // Longer than the card holds: it says so instead of looking whole.
+                Some((end, _)) => format!("{}…", &plan[..end]),
+                None => plan.to_owned(),
+            }),
         // A patch's command is the patch itself: its files and line counts say it better.
         ("apply_patch", _) | (_, None) => None,
         (_, Some(cmd)) => {
@@ -568,6 +579,35 @@ fn unbullet(line: &str) -> &str {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_plan_card_shows_the_plan_allow_approves() {
+        let input = serde_json::json!({"plan": "## Fix login
+1. Read auth.rs
+2. Patch it", "planFilePath": "/p.md"});
+        assert_eq!(target("ExitPlanMode", &input), "ExitPlanMode · ## Fix login…");
+        let asked = ask("ExitPlanMode", &input);
+        assert_eq!(
+            asked.full.as_deref(),
+            Some(
+                "## Fix login
+1. Read auth.rs
+2. Patch it"
+            )
+        );
+        assert!(
+            asked.cut,
+            "a rule for its first line would allow every plan that starts the same"
+        );
+        let long = ask(
+            "ExitPlanMode",
+            &serde_json::json!({"plan": "x".repeat(MAX_FULL + 10)}),
+        )
+        .full
+        .unwrap();
+        assert!(long.ends_with('…') && long.chars().count() == MAX_FULL + 1);
+        assert_eq!(ask("ExitPlanMode", &serde_json::json!({"plan": "  "})).full, None);
+    }
 
     #[test]
     fn command_folders_survive_each_answerable_agent_adapter() {
