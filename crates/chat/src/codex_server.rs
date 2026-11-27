@@ -282,6 +282,19 @@ impl TurnTokens {
     }
 }
 
+/// `turn/start`'s parameters. The approval policy and sandbox go with every turn (they hold for
+/// later turns too), so full access switched on or off applies at once, without a new server:
+/// full access is Codex's own `never` with no sandbox; otherwise everything but known-safe reads
+/// asks, and writes stay in the folder.
+fn turn_params(thread: &str, input: Vec<Value>, full_access: bool) -> Value {
+    let (approval, sandbox) = if full_access {
+        (json!("never"), json!({ "type": "dangerFullAccess" }))
+    } else {
+        (json!("untrusted"), json!({ "type": "workspaceWrite" }))
+    };
+    json!({ "threadId": thread, "input": input, "approvalPolicy": approval, "sandboxPolicy": sandbox })
+}
+
 impl AppServer {
     /// Starts the server and opens (or reopens) the conversation.
     pub(crate) async fn start(spec: &Spec, resume: Option<&str>) -> Result<Self, String> {
@@ -430,8 +443,14 @@ impl AppServer {
 
     /// One turn, streaming the reply and asking the user for each command and change. Stop sends
     /// `turn/interrupt`; the server stays up for the next turn.
-    pub(crate) async fn turn(&mut self, turn: &Turn, sink: &dyn Sink, stop: &Stop) -> Result<(), String> {
-        let result = self.run(turn, sink, stop).await;
+    pub(crate) async fn turn(
+        &mut self,
+        turn: &Turn,
+        sink: &dyn Sink,
+        stop: &Stop,
+        full_access: bool,
+    ) -> Result<(), String> {
+        let result = self.run(turn, sink, stop, full_access).await;
         let end = match &result {
             Ok(end) => end.clone(),
             Err(e) => EndReason::Failed(e.clone()),
@@ -440,13 +459,19 @@ impl AppServer {
         result.map(|_| ())
     }
 
-    async fn run(&mut self, turn: &Turn, sink: &dyn Sink, stop: &Stop) -> Result<EndReason, String> {
+    async fn run(
+        &mut self,
+        turn: &Turn,
+        sink: &dyn Sink,
+        stop: &Stop,
+        full_access: bool,
+    ) -> Result<EndReason, String> {
         let mut input = vec![json!({ "type": "text", "text": prompt(turn, None), "text_elements": [] })];
         for image in turn.files.iter().filter(|f| is_image(f)) {
             input.push(json!({ "type": "localImage", "path": image }));
         }
         let id = self
-            .send("turn/start", json!({ "threadId": self.thread, "input": input }))
+            .send("turn/start", turn_params(&self.thread, input, full_access))
             .await?;
         let mut tokens = TurnTokens::from(self.seen.clone());
         // The turn's id, from `turn/start`'s answer: what `turn/interrupt` names.
@@ -736,6 +761,17 @@ fn config_overrides(spec: &Spec) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn every_turn_carries_codexs_own_mode_for_the_users_access() {
+        let full = turn_params("t1", vec![], true);
+        assert_eq!(full["approvalPolicy"], "never");
+        assert_eq!(full["sandboxPolicy"], json!({ "type": "dangerFullAccess" }));
+        let asks = turn_params("t1", vec![], false);
+        assert_eq!(asks["approvalPolicy"], "untrusted");
+        assert_eq!(asks["sandboxPolicy"], json!({ "type": "workspaceWrite" }));
+        assert_eq!(asks["threadId"], "t1");
+    }
 
     #[test]
     fn public_reasoning_summary_is_separate_and_raw_reasoning_is_ignored() {

@@ -311,7 +311,10 @@ does not change the permission checks. Collapsing a card never grants access.
 - **Full access**: choosing it, in Settings or in the chat's menu, asks you to confirm first; then
   nothing asks: every command and edit runs with no card, destructive ones included, and after the
   conversation read a web page, a command's network output or an MCP tool. Only what a policy of
-  yours denies is refused: add `deny` lines to a policy for what must never run.
+  yours denies is refused: add `deny` lines to a policy for what must never run. The agent itself
+  runs in its own mode that asks nothing (Claude Code's `bypassPermissions`, Codex's `never` with no
+  sandbox), from the next turn, the conversation going on; while a policy of yours denies something,
+  Vults answers its requests instead, so that deny still holds.
 
 The chat says each answer given this way (*Allowed by your policy*, *Denied by your policy*, *Ran
 with full access*), and the audit log keeps it. Its chip, beside the model (amber with a warning sign under full access),

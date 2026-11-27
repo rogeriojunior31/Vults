@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 17b821be914e -->
+<!-- source: 412fd0d7ad73 -->
 
 Os painéis laterais redimensionáveis seguem o ponteiro que iniciou o arraste, ignoram toques adicionais e encerram o arraste quando a janela perde o foco. O cancelamento preserva a largura atual e mantém os rascunhos. Quando o espaço limita um painel, o arraste e o redimensionamento pelo teclado partem da largura visível; reduzir apenas o espaço disponível não sobrescreve a largura salva. Os controles de redimensionar e recolher usam a mesma cor de foco de teclado que o restante do tema selecionado.
 
@@ -347,7 +347,10 @@ orientação não muda as verificações de permissão. Recolher um cartão nunc
 - **Full access**: ao escolher, nas Configurações ou no menu do chat, você confirma antes; depois
   nada pergunta: todo comando e edição roda sem card, os destrutivos inclusive, e também depois de a
   conversa ler uma página web, a saída de rede de um comando ou uma ferramenta MCP. Só o que uma
-  política sua nega é recusado: adicione linhas `deny` a uma política para o que nunca deve rodar.
+  política sua nega é recusado: adicione linhas `deny` a uma política para o que nunca deve rodar. O
+  próprio agente roda no modo dele que não pergunta nada (`bypassPermissions` do Claude Code, `never`
+  sem sandbox do Codex), a partir do próximo turno, sem reiniciar a conversa; enquanto uma política
+  sua negar algo, o Vults responde os pedidos no lugar dele, para que essa negação continue valendo.
 
 O chat diz cada resposta dada assim (*Allowed by your policy*, *Denied by your policy*, *Ran with
 full access*), e o log de auditoria guarda. O chip dele, ao lado do modelo (âmbar com um sinal de aviso

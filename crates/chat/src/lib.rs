@@ -1059,6 +1059,15 @@ impl Chat {
         true
     }
 
+    /// Full access from the agent's own mode, any time: the next turn runs in it, the conversation
+    /// going on (Claude Code's next process, Codex's next `turn/start`).
+    pub fn set_full_access(&mut self, on: bool) {
+        self.spec.full_access = on;
+        if let Some(driver) = self.driver.as_mut() {
+            driver.set_full_access(on);
+        }
+    }
+
     /// Which of the user's settings a CLI reads; like the folder, only before the first turn.
     pub fn set_settings(&mut self, settings: Settings) -> bool {
         if self.started() || (self.is_specialist() && settings != Settings::Isolated) {

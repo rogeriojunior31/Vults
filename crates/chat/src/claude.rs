@@ -102,9 +102,13 @@ fn command_with(
         cmd.arg("--settings")
             .arg(serde_json::Value::Object(flags).to_string());
     }
-    if spec.settings != Settings::Isolated {
+    if spec.full_access {
+        // The user chose to be asked nothing: Claude Code's own mode, so no request is made. The
+        // prompt tool stays: a question (AskUserQuestion) still reaches the user.
+        cmd.args(["--permission-mode", "bypassPermissions"]);
+    } else if spec.settings != Settings::Isolated {
         // The user's rules and MCPs, as in their terminal; but a `defaultMode` that skips the
-        // cards (`acceptEdits`, `bypassPermissions`) never applies to the chat.
+        // cards (`acceptEdits`, `bypassPermissions`) never applies unless they chose full access.
         cmd.args(["--permission-mode", "default"]);
     }
     if let Some(mcp) = &spec.mcp_config {
@@ -793,6 +797,34 @@ mod tests {
         };
         assert_eq!(system(None), system(Some("abc")));
         assert!(system(None).ends_with("\n\n# Your memory"));
+    }
+
+    #[test]
+    fn full_access_is_claude_codes_own_mode_and_questions_still_come() {
+        let mode = |full_access, settings| {
+            let spec = Spec {
+                full_access,
+                settings,
+                ..Spec::in_dir("/w".into())
+            };
+            let args: Vec<String> = command(&spec, &Turn::default(), None)
+                .as_std()
+                .get_args()
+                .map(|a| a.to_string_lossy().into_owned())
+                .collect();
+            assert!(
+                args.windows(2)
+                    .any(|w| w == ["--permission-prompt-tool", "stdio"])
+            );
+            args.windows(2)
+                .find(|w| w[0] == "--permission-mode")
+                .map(|w| w[1].clone())
+        };
+        for settings in [Settings::Isolated, Settings::User, Settings::Project] {
+            assert_eq!(mode(true, settings).as_deref(), Some("bypassPermissions"));
+        }
+        assert_eq!(mode(false, Settings::User).as_deref(), Some("default"));
+        assert_eq!(mode(false, Settings::Isolated), None);
     }
 
     #[test]

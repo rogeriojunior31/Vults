@@ -178,6 +178,9 @@ pub struct Spec {
     pub system_append: Option<String>,
     pub sandbox: Sandbox,
     pub role: Role,
+    /// The user chose full access: the agent runs in its own mode that asks nothing (Claude Code's
+    /// `bypassPermissions`, Codex's `never` with no sandbox), so no request reaches a card.
+    pub full_access: bool,
 }
 
 impl Spec {
@@ -277,6 +280,8 @@ pub trait AgentDriver: Send + std::fmt::Debug {
         Err("This agent cannot use a host tool service.".into())
     }
     fn spec(&self) -> &Spec;
+    /// Full access turned on or off: it takes effect from the next turn, the conversation going on.
+    fn set_full_access(&mut self, _on: bool) {}
     /// A handle that can stop this driver's turns while `send` holds the driver.
     fn interrupter(&self) -> Arc<dyn Interrupter>;
     /// Gets ready for turns (a long-lived process starts here); a no-op for an agent that runs one

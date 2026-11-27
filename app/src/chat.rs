@@ -1031,6 +1031,19 @@ async fn send(
     if companion && chat.provider() == Provider::Claude {
         crate::mcp::keep_scope(targets.as_deref())?;
     }
+    // Full access runs the agent in its own mode that asks nothing. A policy line that denies keeps
+    // the app answering instead, so that deny still holds (the agent's own mode would skip it).
+    let access = match profile.as_ref() {
+        Some(p) => settings::specialist_chat_access(&app, &profile_access_key(p)),
+        None => settings::chat_access(&app),
+    };
+    let denies = crate::policies::active().iter().any(|a| {
+        a.policy
+            .lines
+            .iter()
+            .any(|l| l.verb == vults_core::policies::Verb::Deny)
+    });
+    chat.set_full_access(access == settings::ChatAccess::Full && !denies);
     if !chat.started() && companion {
         let pick = pick_for(&app, chat.folder(), chat.provider());
         let effort = pick.effort.as_deref().and_then(vults_chat::Effort::parse);
