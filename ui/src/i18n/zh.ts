@@ -823,7 +823,6 @@ export default {
   "Open Flock": "打开鸟群",
   "Continue the conversation": "继续对话",
   "Suggested questions": "建议的问题",
-  "Type @ to reference a session or project. References limit this turn's flock reads.": "输入 @ 以引用会话或项目。引用会限制本轮的鸟群读取范围。",
   "Enter sends, Shift+Enter starts a new line, ↑ recalls your last message, and @ references the flock.": "Enter 发送，Shift+Enter 换行，↑ 调出上一条消息，@ 引用鸟群。",
   "Sessions and projects": "会话和项目",
   "Project: {project}": "项目：{project}",

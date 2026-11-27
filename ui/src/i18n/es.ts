@@ -823,7 +823,6 @@ export default {
   "Open Flock": "Abrir Flock",
   "Continue the conversation": "Continuar la conversación",
   "Suggested questions": "Preguntas sugeridas",
-  "Type @ to reference a session or project. References limit this turn's flock reads.": "Escribe @ para mencionar una sesión o proyecto. Las referencias limitan las lecturas de la bandada en este turno.",
   "Enter sends, Shift+Enter starts a new line, ↑ recalls your last message, and @ references the flock.": "Enter envía, Shift+Enter inicia otra línea, ↑ recupera tu último mensaje y @ menciona la bandada.",
   "Sessions and projects": "Sesiones y proyectos",
   "Project: {project}": "Proyecto: {project}",
