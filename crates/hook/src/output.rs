@@ -65,6 +65,15 @@ pub fn decision_json(agent: AgentKind, decision: Decision) -> Option<String> {
     replies(agent).map(|r| (r.decision)(decision))
 }
 
+/// A click's answer as the app sent it.
+#[derive(Debug)]
+pub struct Click {
+    pub decision: Decision,
+    pub then: Option<Then>,
+    /// The user's words for the agent with a no (a plan's "what to change").
+    pub reason: Option<String>,
+}
+
 /// [`decision_json`], with the tool's input sent back where the agent needs it: Claude Code
 /// ignores a bare allow of `ExitPlanMode` ("allow alone is not sufficient for these tools",
 /// https://code.claude.com/docs/en/hooks), and then stays in plan mode.
@@ -72,9 +81,22 @@ pub fn decision_for(
     agent: AgentKind,
     tool: Option<&str>,
     tool_input: Option<Value>,
-    decision: Decision,
-    then: Option<Then>,
+    Click {
+        decision,
+        then,
+        reason,
+    }: Click,
 ) -> Option<String> {
+    // A plan sent back with what to change: Claude Code gives the message to the model, which
+    // stays in plan mode and plans again.
+    if let Some(message) = reason
+        .filter(|_| agent == AgentKind::Claude && tool == Some("ExitPlanMode") && decision == Decision::Deny)
+    {
+        let deny = json!({"behavior": "deny", "message": message});
+        return Some(
+            json!({"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":deny}}).to_string(),
+        );
+    }
     let echoed = agent == AgentKind::Claude && tool == Some("ExitPlanMode") && decision == Decision::Allow;
     match tool_input.filter(|_| echoed) {
         Some(input) => {
@@ -182,11 +204,53 @@ fn answers_json(tool_input: &Value, answers: Vec<Answer>) -> Option<String> {
 mod tests {
     use super::*;
 
+    fn a(decision: Decision, then: Option<Then>) -> Click {
+        Click {
+            decision,
+            then,
+            reason: None,
+        }
+    }
+
+    #[test]
+    fn a_plan_sent_back_carries_the_users_words_and_nothing_else_does() {
+        let plan = json!({ "plan": "1. Read" });
+        let revise = |agent, tool, decision| {
+            let answer = Click {
+                decision,
+                then: None,
+                reason: Some("Keep the old API.".into()),
+            };
+            decision_for(agent, tool, Some(plan.clone()), answer)
+        };
+        let out: Value =
+            serde_json::from_str(&revise(AgentKind::Claude, Some("ExitPlanMode"), Decision::Deny).unwrap())
+                .unwrap();
+        assert_eq!(
+            out["hookSpecificOutput"]["decision"],
+            json!({"behavior": "deny", "message": "Keep the old API."})
+        );
+        // Another tool, another agent or an allow: the words never travel.
+        assert_eq!(
+            revise(AgentKind::Claude, Some("Bash"), Decision::Deny),
+            decision_json(AgentKind::Claude, Decision::Deny)
+        );
+        assert_eq!(
+            revise(AgentKind::Codex, Some("ExitPlanMode"), Decision::Deny),
+            decision_json(AgentKind::Codex, Decision::Deny)
+        );
+        assert!(
+            !revise(AgentKind::Claude, Some("ExitPlanMode"), Decision::Allow)
+                .unwrap()
+                .contains("old API")
+        );
+    }
+
     #[test]
     fn an_allowed_plan_goes_back_with_its_input_and_nothing_else_does() {
         let plan = json!({ "plan": "1. Read\n2. Write", "planFilePath": "/tmp/plan.md" });
         let allow =
-            |tool, decision| decision_for(AgentKind::Claude, tool, Some(plan.clone()), decision, None);
+            |tool, decision| decision_for(AgentKind::Claude, tool, Some(plan.clone()), a(decision, None));
         let out: Value =
             serde_json::from_str(&allow(Some("ExitPlanMode"), Decision::Allow).unwrap()).unwrap();
         assert_eq!(out["hookSpecificOutput"]["decision"]["behavior"], "allow");
@@ -205,8 +269,7 @@ mod tests {
                 AgentKind::Codex,
                 Some("ExitPlanMode"),
                 Some(plan.clone()),
-                Decision::Allow,
-                None
+                a(Decision::Allow, None)
             ),
             decision_json(AgentKind::Codex, Decision::Allow)
         );
@@ -215,8 +278,7 @@ mod tests {
             AgentKind::Claude,
             Some("ExitPlanMode"),
             Some(plan.clone()),
-            Decision::Allow,
-            Some(Then::AcceptEdits),
+            a(Decision::Allow, Some(Then::AcceptEdits)),
         )
         .unwrap();
         let accepting: Value = serde_json::from_str(&accepting).unwrap();
@@ -230,8 +292,7 @@ mod tests {
                 AgentKind::Claude,
                 Some("Bash"),
                 Some(plan.clone()),
-                Decision::Allow,
-                Some(Then::AcceptEdits)
+                a(Decision::Allow, Some(Then::AcceptEdits))
             ),
             decision_json(AgentKind::Claude, Decision::Allow)
         );
@@ -241,8 +302,7 @@ mod tests {
                 AgentKind::Claude,
                 Some("ExitPlanMode"),
                 None,
-                Decision::Allow,
-                None
+                a(Decision::Allow, None)
             ),
             decision_json(AgentKind::Claude, Decision::Allow)
         );

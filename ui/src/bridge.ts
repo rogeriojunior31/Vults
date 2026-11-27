@@ -586,6 +586,7 @@ export const Bridge = {
   decideAlways: (request: string) => invoke<void>("decide_always", { request }),
   /** A Claude Code plan allowed, its session accepting edits (ADR 0002). */
   decidePlan: (request: string) => invoke<void>("decide_plan", { request }),
+  revisePlan: (request: string, feedback: string) => invoke<void>("revise_plan", { request, feedback }),
   setQuestionAgents: (on: boolean) => invoke<void>("question_agents_set", { on }),
   questionInstallStatus: () => invoke<QuestionInstallStatus[]>("question_install_status"),
   questionInstallPreview: (agent: string, install: boolean) => invoke<InstallPreview>("question_install_preview", { agent, install }),

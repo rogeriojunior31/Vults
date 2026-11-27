@@ -2533,6 +2533,12 @@ export default {
   "Approve commands from the island": "从岛上批准命令",
   "A shell command that none of Antigravity's own rules covers waits on a card: Allow runs it, Deny stops it, and no answer leaves Antigravity's own prompt. Hooks installed before this switch need Update hooks… first.": "Antigravity 自身规则未覆盖的 shell 命令会在卡片上等待：Allow 运行它，Deny 阻止它，未回答则由 Antigravity 在自己的提示中询问。在此开关之前安装的钩子需要先点 Update hooks…。",
   "Allow and accept edits": "允许并接受编辑",
+  "What should Claude change?": "Claude 应该修改什么？",
+  "Back": "返回",
+  "Send to Claude": "发送给 Claude",
+  "Change plan…": "修改计划…",
+  "Tell Claude what to change: the plan is not allowed, and Claude plans again from your words.": "告诉 Claude 要修改什么：不批准此计划，Claude 会根据你的话重新规划。",
+  "Plan sent back with what to change": "计划已退回并附上修改意见",
   "Allow the plan, and this session edits files without asking until it ends, as Claude Code's own terminal offers. Its commands still come as cards.": "允许该计划，此会话在结束前编辑文件不再询问，与 Claude Code 自己终端提供的选项相同。它的命令仍以卡片形式出现。",
   "Plan allowed, and its session accepts edits": "计划已允许，其会话接受编辑",
 } satisfies Record<string, string>;

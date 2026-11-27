@@ -272,6 +272,7 @@ pub fn run() {
             open::editor_found,
             runtime::decide_always,
             runtime::decide_plan,
+            runtime::revise_plan,
             runtime::question_answer,
             runtime::question_release,
             runtime::card_skip,

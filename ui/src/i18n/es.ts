@@ -2533,6 +2533,12 @@ export default {
   "Approve commands from the island": "Aprobar comandos desde la isla",
   "A shell command that none of Antigravity's own rules covers waits on a card: Allow runs it, Deny stops it, and no answer leaves Antigravity's own prompt. Hooks installed before this switch need Update hooks… first.": "Un comando de shell que ninguna regla del propio Antigravity cubre espera en una tarjeta: Allow lo ejecuta, Deny lo detiene y sin respuesta Antigravity pregunta en su propio prompt. Los hooks instalados antes de este interruptor necesitan Update hooks… primero.",
   "Allow and accept edits": "Permitir y aceptar ediciones",
+  "What should Claude change?": "¿Qué debe cambiar Claude?",
+  "Back": "Volver",
+  "Send to Claude": "Enviar a Claude",
+  "Change plan…": "Cambiar el plan…",
+  "Tell Claude what to change: the plan is not allowed, and Claude plans again from your words.": "Dile a Claude qué cambiar: el plan no se permite y Claude vuelve a planificar a partir de tus palabras.",
+  "Plan sent back with what to change": "Plan devuelto con lo que hay que cambiar",
   "Allow the plan, and this session edits files without asking until it ends, as Claude Code's own terminal offers. Its commands still come as cards.": "Permite el plan, y esta sesión edita archivos sin preguntar hasta que termine, como ofrece la propia terminal de Claude Code. Sus comandos siguen llegando como tarjetas.",
   "Plan allowed, and its session accepts edits": "Plan permitido, y su sesión acepta ediciones",
 } satisfies Record<string, string>;

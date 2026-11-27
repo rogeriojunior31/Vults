@@ -969,6 +969,16 @@ body.still .compact.needs::after {
   font-size: var(--text-m);
   outline: none;
 }
+/* A plan's "what to change": a few lines, the buttons below it. */
+.other-reply:has(.plan-revise) {
+  flex-direction: column;
+}
+.other-input.plan-revise {
+  min-height: 64px;
+  max-height: 160px;
+  border-radius: 10px;
+  resize: vertical;
+}
 .other-input:focus {
   border-color: color-mix(in srgb, var(--fg) 18%, transparent);
 }

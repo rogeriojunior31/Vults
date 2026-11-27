@@ -9,7 +9,10 @@ fn visible(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
         .filter(|e| {
             matches!(
                 e,
-                Effect::RespondPermission { .. } | Effect::RespondPlan { .. } | Effect::AnswerQuestion { .. }
+                Effect::RespondPermission { .. }
+                    | Effect::RespondPlan { .. }
+                    | Effect::RevisePlan { .. }
+                    | Effect::AnswerQuestion { .. }
             )
         })
         .count();
@@ -24,6 +27,7 @@ fn visible(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
                         | audit::Act::Deny
                         | audit::Act::AlwaysAllow
                         | audit::Act::AllowAcceptingEdits
+                        | audit::Act::RevisePlan
                         | audit::Act::Answer
                 )
             )
@@ -685,13 +689,14 @@ fn a_question_card_can_go_back_to_the_terminal() {
 }
 
 /// Where a quiet intent (one that must never answer a card) sits in the test's coverage list;
-/// `None` for the four that may answer (ADR 0002). Exhaustive on purpose: a new `Intent` stops
+/// `None` for the five that may answer (ADR 0002). Exhaustive on purpose: a new `Intent` stops
 /// the build here until someone decides which it is, and a quiet one needs a sample below.
 fn quiet_index(intent: &Intent) -> Option<usize> {
     match intent {
         Intent::Decide { .. }
         | Intent::DecideAlways { .. }
         | Intent::DecidePlan { .. }
+        | Intent::RevisePlan { .. }
         | Intent::Answer { .. } => None,
         Intent::Release { .. } => Some(0),
         Intent::OpenAlert { .. } => Some(1),
@@ -6227,4 +6232,21 @@ fn a_plan_may_be_allowed_with_its_edits_accepted_and_nothing_else_may() {
     );
     // Answered once.
     assert!(visible(&mut s, plan("p1"), now).is_empty());
+    // What to change: a no with the user's words, only on a plan's card, never empty.
+    let revise = |id: &str, words: &str| {
+        Input::User(Intent::RevisePlan {
+            request: rid(id),
+            feedback: words.into(),
+        })
+    };
+    visible(&mut s, card("a", "bash2", "Bash"), now);
+    assert!(visible(&mut s, revise("bash2", "use a flag"), now).is_empty());
+    visible(&mut s, card("a", "p2", "ExitPlanMode"), now);
+    assert!(visible(&mut s, revise("p2", "   "), now).is_empty());
+    let effects = visible(&mut s, revise("p2", "  Keep the old API.  "), now);
+    assert!(effects.contains(&Effect::RevisePlan {
+        request: rid("p2"),
+        feedback: "Keep the old API.".into()
+    }));
+    assert!(visible(&mut s, revise("p2", "again"), now).is_empty());
 }

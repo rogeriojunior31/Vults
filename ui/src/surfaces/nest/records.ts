@@ -47,6 +47,7 @@ const ACT: Record<string, string> = {
   deny: tk("Denied"),
   "always-allow": tk("Allowed, and saved as a rule"),
   "allow-accepting-edits": tk("Plan allowed, and its session accepts edits"),
+  "revise-plan": tk("Plan sent back with what to change"),
   "allow-in-conversation": tk("Allowed for the conversation"),
   answer: tk("Answered"),
   release: tk("Sent to the terminal"),

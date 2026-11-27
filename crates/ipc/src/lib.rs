@@ -41,6 +41,8 @@ enum Signal {
     Decide(Decision),
     /// Allow, and the agent accepts the session's edits (a Claude Code plan's own choice).
     AllowAcceptingEdits,
+    /// No, with the user's words for the agent (a Claude Code plan's "what to change").
+    DenyWith(String),
     Answer(Vec<Answer>),
     Decline,
 }
@@ -74,6 +76,11 @@ impl ReplyHandle {
     /// Allows a plan, and asks the agent to accept the session's edits without asking.
     pub fn allow_accepting_edits(&self) {
         let _ = self.0.try_send(Signal::AllowAcceptingEdits);
+    }
+
+    /// Denies, and tells the agent why in the user's own words.
+    pub fn deny_with(&self, reason: String) {
+        let _ = self.0.try_send(Signal::DenyWith(reason));
     }
 
     /// The user's replies to a question, one per question (checked in `core`).
@@ -119,6 +126,7 @@ impl LocalReply {
                     Signal::Decide(d) => return Local::Decide(d),
                     // A session Vults drives keeps its own mode: the plan is a plain allow.
                     Signal::AllowAcceptingEdits => return Local::Decide(Decision::Allow),
+                    Signal::DenyWith(_) => return Local::Decide(Decision::Deny),
                     Signal::Answer(a) => return Local::Answer(a),
                     Signal::Decline => return Local::Decline,
                 }
@@ -416,6 +424,13 @@ async fn handle<S: AsyncRead + AsyncWrite + Unpin>(mut conn: S, incoming: mpsc::
             decision: Decision::Allow,
             reason: None,
             then: Some(protocol::Then::AcceptEdits),
+        },
+        Some(Signal::DenyWith(reason)) => Reply::Decision {
+            v,
+            id,
+            decision: Decision::Deny,
+            reason: Some(reason),
+            then: None,
         },
         Some(Signal::Answer(answers)) => Reply::Answer { v, id, answers },
         _ => return,

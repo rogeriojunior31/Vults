@@ -1,5 +1,5 @@
 # Aprovando pela ilha
-<!-- source: 3576ef50a9bf -->
+<!-- source: a5d0541a9dd5 -->
 
 Quando o Claude Code, o Codex, o OpenCode, o Qwen Code ou o Copilot CLI pede permissão para uma chamada de
 ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o
@@ -224,7 +224,10 @@ plano com a sessão perguntando como antes; **Allow and accept edits** começa e
 editar arquivos sem perguntar até terminar, a escolha que o próprio terminal do Claude Code oferece.
 Os comandos dela continuam vindo como cards, os destrutivos inclusive, e o log de auditoria guarda
 a escolha numa linha própria ([ADR 0002](../../adr/0002-permissions.md)). **Deny** mantém o plano em
-andamento.
+andamento. **Change plan…** abre uma caixa para o que mudar: **Send to Claude** (ou Ctrl+Enter)
+recusa o plano com as suas palavras, e o Claude as lê e planeja de novo, como no "diga ao Claude o
+que mudar" do próprio terminal. O log de auditoria registra que você devolveu o plano, nunca o que
+você escreveu.
 
 <a id="claude-codes-auto-mode"></a>
 <a id="auto-mode-and-questions"></a>

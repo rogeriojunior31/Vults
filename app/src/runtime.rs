@@ -1234,6 +1234,12 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                         h.allow_accepting_edits();
                     }
                 }
+                Effect::RevisePlan { request, feedback } => {
+                    tracing::info!("plan sent back with what to change");
+                    if let Some(h) = waiting.remove(&request) {
+                        h.deny_with(feedback);
+                    }
+                }
                 Effect::AnswerQuestion { request, answers } => {
                     tracing::info!(count = answers.len(), "question answered");
                     if let Some(h) = waiting.remove(&request) {
@@ -1637,6 +1643,27 @@ pub async fn decide_always(
         .0
         .send(Msg::User(Intent::DecideAlways {
             request: RequestId(request),
+        }))
+        .await
+        .map_err(|_| ())
+}
+
+/// "Send to Claude" under a plan's "Change plan…": the core takes it for a Claude Code plan only.
+#[tauri::command]
+pub async fn revise_plan(
+    window: tauri::Webview,
+    request: String,
+    feedback: String,
+    inbox: tauri::State<'_, Inbox>,
+) -> Result<(), ()> {
+    if !card_host(&window) {
+        return Err(());
+    }
+    inbox
+        .0
+        .send(Msg::User(Intent::RevisePlan {
+            request: RequestId(request),
+            feedback,
         }))
         .await
         .map_err(|_| ())

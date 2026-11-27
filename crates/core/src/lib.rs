@@ -501,6 +501,12 @@ pub enum Intent {
     DecidePlan {
         request: RequestId,
     },
+    /// On a Claude Code plan's card only: no to this plan, with what to change. Claude reads the
+    /// words and plans again, as with its own terminal's "tell Claude what to change".
+    RevisePlan {
+        request: RequestId,
+        feedback: String,
+    },
     /// The user's replies to a question card, one per question.
     Answer {
         request: RequestId,
@@ -596,6 +602,7 @@ impl Intent {
             Self::Decide { .. }
             | Self::DecideAlways { .. }
             | Self::DecidePlan { .. }
+            | Self::RevisePlan { .. }
             | Self::Answer { .. }
             | Self::Release { .. }
             | Self::Skip { .. }
@@ -759,6 +766,11 @@ pub enum Effect {
     /// Only ever produced from [`Intent::DecidePlan`]: allow, and the session accepts its edits.
     RespondPlan {
         request: RequestId,
+    },
+    /// Only ever produced from [`Intent::RevisePlan`]: deny the plan, with the user's words.
+    RevisePlan {
+        request: RequestId,
+        feedback: String,
     },
     /// Only ever produced from [`Intent::Answer`].
     AnswerQuestion {
@@ -1342,6 +1354,7 @@ fn apply(state: &mut State, input: Input, now: Instant) -> Vec<Effect> {
             intent @ (Intent::Decide { .. }
             | Intent::DecideAlways { .. }
             | Intent::DecidePlan { .. }
+            | Intent::RevisePlan { .. }
             | Intent::Answer { .. }
             | Intent::Release { .. }),
         ) => answer(state, intent, &By::Island, now),
@@ -2254,6 +2267,38 @@ fn answer(state: &mut State, intent: Intent, by: &By, now: Instant) -> Vec<Effec
             vec![
                 Effect::RespondPlan { request },
                 audited(state, &p, by.actor(), audit::Act::AllowAcceptingEdits),
+            ]
+        }
+        Intent::RevisePlan { request, feedback } => {
+            let feedback = feedback
+                .trim()
+                .chars()
+                .take(vults_protocol::MAX_FIELD_LEN)
+                .collect::<String>();
+            if feedback.is_empty() {
+                return Vec::new();
+            }
+            // The same card as DecidePlan's: a plan's, on the island, shown whole.
+            let Some(p) = redeem_here(
+                state,
+                by,
+                |p| {
+                    matches!(by, By::Island)
+                        && p.request == request
+                        && p.questions.is_empty()
+                        && p.ask.whole()
+                        && p.session.agent == AgentKind::Claude
+                        && p.tool == "ExitPlanMode"
+                },
+                now,
+            ) else {
+                return Vec::new();
+            };
+            record_end(state, &p, Outcome::Denied);
+            settle(state, &p.session, now);
+            vec![
+                Effect::RevisePlan { request, feedback },
+                audited(state, &p, by.actor(), audit::Act::RevisePlan),
             ]
         }
         Intent::Answer { request, answers } => {
