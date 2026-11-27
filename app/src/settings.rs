@@ -84,6 +84,9 @@ pub struct Settings {
     /// External clients may request text questions; capture still requires a physical key.
     #[serde(default)]
     pub question_agents: bool,
+    /// Antigravity's shell commands that none of its own rules covers wait on a card. Off by default.
+    #[serde(default)]
+    pub antigravity_approvals: bool,
     /// Explicit permission to paste into validated native X11 editors. Off by default.
     #[serde(default)]
     pub dictation_insert: bool,
@@ -412,6 +415,7 @@ impl Default for Settings {
             voice_model: None,
             voice_language: None,
             question_agents: false,
+            antigravity_approvals: false,
             dictation_insert: false,
             dictation_caption: true,
             dictation_sound: true,
@@ -495,6 +499,8 @@ pub struct SettingsState(pub Mutex<Settings>);
 pub struct Public {
     #[serde(rename = "questionAgents")]
     pub question_agents: bool,
+    #[serde(rename = "antigravityApprovals")]
+    pub antigravity_approvals: bool,
     #[serde(rename = "dictationKeep")]
     pub dictation_keep: String,
     #[serde(rename = "dictationSound")]
@@ -613,6 +619,7 @@ pub fn app_settings(app: AppHandle, state: tauri::State<'_, SettingsState>) -> P
     let s = state.0.lock().map(|s| s.clone()).unwrap_or_default();
     Public {
         question_agents: s.question_agents,
+        antigravity_approvals: s.antigravity_approvals,
         dictation_caption: s.dictation_caption,
         dictation_sound: s.dictation_sound,
         dictation_commands: s.dictation_commands,
@@ -1702,6 +1709,21 @@ pub fn set_memory_suggest(window: tauri::Webview, app: AppHandle, on: bool) -> R
     Ok(())
 }
 
+/// Whether Antigravity's uncovered shell commands wait on a card.
+pub fn antigravity_approvals(app: &AppHandle) -> bool {
+    let state = app.state::<SettingsState>();
+    state.0.lock().is_ok_and(|s| s.antigravity_approvals)
+}
+
+/// Antigravity's command cards on or off: only a click answers them, so only the user's switch.
+#[tauri::command]
+pub fn set_antigravity_approvals(window: tauri::Webview, app: AppHandle, on: bool) -> Result<(), String> {
+    crate::settings_page(&window)?;
+    edit(&app, |s| s.antigravity_approvals = on)?;
+    let _ = app.emit("settings", serde_json::json!({ "antigravityApprovals": on }));
+    Ok(())
+}
+
 /// The sleep's model pass: its switch, and only with the memory on.
 pub fn sleep(app: &AppHandle) -> bool {
     let state = app.state::<SettingsState>();
@@ -2577,6 +2599,7 @@ mod tests {
             voice_model: Some("small".into()),
             voice_language: Some("pt".into()),
             question_agents: false,
+            antigravity_approvals: false,
             dictation_insert: false,
             dictation_caption: true,
             dictation_sound: true,

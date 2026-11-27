@@ -1,5 +1,5 @@
 # Aprovando pela ilha
-<!-- source: 15a23a60e821 -->
+<!-- source: e06562592158 -->
 
 Quando o Claude Code, o Codex, o OpenCode, o Qwen Code ou o Copilot CLI pede permissão para uma chamada de
 ferramenta, a ilha abre num card que mostra exatamente o que **Allow** autoriza (o
@@ -296,6 +296,8 @@ que o Vults não escreveu nunca é tocado.
 ## Agentes que perguntam no próprio prompt
 
 Antigravity, Cursor, Factory Droid, Hermes Agent e Kimi Code pedem as permissões no próprio terminal ou prompt, e
-a ilha nunca as responde: os pássaros deles mostram os passos. [O que cada agente consegue
+a ilha nunca as responde: os pássaros deles mostram os passos. A única exceção são os comandos de
+shell do Antigravity, depois que o botão **Approve commands from the island** dele está ligado
+([Antigravity](other-agents.md#antigravity)). [O que cada agente consegue
 fazer](other-agents.md#what-each-agent-can-do) os resume, e a seção de cada um ali diz por que ele
 não tem card.

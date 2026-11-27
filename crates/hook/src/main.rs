@@ -76,6 +76,7 @@ fn relay(event: Event, raw: &[u8]) -> Option<String> {
         .get("tool_name")
         .and_then(|t| t.as_str())
         .map(str::to_owned);
+    let antigravity = event.agent_name.as_deref() == Some("antigravity");
     let (tx, rx) = mpsc::channel();
     // Its starter gone, nobody reads this hook's answer: end it, and the card goes with the
     // connection. Windows may kill only the shell between the agent and this hook.
@@ -109,6 +110,7 @@ fn relay(event: Event, raw: &[u8]) -> Option<String> {
     };
     match outcome {
         // The whole input, as the agent sent it: the app's copy had its strings capped.
+        Some(Outcome::Decision(decision)) if antigravity => Some(output::antigravity_decision(decision)),
         Some(Outcome::Decision(decision)) => {
             output::decision_for(agent, tool.as_deref(), original_input(raw), decision)
         }
@@ -371,6 +373,44 @@ mod tests {
         assert_eq!(event.payload["cost"]["total_usd"], 0.0042);
         assert!(event.payload.get("email").is_none());
         assert!(event.payload.get("transcript_path").is_none());
+    }
+
+    #[test]
+    fn only_an_antigravity_shell_command_waits_and_gets_its_own_decision() {
+        let args = Args::parse(
+            ["--agent", "antigravity", "PreToolUse"]
+                .map(str::to_string)
+                .into_iter(),
+        );
+        let call = |tool: &str| {
+            format!(
+                r#"{{"conversationId":"c1","toolCall":{{"name":"{tool}","args":{{"CommandLine":"cargo test"}}}}}}"#
+            )
+        };
+        let waits = |tool: &str| {
+            build_event(&args, call(tool).as_bytes(), None, |_| None)
+                .unwrap()
+                .wants_reply
+        };
+        assert!(waits("run_command"));
+        assert!(waits("default_api:run_command"));
+        assert!(!waits("view_file"), "a read never waits");
+        let other = Args::parse(
+            ["--agent", "antigravity", "PostToolUse"]
+                .map(str::to_string)
+                .into_iter(),
+        );
+        assert!(
+            !build_event(&other, call("run_command").as_bytes(), None, |_| None)
+                .unwrap()
+                .wants_reply
+        );
+        let read = |d| serde_json::from_str::<serde_json::Value>(&output::antigravity_decision(d)).unwrap();
+        assert_eq!(
+            read(protocol::Decision::Allow),
+            serde_json::json!({"decision": "allow"})
+        );
+        assert_eq!(read(protocol::Decision::Deny)["decision"], "deny");
     }
 
     #[test]
@@ -700,7 +740,8 @@ mod tests {
             (AgentKind::Other, Some("antigravity"))
         );
         assert_eq!(e.event, "PreToolUse");
-        assert!(!e.wants_reply);
+        // A shell command waits: the app answers at once unless approvals are on.
+        assert!(e.wants_reply);
         assert_eq!(e.terminal.cwd.as_deref(), Some("/home/me/proj"));
         assert_eq!(e.payload.get("transcriptPath"), None);
         assert_eq!(e.payload.get("artifactDirectoryPath"), None);

@@ -893,7 +893,14 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                     continue;
                 }
                 tracing::info!(agent = ?event.agent, event = %event.event, "request for a human");
-                let mut input = parse(&event);
+                // An Antigravity shell command is a card only when the user's switch, agy's hook
+                // timeout and agy's own rules say so; otherwise it is the step it always was, and
+                // the hook, declined, leaves agy to ask.
+                let mut input = if crate::antigravity::gate(&app, &event) {
+                    vults_agents::antigravity_permission(&event).map(Input::Agent)
+                } else {
+                    parse(&event)
+                };
                 if let Some(Input::Agent(update)) = &mut input {
                     update.received = Some(received);
                 }

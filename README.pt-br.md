@@ -1,4 +1,4 @@
-<!-- source: 28954a10ce43 -->
+<!-- source: 23618fc4873a -->
 <div align="center">
 
 <img src="docs/assets/zeca.png" width="128" height="128" alt="Zeca, um urubu-preto em 8 bits" />
@@ -190,8 +190,10 @@ terminal, como sempre fez.
 <details>
 <summary><b>Quais agentes eu posso responder pela ilha?</b></summary>
 
-Claude Code, Codex, OpenCode, Qwen Code e Copilot CLI aceitam respostas da ilha. Antigravity, Cursor,
-Factory Droid, Hermes Agent e Kimi Code aparecem no fio mas perguntam no próprio prompt. Veja a
+Claude Code, Codex, OpenCode, Qwen Code e Copilot CLI aceitam respostas da ilha. Cursor, Factory
+Droid, Hermes Agent e Kimi Code aparecem no fio mas perguntam no próprio prompt, e o Antigravity
+também, a não ser que você ligue o **Approve commands from the island** dele: aí os comandos de shell
+que nenhuma regra dele cobre também vêm para a ilha. Veja a
 [tabela por agente](docs/pt-br/guide/other-agents.md#what-each-agent-can-do).
 </details>
 

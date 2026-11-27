@@ -1,5 +1,5 @@
 # Outros agentes
-<!-- source: b30579131f8e -->
+<!-- source: 624fb8fdbc42 -->
 
 Claude Code, Codex, Antigravity, OpenCode, Hermes Agent, Qwen Code, Copilot CLI, Cursor, Factory Droid e Kimi Code já vêm integrados (**Settings →
 Agents**). Qualquer outra ferramenta também pode colocar suas sessões no fio, se ela rodar um
@@ -49,7 +49,7 @@ Vults aberto aparece depois de reiniciá-lo.
 |---|---|---|---|---|---|---|
 | Claude Code | um card | um card | linhas, numeradas | na hora, quando o Vults o iniciou | bubblewrap, se ligado | sim |
 | Codex | um card | o terminal dele | linhas | na hora, quando o Vults o iniciou | o modo de sandbox dele | sim |
-| Antigravity | o terminal dele | o terminal dele | linhas | pelo Vults, ainda não | nenhum | ainda não |
+| Antigravity | o terminal dele, ou um card para comandos de shell ([abaixo](#antigravity)) | o terminal dele | linhas | pelo Vults, ainda não | nenhum | ainda não |
 | OpenCode | um card | um card (OpenCode 1) | linhas | não pelo Vults | nenhum | não |
 | Hermes Agent | no terminal dele | no terminal dele | linhas do patch e prévia do repositório | não pelo Vults | gerenciado pelo agente | não |
 | Qwen Code | um card | o terminal dele | linhas | não pelo Vults | um contêiner, se ligado | não |
@@ -82,9 +82,17 @@ nada. As sessões dele aparecem como `antigravity`.
 A ilha mostra o Antigravity pensando, cada passo (`view_file`, `run_command`…) e quando ele para,
 e o diff de cada edição, refeito a partir do texto que ela trocou (sem números de linha). O
 Antigravity não manda a resposta dele, então uma sessão terminada não tem linha de resumo, e não há
-início nem fim de sessão. O silêncio não a remove mais: uma sessão aberta pode descansar ou voar, e a limpeza exige confirmar a saída de um processo local antes observado. O hook dele roda antes de toda ferramenta e não diz se o Antigravity
-teria perguntado, então o Antigravity pede as permissões ele mesmo
-([Aprovando](approvals.md#agents-that-ask-in-their-own-prompt)).
+início nem fim de sessão. O silêncio não a remove mais: uma sessão aberta pode descansar ou voar, e a limpeza exige confirmar a saída de um processo local antes observado.
+
+O Antigravity pede as permissões ele mesmo ([Aprovando](approvals.md#agents-that-ask-in-their-own-prompt)),
+menos os comandos de shell depois que você liga **Approve commands from the island** no card dele
+em **Settings → Agents** (desligado por padrão; hooks instalados antes precisam de **Update hooks…**
+primeiro, que dá ao hook do agy os 120 segundos que um card precisa). O Antigravity não tem pedido
+de permissão: ele roda o hook antes da própria checagem e segue a resposta do hook. Então o Vults lê
+as regras `command(...)` do próprio Antigravity (as configurações do CLI, as permissões globais e as
+do projeto) e só põe um `run_command` num card quando nenhuma delas o cobre. **Allow** executa,
+**Deny** impede, e sem resposta, com um comando longo demais para aparecer inteiro ou com o Vults
+fechado, fica o prompt do próprio Antigravity, como se o Vults não existisse.
 
 ## Cursor
 

@@ -2,6 +2,7 @@
 //! the installer adds to it. Everything else in the app is agent-agnostic.
 
 mod antigravity;
+mod antigravity_rules;
 pub mod caps;
 mod claude;
 mod codex;
@@ -29,7 +30,11 @@ use vults_agent_config::HookEntry;
 use vults_core::{AgentUpdate, Ask};
 use vults_protocol::{AgentKind, Event};
 
-pub use antigravity::{Antigravity, metrics_files as antigravity_metrics_files};
+pub use antigravity::{
+    Antigravity, command as antigravity_command, metrics_files as antigravity_metrics_files,
+    permission as antigravity_permission,
+};
+pub use antigravity_rules::{AgyRules, Verdict as AgyVerdict};
 pub use claude::{Claude, state_file as claude_state_file, title as claude_title, trusts as claude_trusts};
 pub use codex::{Codex, Trust as CodexTrust, trust as codex_trust};
 pub use copilot::Copilot;

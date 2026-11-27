@@ -2527,4 +2527,6 @@ export default {
   "Stay quiet when I am looking": "我在看时保持安静",
   "A session that finishes or fails while its terminal is in front makes no sound, and the island stays put. A card always sounds and opens.": "会话结束或失败时,如果它的终端正在前台,就不发声,岛也保持不动。卡片总会发声并打开。",
   "Vults reads the active window once, when a turn ends. On GNOME Wayland, and for terminals on Windows, it cannot tell which session is in front, so every finish sounds as before.": "Vults 只在一轮结束时读取一次当前活动窗口。在 Wayland 上的 GNOME 中,以及 Windows 上的终端,它无法判断哪个会话在前台,因此每次结束仍像以前一样发声。",
+  "Approve commands from the island": "从岛上批准命令",
+  "A shell command that none of Antigravity's own rules covers waits on a card: Allow runs it, Deny stops it, and no answer leaves Antigravity's own prompt. Hooks installed before this switch need Update hooks… first.": "Antigravity 自身规则未覆盖的 shell 命令会在卡片上等待：Allow 运行它，Deny 阻止它，未回答则由 Antigravity 在自己的提示中询问。在此开关之前安装的钩子需要先点 Update hooks…。",
 } satisfies Record<string, string>;

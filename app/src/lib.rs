@@ -1,6 +1,7 @@
 //! The Tauri shell: wires the hook server, the core and the UI together, and executes effects.
 //! Domain rules live in `core`; this file only moves data and talks to the OS.
 
+mod antigravity;
 mod audit;
 mod chat;
 mod connector_snapshots;
@@ -366,6 +367,7 @@ pub fn run() {
             settings::set_local_embeddings,
             settings::set_memory_suggest,
             settings::set_sleep,
+            settings::set_antigravity_approvals,
             memory::memory_command,
             memory::memory_view,
             memory::memory_decide,

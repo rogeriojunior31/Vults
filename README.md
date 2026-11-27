@@ -164,9 +164,11 @@ terminal as it always did.
 <details>
 <summary><b>Which agents can I answer from the island?</b></summary>
 
-Claude Code, Codex, OpenCode, Qwen Code and Copilot CLI take answers from the island. Antigravity,
-Cursor, Factory Droid, Hermes Agent and Kimi Code show on the wire but ask in their own prompt. See
-the [per-agent table](docs/guide/other-agents.md#what-each-agent-can-do).
+Claude Code, Codex, OpenCode, Qwen Code and Copilot CLI take answers from the island. Cursor,
+Factory Droid, Hermes Agent and Kimi Code show on the wire but ask in their own prompt, and
+so does Antigravity unless you turn on its **Approve commands from the island**: then its shell
+commands that none of its own rules covers come to the island too. See the
+[per-agent table](docs/guide/other-agents.md#what-each-agent-can-do).
 </details>
 
 <details>

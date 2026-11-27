@@ -288,6 +288,7 @@ let journalSummary = false;
 let localEmbeddings = false;
 let memorySuggest = false;
 let sleep = false;
+let antigravityApprovals = false;
 let voice: VoiceStatus | null = null;
 /** Model id → percent downloaded, for every download running. */
 const downloading = new Map<string, number>();
@@ -838,10 +839,20 @@ function agentCard(kind: InstallAgent, name: string, found = true): HTMLElement 
           text: t("Vults no longer supports Gemini CLI: Antigravity took its place. Remove the hooks it kept in Gemini's settings."),
         })
       : kind === "antigravity"
-        ? el("p", {
-            class: "note",
-            text: t("Shared Antigravity hooks watch CLI, desktop and IDE sessions. CLI metrics also install a status line, preserving your previous command. Desktop and IDE hooks alone do not report cost or context."),
-          })
+        ? el(
+            "div",
+            {},
+            el("p", {
+              class: "note",
+              text: t("Shared Antigravity hooks watch CLI, desktop and IDE sessions. CLI metrics also install a status line, preserving your previous command. Desktop and IDE hooks alone do not report cost or context."),
+            }),
+            s.installed
+              ? row(t("Approve commands from the island"), t("A shell command that none of Antigravity's own rules covers waits on a card: Allow runs it, Deny stops it, and no answer leaves Antigravity's own prompt. Hooks installed before this switch need Update hooks… first."), toggle(antigravityApprovals, async (on) => {
+                  await Bridge.setAntigravityApprovals(on);
+                  antigravityApprovals = on;
+                }))
+              : null,
+          )
         : kind === "opencode"
           ? el("p", {
               class: "note",
@@ -2484,6 +2495,7 @@ void Bridge.appSettings().then((s) => {
   localEmbeddings = s.localEmbeddings;
   memorySuggest = s.memorySuggest;
   sleep = s.sleep;
+  antigravityApprovals = s.antigravityApprovals;
   zecaSpecies = s.zecaSpecies;
   zecaLook = s.zecaLook;
   flock = s.flock;

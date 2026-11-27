@@ -367,7 +367,16 @@ pub fn build_event(
     let zeca = env(protocol::ZECA_ENV).as_deref() == Some("1");
     // Only the agents in `output::replies` take an answer; any other tool's own terminal asks.
     let tool = payload.get("tool_name").and_then(Value::as_str);
-    let wants_reply = !zeca && output::waits(args.agent, &event, args.ask, tool);
+    // Antigravity takes a decision from its PreToolUse: its shell commands wait for the app, which
+    // answers at once unless the user turned approvals on and agy has no rule for the command.
+    let agy_command = args.agent == AgentKind::Other
+        && args.agent_name.as_deref() == Some("antigravity")
+        && event == "PreToolUse"
+        && payload
+            .pointer("/toolCall/name")
+            .and_then(Value::as_str)
+            .is_some_and(|t| t == "run_command" || t.ends_with(":run_command"));
+    let wants_reply = !zeca && (output::waits(args.agent, &event, args.ask, tool) || agy_command);
     // A session Vults runs asks on its driver's channel, where the app makes the card: its hook
     // asking too would show two. Nothing is relayed, and the agent asks on that channel. Anyone
     // may set the variable, but all it buys is the agent's own question instead of the hook's.

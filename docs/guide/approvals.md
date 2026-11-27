@@ -268,5 +268,7 @@ is never touched.
 ## Agents that ask in their own prompt
 
 Antigravity, Cursor, Factory Droid, Hermes Agent and Kimi Code ask their permissions in their own terminal or
-prompt, and the island never answers them: their birds show the steps. [What each agent can do](other-agents.md#what-each-agent-can-do)
+prompt, and the island never answers them: their birds show the steps. The one exception is
+Antigravity's shell commands, once its **Approve commands from the island** switch is on
+([Antigravity](other-agents.md#antigravity)). [What each agent can do](other-agents.md#what-each-agent-can-do)
 sums them up, and each one's section there says why it has no card.

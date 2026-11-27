@@ -131,6 +131,9 @@ pub fn classify(tool: &str, target: &str) -> Classified {
         }
         // Claude Code's shell on Windows.
         "PowerShell" => powershell(command_of(target)),
+        // Antigravity's: a Unix shell on Linux, PowerShell on Windows, so it is read as both and
+        // the worse reading holds.
+        "run_command" => shell(command_of(target)).and(powershell(command_of(target))),
         t if SHELL_TOOLS.contains(&t) => shell(command_of(target)),
         _ => Classified::guessed(WRITE),
     }
@@ -151,6 +154,7 @@ const SHELL_TOOLS: &[&str] = &[
     "exec_command",
     "local_shell",
     "unified_exec",
+    "run_command",
 ];
 
 /// Whether a call brings content from outside this machine into the conversation (Z8's taint): a
@@ -164,7 +168,7 @@ pub fn reads_outside(tool: &str, target: &str) -> bool {
     }
     match tool {
         "WebFetch" | "WebSearch" | "web_fetch" | "google_web_search" | "web_search" => true,
-        "PowerShell" => fetches(command_of(target)) || windows_fetches(command_of(target)),
+        "PowerShell" | "run_command" => fetches(command_of(target)) || windows_fetches(command_of(target)),
         t if SHELL_TOOLS.contains(&t) => fetches(command_of(target)),
         _ => false,
     }

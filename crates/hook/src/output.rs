@@ -84,6 +84,17 @@ pub fn decision_for(
     }
 }
 
+/// What Antigravity reads from its PreToolUse hook. Only a click gets here: no answer prints
+/// nothing, and agy asks in its own prompt.
+pub fn antigravity_decision(decision: Decision) -> String {
+    match decision {
+        Decision::Allow => json!({"decision": "allow"}).to_string(),
+        Decision::Deny => {
+            json!({"decision": "deny", "reason": format!("Denied from {}", vults_brand::NAME)}).to_string()
+        }
+    }
+}
+
 pub fn answers_output(agent: AgentKind, tool_input: &Value, answers: Vec<Answer>) -> Option<String> {
     replies(agent).and_then(|r| (r.answers)(tool_input, answers))
 }
