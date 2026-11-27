@@ -3519,6 +3519,49 @@ fn copy_to_inbox(src: &Path) -> Result<String, &'static str> {
     copy_file(src).ok_or("unreadable")
 }
 
+/// A name for something pasted: its own name's letters, digits, `.`, `-` and `_` only (never a path),
+/// with a plain name when nothing is left.
+fn pasted_name(name: &str) -> String {
+    let clean: String = name
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | '_'))
+        .take(80)
+        .collect();
+    let clean = clean.trim_start_matches('.').to_string();
+    if clean.is_empty() { "pasted".into() } else { clean }
+}
+
+/// Something pasted into the chat's draft (an image, or text too long for it): written to the
+/// inbox as a file of its own, under the same limit as a dropped file, and attached like one.
+#[tauri::command]
+pub async fn chat_paste(name: String, bytes: Vec<u8>) -> Result<String, String> {
+    if bytes.is_empty() || bytes.len() as u64 > MAX_FILE {
+        return Err("too-big".into());
+    }
+    tokio::task::spawn_blocking(move || {
+        use std::io::Write;
+        let dir = paths::inbox_dir();
+        std::fs::create_dir_all(&dir).map_err(|_| "unreadable".to_string())?;
+        let stamp = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .map_err(|_| "unreadable".to_string())?
+            .as_nanos();
+        let dest = dir.join(format!("{stamp}-{}", pasted_name(&name)));
+        let mut options = std::fs::OpenOptions::new();
+        options.write(true).create_new(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            options.mode(0o600);
+        }
+        let mut file = options.open(&dest).map_err(|_| "unreadable".to_string())?;
+        file.write_all(&bytes).map_err(|_| "unreadable".to_string())?;
+        Ok(dest.to_string_lossy().into_owned())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 fn copy_file(src: &Path) -> Option<String> {
     copy_file_into(src, &paths::inbox_dir())
 }
@@ -4026,6 +4069,15 @@ mod tests {
     }
 
     use super::*;
+
+    #[test]
+    fn a_pasted_name_is_never_a_path() {
+        assert_eq!(pasted_name("Screenshot 2026.png"), "Screenshot2026.png");
+        assert_eq!(pasted_name("../../etc/passwd"), "etcpasswd");
+        assert_eq!(pasted_name("..."), "pasted");
+        assert_eq!(pasted_name(""), "pasted");
+        assert_eq!(pasted_name(&"a".repeat(200)).len(), 80);
+    }
     use vults_chat::Settings;
 
     #[cfg(target_os = "linux")]

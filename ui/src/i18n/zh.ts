@@ -1300,6 +1300,7 @@ export default {
   "A conversation keeps its model; New starts another.": "一段对话会保持它的模型；新建可开始另一段。",
   "The model and effort for new conversations in this folder.": "此文件夹中新对话的模型和力度。",
   "Clean": "干净",
+  "The long text you pasted is attached as a file.": "你粘贴的长文本已作为文件附加。",
   "Zeca keeps a fact in his memory": "Zeca 把一条事实存进记忆",
   "Zeca drops a fact from his memory": "Zeca 从记忆中删除一条事实",
   "Go on with a session that stopped in this folder": "继续在此文件夹中停止的会话",

@@ -1300,6 +1300,7 @@ export default {
   "A conversation keeps its model; New starts another.": "Una conversación mantiene su modelo; Nuevo empieza otra.",
   "The model and effort for new conversations in this folder.": "El modelo y el esfuerzo de las nuevas conversaciones en esta carpeta.",
   "Clean": "Limpio",
+  "The long text you pasted is attached as a file.": "El texto largo que pegaste se adjuntó como archivo.",
   "Zeca keeps a fact in his memory": "Zeca guarda un dato en su memoria",
   "Zeca drops a fact from his memory": "Zeca quita un dato de su memoria",
   "Go on with a session that stopped in this folder": "Seguir con una sesión que se detuvo en esta carpeta",

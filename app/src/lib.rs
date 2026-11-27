@@ -208,6 +208,7 @@ pub fn run() {
             chat::chat_switch_engine,
             chat::chat_sign_in,
             chat::chat_paths,
+            chat::chat_paste,
             chat::chat_models,
             chat::chat_conversations,
             chat::specialist_chat_conversations,

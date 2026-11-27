@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 0e636d957766 -->
+<!-- source: 68b58ee52fa9 -->
 
 Os painéis laterais redimensionáveis seguem o ponteiro que iniciou o arraste, ignoram toques adicionais e encerram o arraste quando a janela perde o foco. O cancelamento preserva a largura atual e mantém os rascunhos. Quando o espaço limita um painel, o arraste e o redimensionamento pelo teclado partem da largura visível; reduzir apenas o espaço disponível não sobrescreve a largura salva. Os controles de redimensionar e recolher usam a mesma cor de foco de teclado que o restante do tema selecionado.
 
@@ -382,8 +382,10 @@ enquanto uma barra enche, e ele entra na sua próxima mensagem: um cartão dentr
 e a extensão do arquivo (**×** o retira). Nomes longos quebram linha, e uma lista longa de arquivos rola
 dentro do compositor. Clique no campo para escrever sobre ele. Você pode enviá-lo sem texto para perguntar o
 que ele é. Imagens, PDFs, código e texto funcionam melhor. Os arquivos são copiados para
-a caixa de entrada do app (até 20 MB cada) e apagados depois de uma semana; uma pasta, ou um arquivo
-com mais de 20 MB, é recusado com uma linha dizendo por quê.
+a caixa de entrada do app (até 20 MB cada) e apagados depois de uma semana; um arquivo com mais de
+20 MB é recusado com uma linha dizendo por quê, e uma pasta entra no rascunho pelo caminho
+([Mencionando o bando](#referencing-the-flock)). Uma imagem colada no rascunho é anexada do mesmo
+jeito, e também um texto colado de 32 KB ou mais, como um arquivo próprio.
 
 No Windows, arquivos arrastados do Explorer usam os objetos nativos de arquivo do WebView2 e
 aceitam até 256 arquivos por vez. Se o WebView2 instalado não conseguir recebê-los, o cursor

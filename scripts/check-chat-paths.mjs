@@ -59,9 +59,10 @@ const chunk = bundles[0].output.find(part => part.type === "chunk");
 const { ChatPanel } = await import(`data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`);
 const nodes = element => [element, ...element.children.flatMap(nodes)];
 const tick = () => new Promise(resolve => setImmediate(resolve));
-const asked = [];
+const asked = [], pastes = [];
 const panel = new ChatPanel({
   models: async () => [], pick: async () => ({}), saveDraft: async () => {}, keyboard() {},
+  paste: async (name, bytes) => { pastes.push([name, bytes.length]); return `/inbox/${name}`; },
   paths: async (folder, query) => { asked.push([folder, query]); return [{ path: "src/auth", dir: true }, { path: "src/auth token.rs", dir: false }]; },
 }, () => {});
 await tick();
@@ -100,4 +101,18 @@ await typeAt("/");
 assert.equal(nodes(menu()).filter(node => node.tag === "button").length, 4, "all four commands");
 await typeAt("Say /re");
 assert.ok(!menu().className.split(" ").includes("on") || !nodes(menu()).some(n => n.tag === "button" && n.textContent.startsWith("/")), "a / mid-sentence is just text");
-console.log("check-chat-paths: @ lists the conversation folder's files and folders and puts the chosen path in the draft; a dropped folder goes in by its path; / lists the chat's commands");
+// A long paste becomes an attached file; a short one stays text in the draft.
+let prevented = false;
+input.listeners.paste({ clipboardData: { files: [], getData: () => "x".repeat(40 * 1024) }, preventDefault() { prevented = true; } });
+await tick(); await tick();
+assert.ok(prevented, "the long text does not land in the draft");
+assert.deepEqual(pastes.at(-1), ["pasted.txt", 40 * 1024]);
+assert.ok(panel.files.includes("/inbox/pasted.txt"), "it is attached");
+prevented = false;
+input.listeners.paste({ clipboardData: { files: [], getData: () => "short" }, preventDefault() { prevented = true; } });
+assert.equal(prevented, false, "a short paste is left to the draft");
+// A pasted image is attached too.
+input.listeners.paste({ clipboardData: { files: [{ type: "image/png", name: "shot.png", arrayBuffer: async () => new ArrayBuffer(3) }], getData: () => "" }, preventDefault() {} });
+await tick(); await tick(); await tick();
+assert.deepEqual(pastes.at(-1), ["shot.png", 3]);
+console.log("check-chat-paths: @ lists the conversation folder's files and folders and puts the chosen path in the draft; a dropped folder goes in by its path; / lists the chat's commands; long pastes and images attach");

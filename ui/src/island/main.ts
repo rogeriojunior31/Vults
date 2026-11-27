@@ -100,6 +100,7 @@ const island = createIsland(document.getElementById("island")!, {
     switchEngine: (provider, generation) => Bridge.chatSwitchEngine(provider, generation),
     signIn: (provider) => Bridge.chatSignIn(provider),
     paths: (folder, query) => Bridge.chatPaths(folder, query),
+    paste: (name, bytes) => Bridge.chatPaste(name, bytes),
     engines: () => Bridge.chatEngines(),
     voice: {
       start: (tap, generation) => Bridge.voiceStart(tap, generation),

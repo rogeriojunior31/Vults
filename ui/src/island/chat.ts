@@ -85,6 +85,8 @@ export interface ChatBackend {
   setAccess?: (access: ChatAccess) => Promise<void>;
   /** Settings' Chat page, where more access is given. */
   openSettings?: () => void;
+  /** Writes something pasted (an image, long text) to the inbox; its copy's path. */
+  paste?: (name: string, bytes: number[]) => Promise<string>;
   /** Files and folders of the conversation's folder matching `query`, by relative path. */
   paths?: (folder: string | null, query: string) => Promise<{ path: string; dir: boolean }[]>;
   /** Opens a terminal running the engine's own sign-in. */
@@ -260,6 +262,8 @@ const SUGGESTIONS = [
 ];
 /** The input grows up to this many lines, then scrolls. */
 const MAX_INPUT_LINES = 6;
+/** Pasted text this long or longer goes in as a file rather than into the draft. */
+const LONG_PASTE = 32 * 1024;
 /** A streamed reply repaints at most this often. */
 const STREAM_MS = 80;
 /** A turn shows how long it has run once it takes longer than this. */
@@ -599,6 +603,7 @@ export class ChatPanel {
       }
       if (!(event as InputEvent | undefined)?.isComposing) this.findMentions();
     });
+    this.input.addEventListener("paste", (event) => this.pasted(event as ClipboardEvent));
     this.input.addEventListener("compositionstart", () => this.closeMentions());
     this.input.addEventListener("compositionend", () => this.findMentions());
     this.input.addEventListener("click", () => this.findMentions());
@@ -1836,6 +1841,31 @@ export class ChatPanel {
     this.mentions = [...(you.mentions ?? [])];
     this.files = [...new Set([...this.files, ...you.files])];
     void this.submit();
+  }
+
+  /** An image pasted, or text too long for the draft, becomes an attachment of its own. */
+  private pasted(event: ClipboardEvent): void {
+    const data = event.clipboardData;
+    if (!data || !this.backend.paste || this.opts.specialist) return;
+    const images = [...(data.files ?? [])].filter(f => f.type.startsWith("image/"));
+    const text = images.length ? "" : data.getData("text/plain");
+    if (!images.length && text.length < LONG_PASTE) return;
+    event.preventDefault();
+    const save = async (name: string, bytes: Uint8Array) => {
+      try {
+        const path = await this.backend.paste!(name, [...bytes]);
+        this.attach([path]);
+      } catch (error) {
+        this.attach([], [{ name, reason: String(error) === "too-big" ? "too-big" : "unreadable" }]);
+      }
+    };
+    if (images.length) {
+      for (const image of images) void image.arrayBuffer().then(b => save(image.name || "pasted.png", new Uint8Array(b)));
+    } else {
+      void save("pasted.txt", new TextEncoder().encode(text));
+      this.messages.push({ who: "note", text: t("The long text you pasted is attached as a file.") });
+      this.paint();
+    }
   }
 
   /** The queue, above the draft: what waits, each removable. */
