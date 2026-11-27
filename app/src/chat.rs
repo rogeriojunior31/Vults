@@ -2972,11 +2972,8 @@ pub async fn chat_engines() -> Engines {
     // The folders may wait on the login shell (up to 2 s at start-up): never on the main thread.
     tokio::task::spawn_blocking(|| {
         let dirs = crate::paths::agent_dirs();
-        let path = std::env::var_os("PATH");
-        let on_path = |program: &str| {
-            path.as_ref()
-                .is_some_and(|p| std::env::split_paths(p).any(|d| d.join(program).is_file()))
-        };
+        // On Windows the CLI is `claude.exe` or an npm `claude.cmd`, never a bare `claude`.
+        let on_path = vults_chat::summary::on_path;
         Engines {
             claude: engine(
                 on_path("claude"),
