@@ -25,10 +25,10 @@ mod claude;
 mod claude_account;
 mod codex;
 mod codex_isolation;
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 mod mcp_tools;
 pub mod model_prices;
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 pub use mcp_tools::stdio as specialist_mcp_main;
 mod codex_server;
 pub mod consult_codex;
@@ -1195,17 +1195,17 @@ impl Chat {
                 let Some(driver) = self.driver.as_mut() else {
                     return Err("This chat has no agent to run.".into());
                 };
-                #[cfg(target_os = "linux")]
+                #[cfg(any(target_os = "linux", windows))]
                 let service = if specialist {
                     Some(mcp_tools::Service::bind()?)
                 } else {
                     None
                 };
-                #[cfg(target_os = "linux")]
+                #[cfg(any(target_os = "linux", windows))]
                 if specialist {
                     driver.set_tool_service(service.as_ref().map(|s| s.config.clone()))?;
                 }
-                #[cfg(not(target_os = "linux"))]
+                #[cfg(not(any(target_os = "linux", windows)))]
                 if specialist && !self.tools.is_empty() {
                     return Err("Specialist GitHub tools currently require Linux.".into());
                 }
@@ -1220,7 +1220,7 @@ impl Chat {
                     running: Default::default(),
                     zeca_mcp: self.provider == Provider::Claude && self.spec.mcp_config.is_some(),
                 };
-                #[cfg(target_os = "linux")]
+                #[cfg(any(target_os = "linux", windows))]
                 if let Some(service) = service {
                     return tokio::select! {
                         result = driver.send(turn,&sink) => result,

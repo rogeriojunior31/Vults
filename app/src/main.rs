@@ -12,7 +12,7 @@ fn main() {
         );
         return;
     }
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", windows))]
     if std::env::args().nth(1).as_deref() == Some("--specialist-mcp") {
         if let Some(path) = std::env::args_os().nth(2) {
             vults_chat::specialist_mcp_main(std::path::Path::new(&path));
