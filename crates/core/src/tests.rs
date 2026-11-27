@@ -4617,6 +4617,27 @@ fn run_step(command: &str) -> AgentEvent {
 }
 
 #[test]
+fn quitting_keeps_each_running_turn_at_its_last_event() {
+    let mut s = State::default();
+    let t0 = Instant::now();
+    let at = |secs| t0 + Duration::from_secs(secs);
+    visible(&mut s, agent("a", AgentEvent::PromptSubmitted), t0);
+    visible(&mut s, agent("a", run_step("cargo test")), at(30));
+    visible(&mut s, agent("b", AgentEvent::SessionStarted), at(31));
+    let effects = reduce(&mut s, Input::Closing, at(90));
+    let kept = turns_of(&effects);
+    assert_eq!(kept.len(), 1, "only a running turn, not an idle session");
+    assert_eq!(
+        (kept[0].secs, kept[0].ago, kept[0].commands),
+        (30, Duration::from_secs(60), 1)
+    );
+    assert!(
+        turns_of(&reduce(&mut s, Input::Closing, at(91))).is_empty(),
+        "kept once"
+    );
+}
+
+#[test]
 fn a_turn_counts_what_its_prompt_set_going() {
     let mut s = State::default();
     let t0 = Instant::now();

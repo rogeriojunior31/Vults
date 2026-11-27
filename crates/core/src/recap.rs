@@ -141,12 +141,16 @@ pub fn week(lang: i18n::Lang, entries: &[Entry], monday: Date) -> WeekView {
     let mut days = vec![0u64; 7];
     let mut agents: BTreeMap<AgentKind, u32> = BTreeMap::new();
     let mut projects: BTreeMap<&str, u32> = BTreeMap::new();
-    for (e, d) in &mine {
-        days[usize::from(d.weekday())] += e.secs;
+    for (e, _) in &mine {
         *agents.entry(e.agent).or_default() += 1;
         if !e.project.is_empty() {
             *projects.entry(e.project.as_str()).or_default() += 1;
         }
+    }
+    // A day's bar is its time with an agent at work, as the week's total: overlaps count once.
+    for (i, day) in days.iter_mut().enumerate() {
+        let date = monday.plus(i as i64);
+        *day = merged_secs(mine.iter().filter(|(_, d)| *d == date).map(|(e, _)| *e));
     }
     // Most turns wins; a tie goes to the first by name, so the recap never flickers.
     fn top<K: Ord + Copy>(m: &BTreeMap<K, u32>) -> Option<K> {
@@ -274,6 +278,24 @@ fn merged_secs<'a>(entries: impl Iterator<Item = &'a Entry>) -> u64 {
     u64::try_from(total).unwrap_or(0)
 }
 
+/// The days' totals, each day the kept turns cover in full taking their time with overlaps
+/// counted once (the stored total adds them up); older days keep the stored total.
+pub fn merged_days(days: &BTreeMap<String, DayTotal>, entries: &[Entry]) -> BTreeMap<String, DayTotal> {
+    let mut by_day: BTreeMap<&str, Vec<&Entry>> = BTreeMap::new();
+    for e in entries {
+        by_day.entry(e.day.as_str()).or_default().push(e);
+    }
+    let mut out = days.clone();
+    for (day, turns) in by_day {
+        if let Some(total) = out.get_mut(day)
+            && usize::try_from(total.turns).is_ok_and(|n| n == turns.len())
+        {
+            total.secs = merged_secs(turns.into_iter());
+        }
+    }
+    out
+}
+
 /// The grid's days, from the Monday 52 weeks before `today`'s week to `today`, with their levels.
 pub fn grid(days: &BTreeMap<String, DayTotal>, today: Date) -> Vec<GridDay> {
     let first = today.monday().plus(-7 * (GRID_WEEKS - 1));
@@ -357,7 +379,10 @@ mod tests {
         assert_eq!(w.top_project.as_deref(), Some("site"));
         assert_eq!(w.busiest_day.as_deref(), Some("2026-10-06"));
         assert_eq!(w.longest_secs, 3600);
-        assert_eq!(w.days[1], 3600 + 600 + 3600 + 100, "per day, as the turns ran");
+        assert_eq!(
+            w.days[1], w.active_secs,
+            "a day's bar counts overlaps once, as the total"
+        );
         // Per project, its own turns merged: site's two overlapping turns count once.
         let projects: Vec<(&str, u64, u32)> = w
             .projects
@@ -427,6 +452,24 @@ mod tests {
             weeks_with_turns(&es),
             [Date::new(2026, 10, 5), Date::new(2026, 9, 28)]
         );
+    }
+
+    #[test]
+    fn a_grid_day_counts_side_by_side_turns_once_when_its_turns_are_kept() {
+        let es = [
+            entry("2026-10-06", TUE, 3600, AgentKind::Claude, "site"),
+            entry("2026-10-06", TUE, 3600, AgentKind::Codex, "api"),
+        ];
+        let mut days = BTreeMap::new();
+        days.insert("2026-10-06".to_string(), DayTotal { turns: 2, secs: 7200 });
+        // Turns pruned or never kept: the stored total stays.
+        days.insert("2026-01-02".to_string(), DayTotal { turns: 5, secs: 900 });
+        let merged = merged_days(&days, &es);
+        assert_eq!(merged["2026-10-06"], DayTotal { turns: 2, secs: 3600 });
+        assert_eq!(merged["2026-01-02"], DayTotal { turns: 5, secs: 900 });
+        // A day only partly kept (an old import) keeps its stored total.
+        days.insert("2026-10-06".to_string(), DayTotal { turns: 3, secs: 8000 });
+        assert_eq!(merged_days(&days, &es)["2026-10-06"].secs, 8000);
     }
 
     #[test]

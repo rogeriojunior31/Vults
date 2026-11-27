@@ -1,5 +1,5 @@
 # Atividade
-<!-- source: 7b5b87cb6986 -->
+<!-- source: f7f050f6264e -->
 
 Week compara os números com a semana anterior do calendário, mostra os turnos registrados por
 agente e identifica os meses e dias da semana na grade anual. Uma base de comparação ausente ou
@@ -89,7 +89,8 @@ O Chat do Zeca, os resumos e o sono têm limites próprios e não entram neste o
 Um turno é o que um prompt pôs para andar, até o agente parar. Para cada um o Vults guarda quando
 ele rodou, o agente, o nome da pasta do projeto e contagens (passos, comandos, linhas mudadas, as
 suas respostas). Nunca um prompt, uma resposta, um comando, um nome de arquivo ou um caminho, e nada
-sai deste computador ([Segurança](../safety.md)).
+sai deste computador ([Segurança](../safety.md)). Um turno ainda rodando quando o Vults fecha (uma
+atualização, um reinício) é guardado, terminando no seu último evento.
 
 <a id="the-week"></a>
 
@@ -104,7 +105,7 @@ O card mostra uma semana, de segunda a domingo, pelos seus dias locais: esta sem
 - **Turnos** e os passos deles, **linhas** adicionadas e removidas e os arquivos mexidos,
   **comandos**, **respostas** (permitidas, negadas, perguntas respondidas), e **turnos que
   falharam**.
-- O tempo por dia em barras, o agente e o projeto com mais turnos, o dia mais movimentado e o turno
+- O tempo por dia em barras (turnos lado a lado contam uma vez, como no total), o agente e o projeto com mais turnos, o dia mais movimentado e o turno
   mais longo.
 
 <a id="sharing-the-week"></a>
@@ -134,7 +135,7 @@ inteira no Nest; ele e o **×** a marcam como lida.
 ## A grade
 
 O último ano, uma coluna por semana e uma linha por dia, com a segunda em cima. O tom de um dia
-segue o tempo com os seus agentes, em quatro degraus pelos quartis dos seus dias ativos. Passe o
+segue o tempo com os seus agentes (turnos lado a lado contam uma vez nas últimas 12 semanas), em quatro degraus pelos quartis dos seus dias ativos. Passe o
 mouse num dia para ver os turnos e o tempo.
 
 A aba **GitHub** mostra o seu calendário de contribuições do GitHub, com os níveis do próprio GitHub

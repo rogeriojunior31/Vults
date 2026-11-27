@@ -77,7 +77,8 @@ Zeca's Chat, summaries and sleep have their own limits and are not counted in th
 A turn is what one prompt set going, until the agent stops. For each one Vults keeps when it ran,
 the agent, the project's folder name and counts (steps, commands, lines changed, your answers).
 Never a prompt, a reply, a command, a file name or a path, and nothing leaves this computer
-([Safety](../safety.md)).
+([Safety](../safety.md)). A turn still running when Vults quits (an update, a restart) is kept,
+ending at its last event.
 
 ## The week
 
@@ -89,7 +90,7 @@ through the weeks the history keeps (12).
 - **Time with your agents**: turns running side by side count once.
 - **Turns** and their steps, **lines** added and removed and the files they touched, **commands**,
   **answers** (allowed, denied, questions answered), and **turns failed**.
-- Time per day as bars, the agent and project with the most turns, the busiest day and the longest
+- Time per day as bars (turns side by side count once, as in the total), the agent and project with the most turns, the busiest day and the longest
   turn.
 
 ## Sharing the week
@@ -112,7 +113,7 @@ after a screen lock does in each preset ([The island](island.md#while-you-were-a
 ## The grid
 
 The last year, a column per week and a row per day, Monday at the top. A day's shade follows its
-time with your agents, in four steps by the quartiles of your active days. Hover a day for its
+time with your agents (turns side by side count once for the last 12 weeks), in four steps by the quartiles of your active days. Hover a day for its
 turns and time.
 
 The **GitHub** tab shows your GitHub contribution calendar instead, with GitHub's own levels and its

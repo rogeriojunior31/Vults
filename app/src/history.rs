@@ -330,7 +330,7 @@ pub fn activity(
         weeks: weeks.iter().map(|d| d.iso()).collect(),
         week: vults_core::recap::week(lang, &entries, monday),
         previous: vults_core::recap::week(lang, &entries, monday.plus(-7)),
-        grid: vults_core::recap::grid(&days, today),
+        grid: vults_core::recap::grid(&vults_core::recap::merged_days(&days, &entries), today),
         dictated_words: {
             let usage = store
                 .dictation_usage(monday, monday.plus(6))

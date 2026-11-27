@@ -66,6 +66,8 @@ impl EarlyMetrics {
 #[derive(Debug)]
 enum Msg {
     RefreshMetrics,
+    /// The app is quitting: running turns go into the history before it does.
+    Closing(std::sync::mpsc::SyncSender<()>),
     /// The session whose terminal was in front when a turn ended (FF3), read off this loop.
     Watched(Option<core::SessionKey>),
     RequestGone {
@@ -792,6 +794,18 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                         .map(|(key, session)| (key.clone(), session.terminal.clone()))
                         .collect(),
                 );
+                continue;
+            }
+            Msg::Closing(reply) => {
+                let history = crate::settings::history(&app);
+                for effect in core::reduce(&mut state, Input::Closing, Instant::now()) {
+                    if let Effect::Turn(turn) = effect
+                        && history
+                    {
+                        keep_turn(&turn);
+                    }
+                }
+                let _ = reply.send(());
                 continue;
             }
             Msg::Hook(Incoming::Event(event)) => {
@@ -1802,6 +1816,16 @@ fn read_watched(app: &AppHandle, state: &core::State, tx: &mpsc::Sender<Msg>) {
     }
     #[cfg(not(any(target_os = "linux", windows)))]
     let _ = (app, state, tx);
+}
+
+/// Keeps the running turns before the app quits; waits a moment at most, never holding the exit.
+pub(crate) fn closing(app: &AppHandle) {
+    let (reply, receive) = std::sync::mpsc::sync_channel(1);
+    if let Some(inbox) = app.try_state::<Inbox>()
+        && inbox.0.try_send(Msg::Closing(reply)).is_ok()
+    {
+        let _ = receive.recv_timeout(Duration::from_secs(2));
+    }
 }
 
 pub(crate) fn dictation_sessions(
