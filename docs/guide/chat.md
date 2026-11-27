@@ -272,7 +272,8 @@ before they are used.
 
 The reply stays separate from a collapsed **Activity** disclosure. Open it for the readable
 thinking supplied by the engine and the tools it reported. Each tool exposes its arguments or
-command and its reported completion or failure. Missing results remain **No result reported**;
+command, its reported completion or failure, and, when the engine reports it (Claude Code's tool
+results, Codex's command output), the last 4,000 characters of what it printed, secrets hidden. Missing results remain **No result reported**;
 Vults does not invent thought text or treat elapsed turn time as measured thinking time. Codex
 shows its public reasoning summaries; engines that do not supply details say so.
 

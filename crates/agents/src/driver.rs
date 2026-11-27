@@ -224,6 +224,11 @@ pub enum Event {
         id: String,
         ok: bool,
     },
+    /// What a tool printed or returned, before its [`Event::ToolEnd`]: for the user to read only.
+    ToolOutput {
+        id: String,
+        output: String,
+    },
     /// The turn is over: the last event of every turn that started.
     TurnEnd(EndReason),
 }

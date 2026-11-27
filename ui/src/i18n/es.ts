@@ -1300,6 +1300,7 @@ export default {
   "A conversation keeps its model; New starts another.": "Una conversación mantiene su modelo; Nuevo empieza otra.",
   "The model and effort for new conversations in this folder.": "El modelo y el esfuerzo de las nuevas conversaciones en esta carpeta.",
   "Clean": "Limpio",
+  "Output": "Salida",
   "I chose: {answer}": "Elegí: {answer}",
   "Or type your own answer below and press Enter.": "O escribe tu propia respuesta abajo y pulsa Enter.",
   "Answered: {text}": "Respondido: {text}",

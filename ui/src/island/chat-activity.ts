@@ -16,6 +16,9 @@ export function applyActivity(activity: ChatActivity, event: ChatActivityEvent):
   } else if (event.type === "end") {
     const tool = activity.tools.find(t => t.id === event.id);
     if (tool) tool.ok = event.ok;
+  } else if (event.type === "output") {
+    const tool = activity.tools.find(t => t.id === event.id);
+    if (tool) tool.output = event.text.slice(-4096);
   } else {
     if (activity.decisions.length >= 128) { activity.truncated = true; return; }
     activity.decisions.push({ tool: event.tool, target: event.target.slice(0, 16384), answer: event.answer, by: event.by });
@@ -30,6 +33,7 @@ export function readActivity(text: string): ChatActivity {
     if (Array.isArray(data.tools)) for (const tool of data.tools.slice(0, 128)) {
       if (typeof tool.id !== "string" || typeof tool.tool !== "string" || typeof tool.detail !== "string") continue;
       applyActivity(result, { type: "start", id: tool.id, tool: tool.tool, detail: tool.detail });
+      if (typeof tool.output === "string") applyActivity(result, { type: "output", id: tool.id, text: tool.output });
       if (typeof tool.ok === "boolean") applyActivity(result, { type: "end", id: tool.id, ok: tool.ok });
     }
     if (Array.isArray(data.decisions)) for (const d of data.decisions.slice(0, 128)) {

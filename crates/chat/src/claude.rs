@@ -212,7 +212,20 @@ pub(crate) fn parse(raw: &str) -> Line {
                 .unwrap_or_default();
             let events: Vec<Event> = blocks
                 .iter()
-                .filter_map(|b| match b["type"].as_str() {
+                .flat_map(|b| {
+                    // A tool's result: its text first (for the user to read), then its end.
+                    let output = (b["type"] == "tool_result")
+                        .then(|| result_text(&b["content"]))
+                        .flatten()
+                        .map(|output| Event::ToolOutput {
+                            id: b["tool_use_id"].as_str().unwrap_or_default().to_string(),
+                            output,
+                        });
+                    output.into_iter().chain(event_of(b))
+                })
+                .collect();
+            fn event_of(b: &Value) -> Option<Event> {
+                match b["type"].as_str() {
                     Some("tool_use") => {
                         let tool = b["name"].as_str().unwrap_or("tool");
                         let detail = detail(tool, &b["input"]).unwrap_or_default();
@@ -228,8 +241,8 @@ pub(crate) fn parse(raw: &str) -> Line {
                         ok: b["is_error"] != true,
                     }),
                     _ => None,
-                })
-                .collect();
+                }
+            }
             if events.is_empty() {
                 Line::Other
             } else {
@@ -307,6 +320,21 @@ fn usage_of(v: &Value) -> Option<Reported> {
         },
         total: usage,
     })
+}
+
+/// A tool result's text (a string, or the text blocks of a list), its last [`OUTPUT_TAIL`]
+/// characters, secrets redacted; none when empty.
+fn result_text(content: &Value) -> Option<String> {
+    let text = match content {
+        Value::String(s) => s.clone(),
+        Value::Array(parts) => parts
+            .iter()
+            .filter_map(|p| p["text"].as_str())
+            .collect::<Vec<_>>()
+            .join("\n"),
+        _ => return None,
+    };
+    crate::output_tail(&text)
 }
 
 /// The answer to a `can_use_tool` request.
@@ -527,6 +555,33 @@ async fn write(stdin: &mut tokio::process::ChildStdin, msg: &Value) -> Result<()
 mod tests {
     use super::*;
 
+    #[test]
+    fn a_tool_result_brings_its_output_before_its_end() {
+        let line = r#"{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"t1","is_error":false,"content":[{"type":"text","text":"test result: ok. 3 passed"}]}]}}"#;
+        let Line::Tools(events) = parse(line) else {
+            panic!("tools")
+        };
+        assert_eq!(
+            events,
+            vec![
+                Event::ToolOutput {
+                    id: "t1".into(),
+                    output: "test result: ok. 3 passed".into()
+                },
+                Event::ToolEnd {
+                    id: "t1".into(),
+                    ok: true
+                },
+            ]
+        );
+        assert_eq!(result_text(&serde_json::json!("  ")), None);
+        let long = "x".repeat(crate::OUTPUT_TAIL + 10);
+        assert_eq!(
+            result_text(&serde_json::json!(long)).unwrap().chars().count(),
+            crate::OUTPUT_TAIL + 1
+        );
+    }
+
     // Lines recorded from claude 2.1.285.
     #[test]
     fn thinking_stream_is_separate_from_reply_text() {
@@ -588,10 +643,16 @@ mod tests {
             parse(
                 r#"{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"t1","is_error":false,"content":"ok"}]}}"#
             ),
-            Line::Tools(vec![Event::ToolEnd {
-                id: "t1".into(),
-                ok: true
-            }])
+            Line::Tools(vec![
+                Event::ToolOutput {
+                    id: "t1".into(),
+                    output: "ok".into()
+                },
+                Event::ToolEnd {
+                    id: "t1".into(),
+                    ok: true
+                }
+            ])
         );
         assert_eq!(
             parse(

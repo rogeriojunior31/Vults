@@ -79,6 +79,7 @@ pub(crate) enum Msg {
     ToolEnd {
         id: String,
         ok: bool,
+        output: Option<String>,
     },
     TurnDone {
         error: Option<String>,
@@ -172,6 +173,9 @@ pub(crate) fn classify(raw: &str) -> Msg {
             Some((id, ..)) => Msg::ToolEnd {
                 id,
                 ok: v["params"]["item"]["status"] == "completed",
+                output: v["params"]["item"]["aggregatedOutput"]
+                    .as_str()
+                    .and_then(crate::output_tail),
             },
             None => Msg::Other,
         },
@@ -548,7 +552,16 @@ impl AppServer {
                     })
                     .await;
                 }
-                Msg::ToolEnd { id, ok } => sink.event(Event::ToolEnd { id, ok }).await,
+                Msg::ToolEnd { id, ok, output } => {
+                    if let Some(output) = output {
+                        sink.event(Event::ToolOutput {
+                            id: id.clone(),
+                            output,
+                        })
+                        .await;
+                    }
+                    sink.event(Event::ToolEnd { id, ok }).await
+                }
                 Msg::Usage { total, last } => {
                     self.seen = Some(total.clone());
                     tokens.note(total, &last);
@@ -780,6 +793,24 @@ mod tests {
     use super::*;
 
     #[test]
+    fn a_command_brings_the_tail_of_its_output() {
+        assert_eq!(
+            classify(
+                r#"{"method":"item/completed","params":{"item":{"type":"commandExecution","id":"c2","command":"ls","status":"completed","aggregatedOutput":"a.txt\nb.txt\n"}}}"#
+            ),
+            Msg::ToolEnd {
+                id: "c2".into(),
+                ok: true,
+                output: Some(
+                    "a.txt
+b.txt"
+                        .into()
+                )
+            }
+        );
+    }
+
+    #[test]
     fn a_clean_environment_is_a_codex_home_of_its_own() {
         let clean = Spec {
             settings: Settings::Isolated,
@@ -872,7 +903,8 @@ mod tests {
             ),
             Msg::ToolEnd {
                 id: "c1".into(),
-                ok: false
+                ok: false,
+                output: None
             }
         );
         assert_eq!(

@@ -455,10 +455,12 @@ export type ChatActivityEvent =
   | { type: "reasoning"; text: string }
   | { type: "start"; id: string; tool: string; detail: string }
   | { type: "end"; id: string; ok: boolean }
+  /** What the tool printed or returned: its tail, secrets redacted. */
+  | { type: "output"; id: string; text: string }
   | { type: "decision"; tool: string; target: string; answer: string; by: string };
 export type ChatActivity = {
   reasoning: string;
-  tools: { id: string; tool: string; detail: string; ok: boolean | null }[];
+  tools: { id: string; tool: string; detail: string; ok: boolean | null; output?: string }[];
   decisions: { tool: string; target: string; answer: string; by: string }[];
   truncated: boolean;
 };

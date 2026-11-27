@@ -17,6 +17,11 @@ pub enum Event {
         id: String,
         ok: bool,
     },
+    /// What the tool printed or returned (its tail, redacted), for the user to read.
+    Output {
+        id: String,
+        text: String,
+    },
     Decision {
         tool: String,
         target: String,
@@ -39,6 +44,8 @@ pub struct Tool {
     pub tool: String,
     pub detail: String,
     pub ok: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub output: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -75,11 +82,17 @@ impl Activity {
                     tool: bounded(tool, 512),
                     detail: bounded(detail, 16_384),
                     ok: None,
+                    output: None,
                 });
             }
             Event::End { id, ok } => {
                 if let Some(t) = self.tools.iter_mut().find(|t| t.id == *id) {
                     t.ok = Some(*ok);
+                }
+            }
+            Event::Output { id, text } => {
+                if let Some(t) = self.tools.iter_mut().find(|t| t.id == *id) {
+                    t.output = Some(bounded(text, 4_096));
                 }
             }
             Event::Decision {

@@ -396,7 +396,7 @@ export class ChatPanel {
   private selectedAsk: string | null = null;
   private approvalQueueKey = "";
   private askNodes = new WeakMap<Ask, HTMLElement>();
-  private readonly activityNodes = new WeakMap<ActivityMessage, { node: HTMLDetailsElement; summary: HTMLElement; reasoning: HTMLElement; tools: HTMLElement; decisions: HTMLElement; warning: HTMLElement; toolNodes: Map<string, { node: HTMLDetailsElement; status: HTMLElement; detail: HTMLElement }> }>();
+  private readonly activityNodes = new WeakMap<ActivityMessage, { node: HTMLDetailsElement; summary: HTMLElement; reasoning: HTMLElement; tools: HTMLElement; decisions: HTMLElement; warning: HTMLElement; toolNodes: Map<string, { node: HTMLDetailsElement; status: HTMLElement; detail: HTMLElement; output: HTMLElement }> }>();
   private activityTimer: number | undefined;
   private replyBreak = false;
   private readonly approvalQueue = el("div", { class: "approval-queue" });
@@ -2316,13 +2316,20 @@ export class ChatPanel {
         detail.tabIndex = 0;
         detail.setAttribute("role", "region");
         detail.setAttribute("aria-label", tool.tool);
-        const node = el("details", { class: "activity-tool" }, el("summary", {}, el("span", { text: tool.tool }), label), detail);
+        // What it printed or returned, under its arguments, once it reports any.
+        const output = el("pre", { class: "activity-output" });
+        output.tabIndex = 0;
+        output.setAttribute("role", "region");
+        output.setAttribute("aria-label", t("Output"));
+        const node = el("details", { class: "activity-tool" }, el("summary", {}, el("span", { text: tool.tool }), label), detail, output);
         node.addEventListener("toggle", () => this.changed());
-        entry = { node, status: label, detail };
+        entry = { node, status: label, detail, output };
         kept!.toolNodes.set(tool.id, entry);
       }
       entry.status.textContent = status;
       entry.status.classList.toggle("failed", tool.ok === false);
+      entry.output.hidden = !tool.output;
+      if (tool.output && entry.output.textContent !== tool.output) entry.output.textContent = tool.output;
       return entry.node;
     });
     if (kept.tools.children.length !== toolNodes.length) kept.tools.replaceChildren(...toolNodes);

@@ -669,6 +669,24 @@ impl Approver for TestApprover {
 
 /// The chat's side of a driver's [`Sink`]: what the agent says goes to the chat, and its tool
 /// requests become cards the approver answers.
+/// The end of a tool's output the chat shows: the last lines are what tells how it went.
+pub const OUTPUT_TAIL: usize = 4_000;
+
+/// `text`'s last [`OUTPUT_TAIL`] characters, secrets redacted; none when only whitespace.
+pub fn output_tail(text: &str) -> Option<String> {
+    let text = text.trim();
+    if text.is_empty() {
+        return None;
+    }
+    let count = text.chars().count();
+    let tail: String = if count > OUTPUT_TAIL {
+        format!("…{}", text.chars().skip(count - OUTPUT_TAIL).collect::<String>())
+    } else {
+        text.to_string()
+    };
+    Some(vults_core::redact::secrets(&tail))
+}
+
 /// Characters of conversation a handoff carries (about 12k tokens): the first message and the
 /// latest ones that fit; a single line longer than [`HANDOFF_LINE`] is cut.
 pub const HANDOFF_BUDGET: usize = 48_000;
@@ -798,6 +816,15 @@ impl Sink for TurnSink<'_> {
                         return;
                     }
                     Delta::ToolState { active: true }
+                }
+                Event::ToolOutput { id, output } => {
+                    let _ = self
+                        .out
+                        .send(Delta::Activity {
+                            event: activity::Event::Output { id, text: output },
+                        })
+                        .await;
+                    return;
                 }
                 Event::ToolEnd { id, ok } => {
                     let _ = self

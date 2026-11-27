@@ -1300,6 +1300,7 @@ export default {
   "A conversation keeps its model; New starts another.": "一段对话会保持它的模型；新建可开始另一段。",
   "The model and effort for new conversations in this folder.": "此文件夹中新对话的模型和力度。",
   "Clean": "干净",
+  "Output": "输出",
   "I chose: {answer}": "我选择了：{answer}",
   "Or type your own answer below and press Enter.": "或者在下方输入你自己的回答并按 Enter。",
   "Answered: {text}": "已回答：{text}",

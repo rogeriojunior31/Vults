@@ -3483,7 +3483,9 @@ body.still #island .inner:has(.main > .chat) .need-strip.top { animation: none; 
 /* The intro takes the room beside the perch and wraps in it: a long setup notice never pushes it
    past the panel's edge. */
 #island .chat-head > .chat-intro { margin-right: auto; flex: 1 1 0; min-width: 0; }
-#island .ask-questions { display: flex; flex-direction: column; gap: 10px; margin: 8px 0; }
+#island .activity-output { margin: 6px 0 0; padding: 8px 10px; max-height: 220px; overflow: auto; border-left: 2px solid var(--line); background: var(--float); color: var(--fg-dim); font: 11px/1.5 var(--mono, monospace); white-space: pre-wrap; overflow-wrap: anywhere; }
+.activity-output[hidden] { display: none; }
+.ask-questions { display: flex; flex-direction: column; gap: 10px; margin: 8px 0; }
 .ask-question-text { margin: 0 0 6px; color: var(--fg); font: 600 var(--text-m)/1.4 var(--font); }
 .ask-options { display: flex; flex-wrap: wrap; gap: 6px; }
 .ask-hint { margin: 0; color: var(--fg-dim); font: var(--text-s)/1.4 var(--font); }

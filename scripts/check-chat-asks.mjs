@@ -94,4 +94,15 @@ await tick(); await tick();
 assert.deepEqual(replies.at(-1), ["p1", "Don't delete build, clean only the cache"]);
 assert.deepEqual(sent, [], "it is an answer, not a new message");
 assert.equal(input.value, "");
-console.log("check-chat-asks: questions get option buttons and go back as the user's words; typing while a card waits answers it");
+// A tool's output shows under it in the turn's activity.
+input.value = "Run the tests"; input.listeners.input({});
+input.listeners.keydown({ key: "Enter", preventDefault() {}, stopPropagation() {} });
+await tick(); await tick();
+panel.receive({ kind: "activity", event: { type: "start", id: "t9", tool: "Bash", detail: "cargo test" } });
+panel.receive({ kind: "activity", event: { type: "output", id: "t9", text: "test result: ok. 42 passed" } });
+panel.receive({ kind: "activity", event: { type: "end", id: "t9", ok: true } });
+panel.paint(); // the harness runs no timers: the throttled repaint, at once
+await tick();
+const outputs = nodes(panel.element).filter(node => node.className === "activity-output");
+assert.ok(outputs.some(o => !o.hidden && o.textContent === "test result: ok. 42 passed"), "the output shows under the tool");
+console.log("check-chat-asks: questions get option buttons and go back as the user's words; typing while a card waits answers it; a tool's output shows under it");

@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 07a0baaf3bf8 -->
+<!-- source: 7e671bc54a9d -->
 
 Os painéis laterais redimensionáveis seguem o ponteiro que iniciou o arraste, ignoram toques adicionais e encerram o arraste quando a janela perde o foco. O cancelamento preserva a largura atual e mantém os rascunhos. Quando o espaço limita um painel, o arraste e o redimensionamento pelo teclado partem da largura visível; reduzir apenas o espaço disponível não sobrescreve a largura salva. Os controles de redimensionar e recolher usam a mesma cor de foco de teclado que o restante do tema selecionado.
 
@@ -303,7 +303,9 @@ deles antes de serem usados.
 
 A resposta fica separada de uma seção **Atividade** recolhida. Abra para ver o pensamento
 legível fornecido pelo motor e as ferramentas que ele informou. Cada ferramenta mostra seus
-argumentos ou comando e a conclusão ou falha informada. Resultados ausentes ficam como **Nenhum
+argumentos ou comando, a conclusão ou falha informada e, quando o motor informa (os resultados de
+ferramenta do Claude Code, a saída de comando do Codex), os últimos 4.000 caracteres do que ela
+imprimiu, com segredos ocultados. Resultados ausentes ficam como **Nenhum
 resultado informado**; o Vults não inventa pensamento nem trata a duração do turno como tempo
 medido de pensamento. O Codex mostra seus resumos públicos de raciocínio; motores que não fornecem
 detalhes informam isso.
