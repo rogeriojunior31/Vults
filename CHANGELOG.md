@@ -27,6 +27,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Fixes
 
+- Voice transcription no longer crashes with an illegal instruction on older processors: the packages' speech engine is built for a portable CPU baseline (AVX2 and below) instead of the build machine's own, on Linux as on Windows.
 - On Windows, agents can ask you a text question (`ask_user`): the Claude Code that Vults starts asks by itself, and Settings > Dictation > Agents sets it up for your own Claude Code or Codex. Type the answer, or hold the dictation key shown on the question and speak, as on Linux.
 - On Windows, a specialist with GitHub tools works in the chat instead of refusing every turn.
 - On Windows, the secrets Vults keeps in Credential Manager stay on this computer: on a domain account with a roaming profile they no longer follow you to other PCs (a secret saved before keeps roaming until it is saved again).
