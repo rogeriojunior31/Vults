@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 593b874acc30 -->
+<!-- source: 254ca3e3c622 -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -47,6 +47,8 @@ Flock → Look** (com o Zeca desenhado ao lado: no visual que você escolhe, com
 nenhum, e acrescenta óculos escuros e catorze trajes
 sem estação. **Clique com o botão direito no Zeca** na ilha para escolher ali mesmo: ele veste o que
 estiver sob o ponteiro, um clique fica com ele, Escape o deixa como estava. Só o Zeca os usa.
+
+![Settings, Flock & Zeca: de onde vêm as espécies do bando, visitantes raros, o Zeca ligado ou desligado, o visual dele e os urubus das Américas para escolher a espécie dele](../../assets/settings-flock.png)
 
 ![Os visuais do Zeca: os quatro sazonais, os óculos escuros e os catorze trajes com chapéus, óculos, grills e correntes](../../assets/zeca-looks.png)
 

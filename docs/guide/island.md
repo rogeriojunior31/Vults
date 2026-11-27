@@ -42,6 +42,8 @@ beside it: in the look you pick, in his own feathers on Auto) keeps one look all
 island to pick one in place: he wears whatever the pointer rests on, a click keeps it, Escape leaves
 him as he was. Only Zeca wears them.
 
+![Settings, Flock & Zeca: where the flock's species come from, rare visitors, Zeca on or off, his look, and the vultures of the Americas to choose his species](../assets/settings-flock.png)
+
 ![Zeca's looks: the four seasonal ones, sunglasses, and the fourteen outfits with hats, shades, grills and chains](../assets/zeca-looks.png)
 
 ### Without Zeca
