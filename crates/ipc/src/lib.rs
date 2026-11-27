@@ -144,7 +144,21 @@ impl Endpoint {
         {
             let sid = vults_peer::current_user_sid()
                 .ok_or_else(|| io::Error::other("cannot read the current user's SID"))?;
-            Ok(Self::Pipe(protocol::pipe_name(&sid)))
+            let name = protocol::pipe_name(&sid);
+            // A debug app under test serves the pipe the debug hook's tests use, so the user's real
+            // agents never reach it (the hook's VULTS_HOOK_TEST_PIPE_SUFFIX, same rules).
+            #[cfg(debug_assertions)]
+            let name = match std::env::var("VULTS_HOOK_TEST_PIPE_SUFFIX") {
+                Ok(suffix)
+                    if !suffix.is_empty()
+                        && suffix.len() <= 128
+                        && suffix.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'-') =>
+                {
+                    format!("{name}-test-{suffix}")
+                }
+                _ => name,
+            };
+            Ok(Self::Pipe(name))
         }
     }
 }
