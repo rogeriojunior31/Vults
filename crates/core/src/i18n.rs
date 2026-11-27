@@ -419,6 +419,28 @@ pub fn recap_card(lang: Lang, headline: &str) -> String {
     }
 }
 
+/// The notification when agent events can't reach Vults: another program holds its connection.
+pub fn hooks_unreachable(lang: Lang) -> (&'static str, &'static str) {
+    match lang {
+        Lang::En => (
+            "Vults can't hear your agents",
+            "Another program holds its connection, so no session, card or turn reaches it. Quit any other copy of Vults, or restart it.",
+        ),
+        Lang::PtBr => (
+            "O Vults não consegue ouvir os seus agentes",
+            "Outro programa está com a conexão dele, então nenhuma sessão, card ou turno chega. Feche qualquer outra cópia do Vults, ou reinicie-o.",
+        ),
+        Lang::Es => (
+            "Vults no puede oír a tus agentes",
+            "Otro programa tiene su conexión, así que no le llega ninguna sesión, tarjeta ni turno. Cierra cualquier otra copia de Vults o reinícialo.",
+        ),
+        Lang::Zh => (
+            "Vults 听不到你的代理",
+            "另一个程序占用了它的连接，所以会话、卡片和回合都无法到达。请退出其他 Vults 副本，或重新启动它。",
+        ),
+    }
+}
+
 /// A quiet bird's notification: it only informs (`crate::silence`).
 pub fn silent_body(lang: Lang) -> &'static str {
     match lang {

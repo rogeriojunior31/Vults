@@ -270,6 +270,15 @@ async fn serve_unix(
 }
 
 #[cfg(windows)]
+/// Whether the hook's pipe is still waiting for its name (another program holds it): no agent
+/// event reaches this run meanwhile.
+static ENDPOINT_BUSY: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Whether hook events can't reach this run yet because another program holds the endpoint.
+pub fn endpoint_busy() -> bool {
+    ENDPOINT_BUSY.load(std::sync::atomic::Ordering::Relaxed)
+}
+
 /// An instance of the hook's pipe that only this user (and administrators, SYSTEM) may open.
 #[cfg(windows)]
 fn private_pipe(name: &str, first: bool) -> io::Result<tokio::net::windows::named_pipe::NamedPipeServer> {
@@ -289,8 +298,12 @@ async fn serve_pipe(name: String, incoming: mpsc::Sender<Incoming>, slots: Arc<S
     let mut wait = Duration::from_millis(100);
     let mut server = loop {
         match private_pipe(&name, true) {
-            Ok(server) => break server,
+            Ok(server) => {
+                ENDPOINT_BUSY.store(false, std::sync::atomic::Ordering::Relaxed);
+                break server;
+            }
             Err(_) if !incoming.is_closed() => {
+                ENDPOINT_BUSY.store(true, std::sync::atomic::Ordering::Relaxed);
                 tokio::time::sleep(wait).await;
                 wait = (wait * 2).min(Duration::from_secs(5));
             }

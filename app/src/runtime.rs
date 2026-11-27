@@ -304,6 +304,16 @@ pub fn start(app: AppHandle) {
             Err(err) => tracing::error!("no hook endpoint: {err}"),
         }
     });
+    // Silence from every agent is not a quiet day when the endpoint never opened: said once.
+    let told = app.clone();
+    tauri::async_runtime::spawn(async move {
+        tokio::time::sleep(Duration::from_secs(15)).await;
+        if vults_ipc::endpoint_busy() {
+            tracing::warn!("hook endpoint held by another program: no agent event reaches this run");
+            let (title, body) = vults_core::i18n::hooks_unreachable(crate::settings::lang(&told));
+            crate::notify::plain(&told, title.into(), body.into());
+        }
+    });
     let forward = tx.clone();
     tauri::async_runtime::spawn(async move {
         while let Some(incoming) = hooks_rx.recv().await {
