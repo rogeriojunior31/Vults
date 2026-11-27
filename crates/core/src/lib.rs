@@ -261,6 +261,19 @@ pub struct Ask {
     pub removed: u32,
 }
 
+impl Ask {
+    /// The card shows all that Allow authorizes: a target that is the whole call, or a cut one
+    /// with the whole command or plan below it. A `full` cut short ends in "…" and is not whole.
+    /// A click answers only a whole card; an *Always* rule never answers a cut one.
+    pub fn whole(&self) -> bool {
+        !self.cut
+            || self
+                .full
+                .as_deref()
+                .is_some_and(|f| !f.is_empty() && !f.ends_with('…'))
+    }
+}
+
 /// What a finished edit changed, file by file, for the island's diff card.
 #[derive(Serialize, Clone, Debug, PartialEq, Eq, Default)]
 #[cfg_attr(test, derive(ts_rs::TS))]
@@ -2177,7 +2190,7 @@ fn answer(state: &mut State, intent: Intent, by: &By, now: Instant) -> Vec<Effec
                 |p| {
                     p.request == request
                         && p.questions.is_empty()
-                        && !p.ask.cut
+                        && p.ask.whole()
                         && !(matches!(by, By::Paired { .. }) && p.target.len() > MAX_PHONE_TARGET)
                 },
                 now,

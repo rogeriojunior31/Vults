@@ -30,6 +30,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Fixes
 
+- Allow works on a card for a multi-line command or plan: the click did nothing and the card waited until it went back to the terminal. A card that shows the whole command answers a click; one cut short ("…") still does not, and neither takes an *Always* rule.
 - Full access in Zeca's chat answers on Windows: almost every PowerShell command (anything with a variable, parentheses or brackets) read as destructive, so it always asked. PowerShell is now read for what it runs, inside blocks, subexpressions and assignments, and destructive commands, .NET calls that delete or run code, `& $cmd` and overwriting a file still ask. A command with `2>&1;` no longer reads as overwriting a file, on Linux too.
 - A plan card shows the plan Claude Code asks to start, not just `ExitPlanMode`: its first line in the target and the whole plan below (up to 2,000 characters, marked when longer).
 - A Codex turn reviewed by Codex's own automatic reviewer (`auto_review`, `strict_auto_review`) no longer waits on a card: Codex decides it. Only a turn its rollout proves automatic skips the card.

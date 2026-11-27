@@ -2071,6 +2071,30 @@ fn a_cut_target_gets_no_always() {
         visible(&mut s, cut("r2"), now),
         vec![Effect::AckPermission(rid("r2"))]
     );
+
+    // The card shows the whole command below its cut target: a click answers it (Always never
+    // does, above). A multi-line command or plan was otherwise unanswerable from the island.
+    let effects = visible(&mut s, decide("r2", Decision::Allow), now);
+    assert!(effects.contains(&Effect::RespondPermission {
+        request: rid("r2"),
+        decision: Decision::Allow
+    }));
+    // A whole command longer than the card holds ends in "…": not seen whole, no click.
+    let unseen = agent(
+        "a",
+        AgentEvent::PermissionRequested {
+            request: rid("r3"),
+            tool: "Bash".into(),
+            target: "Bash · echo ok…".into(),
+            ask: Ask {
+                full: Some("echo ok\nmore…".into()),
+                cut: true,
+                ..Ask::default()
+            },
+        },
+    );
+    visible(&mut s, unseen, now);
+    assert!(visible(&mut s, decide("r3", Decision::Allow), now).is_empty());
 }
 
 #[test]
@@ -5388,12 +5412,26 @@ mod properties {
                             } => {
                                 let card = before.get(request);
                                 prop_assert!(card.is_some(), "answered a card that was not waiting");
-                                let card = card.map(|c| (c.ask.cut, c.questions.is_empty()));
-                                // A click (or the rule it saved) answers only a whole permission.
+                                let always = matches!(
+                                    input,
+                                    Input::User(Intent::DecideAlways { .. })
+                                        | Input::Paired {
+                                            intent: Intent::DecideAlways { .. },
+                                            ..
+                                        }
+                                );
+                                // A click answers only a card that shows all it authorizes; the
+                                // rule Always saves, only one whose target is the whole call.
+                                let card = card.map(|c| {
+                                    (
+                                        if always { !c.ask.cut } else { c.ask.whole() },
+                                        c.questions.is_empty(),
+                                    )
+                                });
                                 prop_assert_eq!(
                                     card,
-                                    Some((false, true)),
-                                    "answered a cut card or a question"
+                                    Some((true, true)),
+                                    "answered a card it could not see whole, or a question"
                                 );
                                 if clicked == request {
                                     // Before the hook stops waiting, with the grace to spare.

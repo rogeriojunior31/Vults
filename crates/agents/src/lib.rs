@@ -429,8 +429,13 @@ pub fn ask(tool: &str, input: &Value) -> Ask {
         ("apply_patch", _) | (_, None) => None,
         (_, Some(cmd)) => {
             let cmd = cmd.trim();
-            (cmd.lines().count() > 1 || cmd.chars().count() > TARGET_MAX)
-                .then(|| cmd.chars().take(MAX_FULL).collect())
+            (cmd.lines().count() > 1 || cmd.chars().count() > TARGET_MAX).then(|| {
+                match cmd.char_indices().nth(MAX_FULL) {
+                    // Longer than the card holds: it says so, and a click can't answer it.
+                    Some((end, _)) => format!("{}…", &cmd[..end]),
+                    None => cmd.to_owned(),
+                }
+            })
         }
     };
     let (added, removed) = match tool {
