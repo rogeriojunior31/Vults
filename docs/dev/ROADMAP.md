@@ -35,7 +35,7 @@ Agents page and shorter copy (3).
 - [ ] T1 · New-conversation engine and model in Settings · P1 · S
 - [ ] X3 · Palette over conversations, Settings pages and themes; Settings search · P1 · S-M
 - [ ] X4 · Fallback model when an engine is at its limit (new conversations only) · P1 · S
-- [ ] X10 · Ask before quitting mid-turn; *Continue* on a cut turn · P1 · S
+- [ ] X10b · Save a cut turn's partial reply and offer *Continue* (asking before quitting is done) · P2 · S
 - [ ] U1, U2, U3 · Every plan window, Codex's reset credits, tokens as 1.2M and the pace · P1 · S
 - [ ] X12, X13, X14, X15 · Skills in `/`; pace on quotas; favorite models; Nest hotkeys · P2 · S
 - [ ] X8, X9 · Remove a voice model and space used; logs folder and a copied report · P2 · S

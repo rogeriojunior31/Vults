@@ -441,6 +441,36 @@ pub fn hooks_unreachable(lang: Lang) -> (&'static str, &'static str) {
     }
 }
 
+/// Asked before quitting while a chat turn runs: title, body, the quit button, the stay button.
+pub fn quit_mid_turn(lang: Lang) -> (&'static str, &'static str, &'static str, &'static str) {
+    match lang {
+        Lang::En => (
+            "A chat turn is still running",
+            "Quitting now stops it, and its unfinished reply is lost.",
+            "Quit",
+            "Keep working",
+        ),
+        Lang::PtBr => (
+            "Um turno do chat ainda está rodando",
+            "Sair agora o interrompe, e a resposta pela metade se perde.",
+            "Sair",
+            "Continuar",
+        ),
+        Lang::Es => (
+            "Un turno del chat sigue en marcha",
+            "Salir ahora lo detiene, y su respuesta a medias se pierde.",
+            "Salir",
+            "Seguir",
+        ),
+        Lang::Zh => (
+            "聊天回合仍在运行",
+            "现在退出会中断它，未完成的回复会丢失。",
+            "退出",
+            "继续",
+        ),
+    }
+}
+
 /// A quiet bird's notification: it only informs (`crate::silence`).
 pub fn silent_body(lang: Lang) -> &'static str {
     match lang {

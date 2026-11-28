@@ -22,7 +22,7 @@ fn wanted(app: &AppHandle) -> bool {
     let flock = app
         .try_state::<Flock>()
         .is_some_and(|f| f.0.load(Ordering::Relaxed));
-    crate::settings::keep_awake(app) && (flock || crate::chat::busy(app))
+    crate::settings::keep_awake(app) && (flock || crate::chat::any_busy(app))
 }
 
 /// Watches every few seconds and holds or drops the inhibitor; logind takes it back by itself

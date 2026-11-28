@@ -222,6 +222,9 @@ replies, errors and stops; never a card's answer (the audit log keeps those) and
 are kept, in the same local `vults.sqlite` as the activity history; **Settings → History and budget →
 Clear history** removes them all. A conversation whose folder is gone can't be opened again.
 
+Quitting Vults from the tray while a turn runs, in Zeca's chat or a specialist's, asks first: quitting
+stops the turn and its unfinished reply is lost.
+
 <a id="memory"></a>
 
 ## What Zeca knows

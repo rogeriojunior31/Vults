@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 8684e307ccd7 -->
+<!-- source: cffffea8d29f -->
 
 Os painéis laterais redimensionáveis seguem o ponteiro que iniciou o arraste, ignoram toques adicionais e encerram o arraste quando a janela perde o foco. O cancelamento preserva a largura atual e mantém os rascunhos. Quando o espaço limita um painel, o arraste e o redimensionamento pelo teclado partem da largura visível; reduzir apenas o espaço disponível não sobrescreve a largura salva. Os controles de redimensionar e recolher usam a mesma cor de foco de teclado que o restante do tema selecionado.
 
@@ -238,6 +238,9 @@ nunca uma regra *Always in this chat*, então uma conversa aberta de novo pergun
 perguntaria. As 200 mais recentes ficam guardadas, no mesmo `vults.sqlite` local do histórico de
 atividade; **Settings → History and budget → Clear history** apaga todas. Uma conversa cuja pasta sumiu não pode
 ser aberta de novo.
+
+Sair do Vults pela bandeja enquanto um turno roda, no chat do Zeca ou de um especialista, pergunta antes:
+sair interrompe o turno e a resposta pela metade se perde.
 
 <a id="what-zeca-knows"></a>
 <a id="memory"></a>

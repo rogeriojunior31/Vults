@@ -1706,6 +1706,15 @@ pub fn busy(app: &AppHandle) -> bool {
     app.state::<ChatState>().live.lock().is_ok_and(|l| l.busy)
 }
 
+/// A turn runs in Zeca's chat or in any specialist's: quitting now would cut it.
+pub fn any_busy(app: &AppHandle) -> bool {
+    busy(app)
+        || app.try_state::<SpecialistChatState>().is_some_and(|s| {
+            s.0.lock()
+                .is_ok_and(|r| r.values().any(|c| c.live.lock().is_ok_and(|l| l.busy)))
+        })
+}
+
 /// The saved record of the chat's conversation was removed (Clear history): the next message
 /// saves it anew rather than into a record that is gone.
 pub async fn forget_current(app: &AppHandle) {
