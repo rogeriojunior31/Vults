@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: e64fc2446cb5 -->
+<!-- source: ec5a847d47cc -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, o
 chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -14,7 +14,10 @@ foco), e na ilha, que aparece para ele, enquanto você está em outro lugar.
 Atividade, Conexões e Configurações usam controles neutros, títulos, cards e estados de leitura
 compartilhados. **Settings → General → Theme** escolhe **Dark** (o padrão), o neutro **Light** ou um dos três
 temas SP Night, três vistas de São Paulo à noite (**Noite Paulista**; **Garoa**, o cinza chapado do
-chuvisco; **Pico do Jaraguá**, o escuro da mata), em todas as janelas. Atividade e Conexões usam abas sublinhadas; as cores de status mantêm seus significados. O palco do Flock,
+chuvisco; **Pico do Jaraguá**, o escuro da mata), em todas as janelas. Cada tema é um bloco com uma
+pequena imagem do Vults nas próprias cores (a ilha com o bando no fio, a lista do Nest e um cartão):
+Dark e Light primeiro, depois as três vistas SP Night sob o nome delas. As setas mudam a escolha; ela
+vale na hora, e uma mudança que não pode ser salva volta atrás com um aviso. Atividade e Conexões usam abas sublinhadas; as cores de status mantêm seus significados. O palco do Flock,
 os diffs e os controles do Compact seguem o mesmo tema, incluindo a atualização ao vivo
 das cores dos agentes nas aves e do fio.
 

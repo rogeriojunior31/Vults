@@ -14,6 +14,10 @@ Activity, Connections and Settings share neutral controls, page headings, cards 
 **Settings → General → Theme** chooses **Dark** (the default), the neutral **Light**, or one of
 three SP Night themes, three views of the city at night (**Noite Paulista**; **Garoa**, the flat
 grey of drizzle; **Pico do Jaraguá**, the dark of the forest), across every window. <!-- check-english:allow -->
+Each theme is a tile holding a small picture of Vults in its own colors (the island with its flock on
+the wire, the Nest's list and a card): Dark and Light first, then the three SP Night views under
+their name. Arrow keys move the choice; it applies at once, and a change that can't be saved goes
+back with a note.
 Activity and Connections use underlined view tabs; status colors keep their meaning. The Flock stage,
 diffs and Compact controls follow the same theme, including live changes to the birds'
 agent colors and wire.

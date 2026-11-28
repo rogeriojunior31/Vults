@@ -1298,6 +1298,7 @@ export default {
   "A conversation keeps its model; New starts another.": "Una conversación mantiene su modelo; Nuevo empieza otra.",
   "The model and effort for new conversations in this folder.": "El modelo y el esfuerzo de las nuevas conversaciones en esta carpeta.",
   "Clean": "Limpio",
+  "Could not change the theme.": "No se pudo cambiar el tema.",
   "Signed in and ready.": "Con sesión iniciada y listo.",
   "Installed, not signed in.": "Instalado, sin sesión iniciada.",
   "Not installed on this computer.": "No está instalado en este equipo.",

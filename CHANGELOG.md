@@ -32,6 +32,8 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Changed
 
+- **Settings → General → Theme**: each theme is a tile with a small picture of Vults in its colors (the island's flock on the wire, the Nest's list, a card), Dark and Light first, then SP Night's three views; arrows move the choice.
+
 - **Zeca's chat**: Qwen Code, Copilot CLI and Kimi Code are offered as engines only once turned on in **Settings → Labs**.
 
 - **Zeca's chat, ACP agents**: an agent follows its own permission settings, as in its terminal: what it asks is a card, and what its settings allow it runs, said in the turn's **Activity**, instead of the turn being stopped.

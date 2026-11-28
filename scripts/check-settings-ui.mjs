@@ -356,17 +356,23 @@ assert.equal(field().value, "8.5", "A read from before the save must not restore
 console.log("check-settings-ui: initial budget read failure, stale responses and read/write ordering");
 
 await go("General");
-const themeControl = () => rowNamed("Theme").querySelector("select");
-assert.equal(themeControl().dataset.savedValue, "0");
-themeControl().value = "1"; themeControl().fire("change"); await tick();
-assert.deepEqual(writes.at(-1), ["setTheme", "light"]); assert.equal(themeControl().disabled, true);
-events.onSettings({ volume: 70 }); assert.equal(themeControl().value, "1"); assert.equal(themeControl().disabled, true);
+// The themes are tiles, one radio group: pending, repaint, rollback and retry as any setting.
+const tiles = () => rowNamed("Theme").querySelectorAll(".theme-tile");
+const checked = () => tiles().findIndex(t => t.getAttribute("aria-checked") === "true");
+assert.equal(tiles().length, 5, "every theme has its tile");
+assert.equal(checked(), 0, "Dark, the default, is chosen");
+tiles()[1].fire("click"); await tick();
+assert.deepEqual(writes.at(-1), ["setTheme", "light"]); assert.equal(tiles()[1].getAttribute("aria-disabled"), "true");
+const pendingWrites = writes.length;
+tiles()[2].fire("click"); await tick();
+assert.equal(writes.length, pendingWrites, "a second click waits for the first");
+events.onSettings({ volume: 70 }); assert.equal(checked(), 1); assert.equal(tiles()[1].getAttribute("aria-disabled"), "true");
 pendingSettings.at(-1).reject(new Error("Cannot save theme")); await tick();
-assert.equal(themeControl().value, "0"); assert.equal(themeControl().disabled, false);
-themeControl().value = "1"; themeControl().fire("change"); await tick(); pendingSettings.at(-1).resolve(); await tick();
-assert.equal(themeControl().value, "1");
+assert.equal(checked(), 0); assert.equal(tiles()[0].getAttribute("aria-disabled"), "false");
+tiles()[1].fire("click"); await tick(); pendingSettings.at(-1).resolve(); await tick();
+assert.equal(checked(), 1);
 assert.equal(page().querySelectorAll(".settings-group-title").length, 4);
-console.log("check-settings-ui: theme pending/repaint/rollback/retry and grouped General settings");
+console.log("check-settings-ui: theme tiles pending/repaint/rollback/retry and grouped General settings");
 
 await go("Dictation");
 const musicControl = () => rowNamed("Music while you speak").querySelector("select");

@@ -304,6 +304,10 @@ let openOnHover = false;
 /** The language chosen, or null to follow the system. */
 let language: string | null = null;
 let theme: Theme = DEFAULT_THEME;
+/** Why the last theme change did not hold, until the next one. */
+let themeNote: string | null = null;
+/** A theme being saved: the tiles wait, so two clicks never race. */
+let themeSaving = false;
 /** SP Night's flavors keep their names in every language. */
 const THEMES: [Theme, string][] = [
   ["dark", tk("Dark")],
@@ -1091,6 +1095,81 @@ function updatesSection(): HTMLElement[] {
   ];
 }
 
+/** A small picture of Vults in `value`'s own colors: the island with its flock on the wire, the
+ *  Nest's list with its chosen item, a card. Its colors are the theme's tokens, scoped to it. */
+function themePreview(value: Theme): HTMLElement {
+  const bird = (agent: string) => el("span", { class: `tp-bird tp-${agent}` });
+  const preview = el("div", { class: "tp" },
+    el("div", { class: "tp-island" }, el("span", { class: "tp-wire" }), bird("claude"), bird("codex"), bird("zeca")),
+    el("div", { class: "tp-nest" },
+      el("div", { class: "tp-side" }, el("span", { class: "tp-item on" }), el("span", { class: "tp-item" }), el("span", { class: "tp-item" })),
+      el("div", { class: "tp-card" }, el("span", { class: "tp-title" }), el("span", { class: "tp-line" }), el("span", { class: "tp-line short" }),
+        el("span", { class: "tp-chip" }))));
+  preview.dataset.theme = value;
+  preview.setAttribute("aria-hidden", "true");
+  return preview;
+}
+
+/** The themes as tiles, each a picture of Vults in its colors; one radio group, arrows move. */
+function themeTiles(): HTMLElement {
+  const group = el("div", { class: "theme-tiles" });
+  group.setAttribute("role", "radiogroup");
+  group.setAttribute("aria-label", t("Theme"));
+  group.setAttribute("aria-busy", String(themeSaving));
+  const tiles = THEMES.map(([value, label]) => {
+    // SP Night's three keep the family as a tag, so each flavor's own name fits its tile.
+    const night = value.startsWith("sp-night") ? label.replace(/^SP Night: /, "") : null;
+    const name = night ?? t(label);
+    const on = value === theme;
+    const tile = el("button", { class: `theme-tile${on ? " on" : ""}`, onclick: () => choose(value) },
+      themePreview(value),
+      el("span", { class: "theme-name" },
+        el("span", { text: name }),
+        value === DEFAULT_THEME ? el("span", { class: "theme-tag", text: t("Default") }) : null));
+    tile.setAttribute("aria-label", night ? label : name);
+    tile.setAttribute("role", "radio");
+    tile.setAttribute("aria-checked", String(on));
+    tile.setAttribute("aria-disabled", String(themeSaving));
+    tile.tabIndex = on ? 0 : -1;
+    tile.dataset.setting = `theme:${value}`;
+    return tile;
+  });
+  async function choose(value: Theme): Promise<void> {
+    if (value === theme || themeSaving) return;
+    const before = theme;
+    theme = value;
+    themeSaving = true;
+    themeNote = null;
+    render();
+    document.querySelector?.<HTMLElement>(`[data-setting="theme:${value}"]`)?.focus();
+    try {
+      await Bridge.setTheme(value);
+    } catch (e) {
+      theme = before;
+      themeNote = failure(t("Could not change the theme."), e);
+    } finally {
+      themeSaving = false;
+      render();
+    }
+  }
+  group.addEventListener("keydown", event => {
+    const keys = ["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp", "Home", "End"];
+    if (!keys.includes(event.key)) return;
+    event.preventDefault();
+    const at = THEMES.findIndex(([value]) => value === theme);
+    const n = THEMES.length;
+    const next = event.key === "Home" ? 0 : event.key === "End" ? n - 1
+      : (at + (event.key === "ArrowRight" || event.key === "ArrowDown" ? 1 : -1) + n) % n;
+    void choose(THEMES[next][0]);
+  });
+  // Dark and Light first; SP Night's three views under their family's name.
+  const family = el("span", { class: "theme-family", text: "SP Night" });
+  family.setAttribute("aria-hidden", "true");
+  const first = THEMES.findIndex(([value]) => value.startsWith("sp-night"));
+  group.append(...tiles.slice(0, first), family, ...tiles.slice(first));
+  return group;
+}
+
 function generalPage(): HTMLElement[] {
   return [
     el("h1", { text: t("General") }),
@@ -1100,8 +1179,11 @@ function generalPage(): HTMLElement[] {
         dropdown(ISLAND_WIDTHS.map(value => ({ value, label: value ? `${value} px` : t("Default") })), restoreWidth(), async value => {
           if (!saveWidth(value)) throw new Error(t("Could not save the width. Choose it again to retry."));
         })),
-      row(t("Theme"), t("Dark, a neutral light theme, or SP Night: three views of the city at night. Every window follows it."),
-        dropdown(THEMES.map(([value, label]) => ({ value, label: t(label) })), theme, async value => { await Bridge.setTheme(value); theme = value; })),
+      el("div", { class: "row theme-row" },
+        el("div", { class: "row-title", text: t("Theme") }),
+        el("div", { class: "row-about", text: t("Dark, a neutral light theme, or SP Night: three views of the city at night. Every window follows it.") }),
+        themeTiles(),
+        themeNote ? el("p", { class: "note error", text: themeNote }) : null),
       row(
         t("Language"),
         t("The language of the island, these settings, the tray and the notifications. System follows your desktop's."),
