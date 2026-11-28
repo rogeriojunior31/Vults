@@ -229,6 +229,9 @@ pub enum Event {
         id: String,
         output: String,
     },
+    /// The agent's plan as it stands: each step's words and its status (`pending`, `in_progress`
+    /// or `completed`), the whole list each time.
+    Plan(Vec<(String, String)>),
     /// A tool the agent ran without asking, as its own settings allow: told, never a stop.
     Unasked {
         tool: String,

@@ -1299,6 +1299,8 @@ export default {
   "A conversation keeps its model; New starts another.": "Una conversación mantiene su modelo; Nuevo empieza otra.",
   "The model and effort for new conversations in this folder.": "El modelo y el esfuerzo de las nuevas conversaciones en esta carpeta.",
   "Clean": "Limpio",
+  "Plan": "Plan",
+  "Plan {done} of {total}": "Plan {done} de {total}",
   "Ran by the agent's own settings, without asking: {target}": "Se ejecutó por la configuración del propio agente, sin preguntar: {target}",
   "Files": "Archivos",
   "Side panel": "Panel lateral",

@@ -245,6 +245,8 @@ With the memory on, what Zeca remembers and recalls joins as well: see [Zeca's m
 - Both Quick and Room show headings, lists, quotes, code and tables. Code and wide tables have
   their own keyboard-focusable scrolling area. Links stay text, with their address beside the label;
   a bare address shows as one. `~~text~~` strikes through, and `- [ ]` / `- [x]` lists get their boxes.
+  Code is colored by its fence's language (comments, strings, numbers, keywords; a `diff` block by
+  its lines), and a block past 20,000 characters stays plain.
 - A turn that fails says why, with **Try again**: it sends the same words and files once more.
   A long task runs as long as it keeps reporting; only a turn silent for 15 minutes (no words, no
   tool, no card) ends as *stopped responding*.
@@ -301,6 +303,9 @@ is reopened. Open it for the readable
 thinking supplied by the engine and the tools it reported. Each tool exposes its arguments or
 command, its reported completion or failure, and, when the engine reports it (Claude Code's tool
 results, Codex's command output), the last 4,000 characters of what it printed, secrets hidden.
+When the agent keeps a plan (Claude Code's todo list, Codex's plan, an ACP agent's plan), it shows
+as a checklist at the top of the turn's **Activity**, with *Plan 2 of 5* on its closed line, and the
+line under the conversation says the step it is on. An ACP agent's thinking shows there too.
 An edit shows its change as colored lines, with the lines it added and removed on its row
 (Claude Code's Edit, MultiEdit and Write; Codex's file changes). Missing results remain **No result reported**;
 Vults does not invent thought text or treat elapsed turn time as measured thinking time. Codex

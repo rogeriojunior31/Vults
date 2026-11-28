@@ -177,6 +177,22 @@ panel.reference("src/my file.rs");
 assert.equal(input.value, 'look at @"src/my file.rs" ', "a path goes in as @ puts it");
 input.value = ""; input.listeners.input({});
 
+// Code is colored: keywords, strings, comments; plain past its limit.
+panel.receive({ kind: "text", text: "\n\n```rust\nfn main() { let s = \"hi\"; } // done\n```" });
+panel.paint();
+assert.ok(byClass("tok-keyword").some(n => n.textContent === "fn"), "a keyword is colored");
+assert.ok(byClass("tok-string").some(n => n.textContent === '"hi"'), "a string is colored");
+assert.ok(byClass("tok-comment").some(n => n.textContent === "// done"), "a comment is colored");
+
+// The agent's plan: a checklist in the activity, its step on the status line, its progress on the closed line.
+await send("Plan it");
+panel.receive({ kind: "activity", event: { type: "plan", steps: [{ text: "Read the code", status: "completed" }, { text: "Fix the bug", status: "in_progress" }, { text: "Run the tests", status: "pending" }] } });
+panel.paint();
+assert.equal(byClass("plan-step").length >= 3, true);
+assert.ok(panel.element.textContent.includes("Fix the bug…"), "the status line says the step it is on");
+assert.ok(panel.element.textContent.includes("Plan 1 of 3"));
+panel.receive({ kind: "done" }); await tick();
+
 // The context meter: hidden until the engine says, a share once it gives the window too.
 const meter = byClass("context-meter")[0];
 assert.ok(meter.hidden, "no meter before the engine says");

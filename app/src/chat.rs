@@ -653,7 +653,8 @@ enum Sync {
     },
     Opened {
         from: String,
-        conversation: Opened,
+        // Boxed: a conversation with its activity outweighs every other sync.
+        conversation: Box<Opened>,
     },
     Answered {
         from: String,
@@ -1823,7 +1824,7 @@ pub async fn chat_switch_engine(
         &app,
         Sync::Opened {
             from: window.label().to_string(),
-            conversation: conversation.clone(),
+            conversation: Box::new(conversation.clone()),
         },
     );
     Ok(conversation)
@@ -2826,7 +2827,7 @@ pub async fn specialist_chat_open(
         &profile,
         Sync::Opened {
             from: window.label().into(),
-            conversation: conversation.clone(),
+            conversation: Box::new(conversation.clone()),
         },
     );
     Ok(conversation)
@@ -2998,7 +2999,7 @@ pub async fn chat_open(
         &app,
         Sync::Opened {
             from,
-            conversation: conversation.clone(),
+            conversation: Box::new(conversation.clone()),
         },
     );
     Ok(conversation)

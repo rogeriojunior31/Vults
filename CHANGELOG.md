@@ -34,6 +34,9 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Added
 
+- **Zeca's chat**: the agent's plan (Claude Code's todo list, Codex's plan, an ACP agent's plan) shows as a checklist in the turn's **Activity**, its step on the status line; ACP agents' thinking shows too.
+- **Zeca's chat**: code blocks are colored by their language.
+
 - **Zeca's chat**: Antigravity runs the chat (`agy acp`, its telemetry off, asking before edits and commands), with **Sign in** for it and for OpenCode; ACP agents' edits show their diffs, and their context fills the meter.
 
 - **Zeca's chat**: an edit in a turn's **Activity** shows its change as colored lines, with the lines added and removed on its row (Claude Code and Codex).

@@ -1299,6 +1299,8 @@ export default {
   "A conversation keeps its model; New starts another.": "一段对话会保持它的模型；新建可开始另一段。",
   "The model and effort for new conversations in this folder.": "此文件夹中新对话的模型和力度。",
   "Clean": "干净",
+  "Plan": "计划",
+  "Plan {done} of {total}": "计划 {done}/{total}",
   "Ran by the agent's own settings, without asking: {target}": "按智能体自身设置运行，未经询问：{target}",
   "Files": "文件",
   "Side panel": "侧边栏",

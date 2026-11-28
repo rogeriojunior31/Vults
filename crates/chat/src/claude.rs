@@ -233,6 +233,23 @@ pub(crate) fn parse(raw: &str) -> Line {
                         // An edit's change, right after it starts: what it does to the file.
                         let diff =
                             change(tool, &b["input"]).map(|diff| Event::ToolDiff { id: id.clone(), diff });
+                        // Its todo list is the plan, shown as one.
+                        let plan = (tool == "TodoWrite")
+                            .then(|| b["input"]["todos"].as_array())
+                            .flatten()
+                            .map(|todos| {
+                                Event::Plan(
+                                    todos
+                                        .iter()
+                                        .filter_map(|t| {
+                                            Some((
+                                                t["content"].as_str()?.to_string(),
+                                                t["status"].as_str().unwrap_or("pending").to_string(),
+                                            ))
+                                        })
+                                        .collect(),
+                                )
+                            });
                         std::iter::once(Event::ToolStart {
                             id,
                             tool: tool.to_string(),
@@ -240,6 +257,7 @@ pub(crate) fn parse(raw: &str) -> Line {
                             detail,
                         })
                         .chain(diff)
+                        .chain(plan)
                         .collect()
                     }
                     Some("tool_result") => vec![Event::ToolEnd {
@@ -635,6 +653,18 @@ mod tests {
                 window: Some(200000)
             })
         );
+    }
+
+    #[test]
+    fn a_todo_list_is_the_plan() {
+        let line = r#"{"type":"assistant","message":{"content":[{"type":"tool_use","id":"t3","name":"TodoWrite","input":{"todos":[{"content":"Read the code","status":"completed"},{"content":"Fix it","status":"in_progress"}]}}]}}"#;
+        let Line::Tools(events) = parse(line) else {
+            panic!("tools")
+        };
+        assert!(events.contains(&Event::Plan(vec![
+            ("Read the code".into(), "completed".into()),
+            ("Fix it".into(), "in_progress".into())
+        ])));
     }
 
     #[test]

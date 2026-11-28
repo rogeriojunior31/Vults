@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: daa4df50a32b -->
+<!-- source: 95226b3cd05d -->
 
 Os painéis laterais redimensionáveis seguem o ponteiro que iniciou o arraste, ignoram toques adicionais e encerram o arraste quando a janela perde o foco. O cancelamento preserva a largura atual e mantém os rascunhos. Quando o espaço limita um painel, o arraste e o redimensionamento pelo teclado partem da largura visível; reduzir apenas o espaço disponível não sobrescreve a largura salva. Os controles de redimensionar e recolher usam a mesma cor de foco de teclado que o restante do tema selecionado.
 
@@ -269,7 +269,9 @@ Com a memória ligada, o que o Zeca lembra e o que ele recupera também entram: 
 - Tanto Quick quanto Room mostram títulos, listas, citações, código e tabelas. Código e tabelas
   largas têm uma área de rolagem própria que aceita foco pelo teclado. Links continuam como
   texto, com o endereço ao lado do rótulo; um endereço solto aparece como um. `~~texto~~` risca o
-  texto, e listas `- [ ]` / `- [x]` ganham as suas caixas.
+  texto, e listas `- [ ]` / `- [x]` ganham as suas caixas. O código é colorido pela linguagem do
+  bloco (comentários, strings, números, palavras-chave; um bloco `diff` pelas suas linhas), e um bloco
+  com mais de 20.000 caracteres fica sem cor.
 - Um turno que falha diz por quê, com **Try again**: ele envia as mesmas palavras e arquivos mais uma
   vez. Uma tarefa longa roda enquanto continuar dando sinal; só um turno calado por 15 minutos (sem
   palavras, ferramenta ou card) termina como *stopped responding*.
@@ -333,7 +335,10 @@ reabrir a conversa. Abra para ver o pensamento
 legível fornecido pelo motor e as ferramentas que ele informou. Cada ferramenta mostra seus
 argumentos ou comando, a conclusão ou falha informada e, quando o motor informa (os resultados de
 ferramenta do Claude Code, a saída de comando do Codex), os últimos 4.000 caracteres do que ela
-imprimiu, com segredos ocultados. Uma edição mostra a sua mudança em linhas coloridas, com as
+imprimiu, com segredos ocultados. Quando o agente mantém um plano (a lista de tarefas do Claude Code, o plano do Codex, o plano de um
+agente ACP), ele aparece como checklist no topo da **Atividade** do turno, com *Plano 2 de 5* na linha
+fechada, e a linha embaixo da conversa diz o passo em que ele está. O pensamento de um agente ACP
+aparece ali também. Uma edição mostra a sua mudança em linhas coloridas, com as
 linhas que adicionou e removeu na sua linha (Edit, MultiEdit e Write do Claude Code; as mudanças de
 arquivo do Codex). Resultados ausentes ficam como **Nenhum
 resultado informado**; o Vults não inventa pensamento nem trata a duração do turno como tempo

@@ -89,6 +89,10 @@ const CANCEL_GRACE: Duration = Duration::from_secs(10);
 /// What a message from the agent means.
 #[derive(Debug, PartialEq)]
 enum Msg {
+    /// Its thinking, as it streams (`agent_thought_chunk`): for the activity only.
+    Thought(String),
+    /// Its plan, the whole list each time (`plan`).
+    Plan(Vec<(String, String)>),
     Response {
         id: u64,
         result: Value,
@@ -183,6 +187,23 @@ fn classify(raw: &str) -> Msg {
 fn update(u: &Value) -> Msg {
     let text = |k: &str| u[k].as_str().unwrap_or_default().to_string();
     match u["sessionUpdate"].as_str() {
+        Some("plan") => Msg::Plan(
+            u["entries"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(|e| {
+                    Some((
+                        e["content"].as_str()?.to_string(),
+                        e["status"].as_str().unwrap_or("pending").to_string(),
+                    ))
+                })
+                .collect(),
+        ),
+        Some("agent_thought_chunk") => match u["content"]["text"].as_str() {
+            Some(t) if !t.is_empty() => Msg::Thought(t.to_string()),
+            _ => Msg::Other,
+        },
         Some("agent_message_chunk") => match u["content"]["text"].as_str() {
             Some(t) if !t.is_empty() => Msg::Text(t.to_string()),
             _ => Msg::Other,
@@ -965,6 +986,8 @@ impl AcpDriver {
                 }
                 Msg::Request { id: req } => conn.refuse(&req).await?,
                 Msg::Text(t) => sink.event(Event::Text(t)).await,
+                Msg::Thought(t) => sink.event(Event::Reasoning(t)).await,
+                Msg::Plan(steps) => sink.event(Event::Plan(steps)).await,
                 Msg::Tool {
                     id,
                     tool,
@@ -1144,6 +1167,12 @@ mod tests {
         assert!(wants_sign_in("Authentication required"));
         assert!(wants_sign_in("please log in with Google"));
         assert!(!wants_sign_in("session not found"));
+    }
+
+    #[test]
+    fn its_thinking_goes_to_the_activity() {
+        let thought = r#"{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"s","update":{"sessionUpdate":"agent_thought_chunk","content":{"type":"text","text":"Reading the file first."}}}}"#;
+        assert_eq!(classify(thought), Msg::Thought("Reading the file first.".into()));
     }
 
     #[test]

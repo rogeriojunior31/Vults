@@ -857,6 +857,14 @@ impl Sink for TurnSink<'_> {
                 Event::Usage(usage) => Delta::Usage(usage),
                 Event::Context { used, window } => Delta::Context { used, window },
                 // The agent's own settings ran it: the activity says so, on the agent's word.
+                Event::Plan(steps) => Delta::Activity {
+                    event: activity::Event::Plan {
+                        steps: steps
+                            .into_iter()
+                            .map(|(text, status)| activity::Step { text, status })
+                            .collect(),
+                    },
+                },
                 Event::Unasked { tool, target } => Delta::Activity {
                     event: activity::Event::Decision {
                         tool,

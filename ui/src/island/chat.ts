@@ -438,7 +438,7 @@ export class ChatPanel {
   private selectedAsk: string | null = null;
   private approvalQueueKey = "";
   private askNodes = new WeakMap<Ask, HTMLElement>();
-  private readonly activityNodes = new WeakMap<ActivityMessage, { node: HTMLDetailsElement; summary: HTMLElement; reasoning: HTMLElement; tools: HTMLElement; decisions: HTMLElement; warning: HTMLElement; toolNodes: Map<string, ToolNode> }>();
+  private readonly activityNodes = new WeakMap<ActivityMessage, { node: HTMLDetailsElement; summary: HTMLElement; reasoning: HTMLElement; tools: HTMLElement; decisions: HTMLElement; warning: HTMLElement; plan: HTMLElement; toolNodes: Map<string, ToolNode> }>();
   /** Each message's node, kept while what it shows stays the same: a repaint rebuilds none of them. */
   private rendered = new WeakMap<Message, { key: string; node: HTMLElement }>();
   /** How full the model's context is, as its engine last said; the meter beside Send. */
@@ -2530,17 +2530,30 @@ export class ChatPanel {
       const tools = el("div", { class: "activity-tools" });
       const decisions = el("div", { class: "activity-decisions" });
       const warning = el("p", { class: "activity-warning" });
+      const plan = el("ol", { class: "activity-plan" });
+      plan.setAttribute("aria-label", t("Plan"));
       const node = el("details", { class: "chat-activity" }, summary,
-        el("div", { class: "activity-body" }, el("h4", { text: t("Thinking details") }), reasoning, tools, decisions, warning));
+        el("div", { class: "activity-body" }, plan, el("h4", { text: t("Thinking details") }), reasoning, tools, decisions, warning));
       node.addEventListener("toggle", () => this.changed());
-      kept = { node, summary, reasoning, tools, decisions, warning, toolNodes: new Map() };
+      kept = { node, summary, reasoning, tools, decisions, warning, plan, toolNodes: new Map() };
       this.activityNodes.set(m, kept);
     }
     const { data } = m;
     kept.summary.replaceChildren(
       el("span", { text: data.tools.length === 1 ? t("Activity · 1 tool") : data.tools.length ? t("Activity · {n} tools", { n: data.tools.length }) : t("Activity") }),
+      // How far its plan is, on the closed line too.
+      ...(data.plan?.length ? [el("span", { class: "activity-took", text: t("Plan {done} of {total}", { done: data.plan.filter(s => s.status === "completed").length, total: data.plan.length }) })] : []),
       ...(m.took !== undefined ? [el("span", { class: "activity-took", text: duration(m.took) })] : []),
     );
+    const steps = data.plan ?? [];
+    kept.plan.hidden = !steps.length;
+    const planKey = JSON.stringify(steps);
+    if (kept.plan.dataset.key !== planKey) {
+      kept.plan.dataset.key = planKey;
+      kept.plan.replaceChildren(...steps.map(s => el("li", { class: `plan-step ${s.status}` },
+        el("span", { class: "plan-mark", text: s.status === "completed" ? "☑" : s.status === "in_progress" ? "◐" : "☐" }),
+        el("span", { text: s.text }))));
+    }
     const reasoning = data.reasoning.trim() ? data.reasoning : t("This engine has not provided thinking details.");
     if (kept.reasoning.textContent !== reasoning) kept.reasoning.textContent = reasoning;
     const toolNodes = data.tools.map(tool => {
@@ -3553,7 +3566,8 @@ export class ChatPanel {
     }
     const [, words, time] = Array.from(this.thinking.children) as HTMLElement[];
     const running = this.runningTool();
-    const said = running ? doing(running.tool, running.detail) : this.searching ? t("Using tools…") : t("Working…");
+    const step = running ? undefined : this.currentStep();
+    const said = running ? doing(running.tool, running.detail) : step ? `${step}…` : this.searching ? t("Using tools…") : t("Working…");
     if (words.textContent !== said) words.textContent = said;
     const tick = () => {
       const ms = Clock.now() - this.turnSince;
@@ -3636,6 +3650,17 @@ export class ChatPanel {
       this.following = false;
       this.nodes[hits[this.findAt]]?.scrollIntoView?.({ block: "center" });
     }
+  }
+
+  /** The step the turn's plan is on, the latest plan's. */
+  private currentStep(): string | undefined {
+    for (let i = this.messages.length - 1; i >= 0; i--) {
+      const m = this.messages[i];
+      if (m.who === "you") return undefined;
+      const step = m.who === "activity" ? m.data.plan?.find(s => s.status === "in_progress") : undefined;
+      if (m.who === "activity" && m.data.plan?.length) return step ? brief(step.text, 72) : undefined;
+    }
+    return undefined;
   }
 
   /** The tool the turn is running now: the latest one started and not ended. */

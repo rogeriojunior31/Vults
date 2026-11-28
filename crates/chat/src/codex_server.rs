@@ -88,6 +88,8 @@ pub(crate) enum Msg {
     },
     Error(String),
     Other,
+    /// The turn's plan as it stands (`turn/plan/updated`).
+    Plan(Vec<(String, String)>),
     /// The thread's tokens so far, and those of its last model request (`thread/tokenUsage/updated`:
     /// one per request, so several in a turn that runs tools).
     Usage {
@@ -193,6 +195,19 @@ pub(crate) fn classify(raw: &str) -> Msg {
                 }),
             }
         }
+        (None, Some("turn/plan/updated")) => Msg::Plan(
+            v["params"]["plan"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(|s| {
+                    Some((
+                        s["step"].as_str()?.to_string(),
+                        s["status"].as_str().unwrap_or("pending").to_string(),
+                    ))
+                })
+                .collect(),
+        ),
         (None, Some("thread/tokenUsage/updated")) => {
             let usage = |v: &Value| {
                 let n = |k: &str| v[k].as_u64().unwrap_or(0);
@@ -590,6 +605,7 @@ impl AppServer {
                     }
                     sink.event(Event::ToolEnd { id, ok }).await
                 }
+                Msg::Plan(steps) => sink.event(Event::Plan(steps)).await,
                 Msg::Usage { total, last, window } => {
                     // The last request's input is what the context holds now.
                     if last.input > 0 || window.is_some() {
@@ -834,6 +850,16 @@ fn config_overrides(spec: &Spec) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_plan_update_is_the_plan() {
+        assert_eq!(
+            classify(
+                r#"{"method":"turn/plan/updated","params":{"plan":[{"step":"Write tests","status":"inProgress"}]}}"#
+            ),
+            Msg::Plan(vec![("Write tests".into(), "inProgress".into())])
+        );
+    }
 
     #[test]
     fn a_file_change_diff_drops_its_headers_and_marks_a_new_file() {
