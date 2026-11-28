@@ -294,8 +294,12 @@ async fn serve_unix(
 static ENDPOINT_BUSY: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
 /// Whether hook events can't reach this run yet because another program holds the endpoint.
+/// Only Windows' pipe can be held by another program; a Unix socket is this user's alone.
 pub fn endpoint_busy() -> bool {
-    ENDPOINT_BUSY.load(std::sync::atomic::Ordering::Relaxed)
+    #[cfg(windows)]
+    return ENDPOINT_BUSY.load(std::sync::atomic::Ordering::Relaxed);
+    #[cfg(not(windows))]
+    false
 }
 
 /// An instance of the hook's pipe that only this user (and administrators, SYSTEM) may open.
@@ -309,6 +313,7 @@ fn private_pipe(name: &str, first: bool) -> io::Result<tokio::net::windows::name
     })
 }
 
+#[cfg(windows)]
 async fn serve_pipe(name: String, incoming: mpsc::Sender<Incoming>, slots: Arc<Semaphore>) -> io::Result<()> {
     use std::time::Duration;
     // first_pipe_instance: refuse to serve on a name somebody else already owns. That may be this
