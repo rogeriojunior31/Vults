@@ -34,6 +34,8 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Changed
 
+- **Settings**: 191 of its longer sentences rewritten shorter, in all four languages, keeping what leaves the computer, what costs and what can't be undone.
+
 - **Settings**: voice models carry tags (*Recommended* for the language spoken, *Fastest*, *Balanced*, *Most accurate*, *Best with a GPU*) and say *Verifying…* when a download is checked; Projects show each project's choices on one line; Phone says first that its app is not out yet; Gitea's *Save connection* is the one primary step; About names its version in its title and lists its files under a title.
 
 - **Settings**: a long description shows its first sentence, with the rest under **More**; each agent's card shows its state and the step that is due first, with how it works folded and **Remove** last and quiet; History and budget, Approvals and Labs read in titled sections.

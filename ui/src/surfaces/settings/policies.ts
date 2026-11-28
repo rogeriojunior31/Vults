@@ -22,7 +22,7 @@ const ERRORS: Record<PolicyError["kind"], string> = {
   twice: tk("Line {line}: project and agents come once each."),
   "unknown-agent": tk("Line {line}: the agents are claude, codex, opencode, qwen and copilot."),
   empty: tk("Line {line}: a policy needs at least one allow, deny or ask line."),
-  "never-allowed": tk("Line {line}: a shell is allowed by its commands, and an MCP tool never; deny or ask them instead."),
+  "never-allowed": tk("Line {line}: allow a shell by its commands; an MCP tool can only be denied or asked."),
 };
 
 function template(): string {
@@ -208,7 +208,7 @@ export function policiesSection(render: () => void, titled = true): HTMLElement[
     el("p", {
       class: "lede",
       text: t(
-        "A policy answers cards for you, in a folder or everywhere: what to allow, deny or always ask. You write it, see it as a diff and accept it with a click. A destructive action always asks; when a policy both allows and denies something, deny wins; an allow reaches only the session's folder; and every answer goes to the audit log.",
+        "A policy answers cards for you: what to allow, deny or always ask. Destructive actions always ask, deny beats allow, and every answer is logged.",
       ),
     }),
     message

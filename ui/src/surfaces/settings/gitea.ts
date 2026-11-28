@@ -61,8 +61,8 @@ export function createGitea(native: Native) {
   }
   const form = el("div", { class: "gitea-connection" },
     row(t("Gitea base URL"), t("Use HTTPS, including the port and subfolder when needed. Do not append /api/v1."), url),
-    row(t("Gitea access token"), t("Stored only in the OS keyring. Leave blank to keep the saved token for the same URL. Changing the URL requires a token."), token),
-    el("p", { class: "note", text: t("Turn off Gitea before editing. Use read:user, read:issue and read:repository; repositories with Actions also need read:actions. Saving does not enable the connector.") }),
+    row(t("Gitea access token"), t("Stored only in the OS keyring. Leave blank to keep the saved one; a new URL needs a new token."), token),
+    el("p", { class: "note", text: t("Turn off Gitea to edit. Scopes: read:user, read:issue, read:repository, plus read:actions for Actions. Saving doesn't turn it on.") }),
     el("div", { class: "head-right" }, save, clear, cancel, retry), status);
   form.addEventListener("keydown", (e) => { if (e.key === "Escape" && removing) { e.stopPropagation(); cancel.click(); } });
   let language = locale();
@@ -74,8 +74,8 @@ export function createGitea(native: Native) {
     rows[0].querySelector<HTMLElement>(".row-title")!.textContent = t("Gitea base URL");
     rows[0].querySelector<HTMLElement>(".row-about")!.textContent = t("Use HTTPS, including the port and subfolder when needed. Do not append /api/v1.");
     rows[1].querySelector<HTMLElement>(".row-title")!.textContent = t("Gitea access token");
-    rows[1].querySelector<HTMLElement>(".row-about")!.textContent = t("Stored only in the OS keyring. Leave blank to keep the saved token for the same URL. Changing the URL requires a token.");
-    form.querySelector<HTMLElement>("p.note")!.textContent = t("Turn off Gitea before editing. Use read:user, read:issue and read:repository; repositories with Actions also need read:actions. Saving does not enable the connector.");
+    rows[1].querySelector<HTMLElement>(".row-about")!.textContent = t("Stored only in the OS keyring. Leave blank to keep the saved one; a new URL needs a new token.");
+    form.querySelector<HTMLElement>("p.note")!.textContent = t("Turn off Gitea to edit. Scopes: read:user, read:issue, read:repository, plus read:actions for Actions. Saving doesn't turn it on.");
   }
   return {
     context(onPage: boolean, on: boolean) {

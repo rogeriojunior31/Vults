@@ -68,8 +68,8 @@ export function createWindowsPlayerAudio(native: Native, repaint: () => void) {
       });
       const status = el("p", { class: "hint", text: busy ? t("Saving…") : message }); status.setAttribute("role", "status");
       const section = el("section", { class: "card rows" },
-        row(t("Player audio app"), t("Temporarily link the selected player to an app in the Windows mixer. Applies to all audio in that app group, including browser tabs. Refresh clears the link. Choose again after the app or output changes."), refresh),
-        row(t("Audio app"), t("Enable voice commands, Media voice commands and Now playing, then refresh while media is playing."), select),
+        row(t("Player audio app"), t("Link the player to an app in the Windows mixer. Affects all its audio, browser tabs included. Refresh clears it."), refresh),
+        row(t("Audio app"), t("Turn on voice commands, Media voice commands and Now playing, then refresh while media plays."), select),
         status,
       );
       section.dataset.setting = "windows-player-audio";

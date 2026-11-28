@@ -13,7 +13,7 @@ export function accountSentence(d: GithubDiagnosis): string {
     case "ready": return t("Signed in as {login} on {host}.", { login: d.login ?? "?", host: d.host ?? "github.com" });
     case "noCli": return t("The GitHub CLI (gh) is not installed. Install it, then run gh auth login in a terminal.");
     case "signedOut": return t("gh is not signed in. Run gh auth login in a terminal.");
-    case "rejected": return t("GitHub refused the saved login: it expired or was revoked. Run gh auth login again.");
+    case "rejected": return t("Your GitHub login expired or was revoked. Run gh auth login again.");
     case "rateLimited": return t("GitHub's rate limit is spent for now. Try again in a few minutes.");
     case "sso": return t("An organization requires single sign-on for this login. Authorize it on GitHub, then check again.");
     case "forbidden": return t("GitHub refused this login's account read.");
@@ -29,7 +29,7 @@ export function repositorySentence(r: NonNullable<GithubDiagnosis["repository"]>
     case "ready":
       if (r.archived) return t("{name} is archived: you can read it, and nobody can push to it.", { name });
       return r.push ? t("You can read and push to {name}.", { name }) : t("You can read {name}, but not push to it.", { name });
-    case "notFound": return t("{name} was not found, or it is private and this login cannot see it.", { name });
+    case "notFound": return t("{name} was not found, or this login can't see it.", { name });
     case "sso": return t("An organization requires single sign-on for {name}. Authorize this login for it on GitHub.", { name });
     case "forbidden": return t("This login may not read {name}.", { name });
     case "rateLimited": return t("GitHub's rate limit is spent for now. Try again in a few minutes.");
@@ -92,7 +92,7 @@ export function createGithubCheck(native: Native, lastAccount: () => string | nu
     element.replaceChildren(
       row(
         t("Check access"),
-        t("Asks gh which account it uses and, if you name one, what it may do in a repository. Two reads at most, on your click, even with the connector off."),
+        t("Asks gh which account it uses and what it may do in a repository you name. At most two reads, on your click, even with the connector off."),
         el("div", { class: "actions" }, repo, check),
       ),
       result,

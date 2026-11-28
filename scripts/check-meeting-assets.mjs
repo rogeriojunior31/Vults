@@ -52,7 +52,7 @@ checkbox().checked = true; checkbox().listeners.change(); view.element.open = fa
 assert.equal(checkbox().checked, false); assert.ok(stops.includes("new"));
 view.element.open = true; view.element.listeners.toggle(); statuses[3].resolve(snapshot("downloading")); await tick();
 await poll(); statuses[4].reject(Error("private signed URL")); await tick();
-assert.ok(view.element.textContent.includes("Could not update installation status"));
+assert.ok(view.element.textContent.includes("Could not update the status. Review again to reconnect; an installation may still be running."));
 assert.ok(!view.element.textContent.includes("private signed URL"));
 assert.equal(checkbox().checked, false);
 await poll(); statuses[5].resolve(snapshot("installed")); await tick();

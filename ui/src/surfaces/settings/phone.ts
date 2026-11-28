@@ -65,14 +65,14 @@ export function phonePage(): HTMLElement[] {
     el("h1", { text: t("Phone") }),
     el("p", {
       class: "lede",
-      text: t("Answer cards from your phone while you are away from the desk. The phone only decides; this computer does what you chose. Approving needs your fingerprint or face on the phone; denying does not."),
+      text: t("Answer cards from your phone when away. Approving needs your fingerprint or face; denying does not."),
     }),
   ];
   if (!phone) {
     const state = el(
       "section",
       { class: "card read-state" },
-      el("p", { class: phoneFailed ? "note error" : "note", text: phoneFailed ? t("Could not read the phone settings. Whether a phone can answer cards is unknown until this is read.") : t("Reading the phone settings…") }),
+      el("p", { class: phoneFailed ? "note error" : "note", text: phoneFailed ? t("Could not read the phone settings.") : t("Reading the phone settings…") }),
       phoneFailed ? button(t("Try again"), () => void refreshPhone(rerender)) : null,
     );
     state.setAttribute("role", phoneFailed ? "alert" : "status");
@@ -82,7 +82,7 @@ export function phonePage(): HTMLElement[] {
   const rows: HTMLElement[] = [
     row(
       t("Answer cards from a phone"),
-      t("Sends each card to your paired phones and reads their answers, through the relay you choose. Each request to the relay is on your behalf: at most 10,000 a day, each kept in the local trace. The relay sees only sealed messages, never a command or a project."),
+      t("Sends cards to your phones through the relay you choose, up to 10,000 requests a day. The relay sees only sealed messages."),
       toggle(p.on, async (on) => {
         await Bridge.setPhone(on);
         p.on = on;
@@ -101,7 +101,7 @@ export function phonePage(): HTMLElement[] {
       .then(() => refreshPhone(rerender))
       .catch((e) => said(failure(t("Could not change how the phone reaches this computer."), e), true));
   });
-  rows.push(row(t("How the phone reaches this computer"), t("Through a relay on the internet, or straight over your own network (a local or private one, such as a tailnet)."), transport));
+  rows.push(row(t("How the phone reaches this computer"), t("Through a relay on the internet, or directly over your own network (such as a tailnet)."), transport));
   const direct = p.transport === "direct";
   const input = document.createElement("input");
   input.className = "field";
@@ -120,7 +120,7 @@ export function phonePage(): HTMLElement[] {
       direct ? t("Listen on") : t("Relay"),
       direct
         ? t("This computer's address on your network or tailnet, and a port. The phone must reach it.")
-        : t("Its address. You can run your own (see The phone's relay in the docs); plain http only on a network you trust."),
+        : t("Its address. You can run your own; use plain http only on a network you trust."),
       el("div", { class: "inline" }, input, button(t("Save"), () => void save())),
     ),
   );
@@ -182,7 +182,7 @@ export function phonePage(): HTMLElement[] {
 
   return [
     ...head,
-    el("p", { class: "note", text: t("The Vults phone app is not out yet. Until it is, the command-line test client in the docs pairs and answers like a phone.") }),
+    el("p", { class: "note", text: t("The Vults phone app is not out yet. Meanwhile, the test client in the docs works like a phone.") }),
     el("h2", { class: "settings-group-title", text: t("Connection") }),
     el("section", { class: "card rows" }, ...rows),
     el("h2", { class: "settings-group-title", text: t("Paired phones") }),

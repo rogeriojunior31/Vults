@@ -477,7 +477,7 @@ assert.equal(button("Refresh microphones").disabled, false);
 button("Refresh microphones").fire("click"); await tick();
 microphoneReads[2].reject(new Error("Audio server disconnected")); await tick();
 assert.ok(microphoneControl().textContent.includes("USB mic"), "A failed refresh retains its last list");
-assert.ok(page().textContent.includes("The last list may be out of date"));
+assert.ok(page().textContent.includes("the list may be outdated"));
 button("Refresh microphones").fire("click"); await tick();
 microphoneReads[3].resolve([]); await tick();
 assert.ok(page().textContent.includes("No microphones found"));
@@ -629,7 +629,7 @@ events.onSettings({ dictationCommandChat: false });
 pendingSettings.at(-1).resolve(); await tick();
 assert.equal(fallback().value, "0");
 assert.ok(page().textContent.includes("Unrecognized phrases stay local."));
-assert.ok(page().textContent.includes("Refused commands and ambiguous names stay local"));
+assert.ok(page().textContent.includes("Needs Zeca on and Chat idle, with nothing unsent. Refused or ambiguous commands stay local."));
 assert.ok(!page().textContent.includes("What you can say"), "Examples remain in the command work page");
 const outputSwitch = () => rowNamed("System audio voice commands").querySelector("input");
 assert.equal(outputSwitch().checked, false, "System audio has its own default-off grant");
@@ -885,7 +885,7 @@ console.log('check-settings-ui: Gitea keeps drafts, clears tokens, serializes sa
 
 // A list that cannot be read says so, with a retry, instead of looking empty or off.
 for (const [label, call, failed] of [
-  ["Projects", "projectsList", "Could not read your project choices."],
+  ["Projects", "projectsList", "Could not show your project choices"],
   ["Phone", "phoneSettings", "Could not read the phone settings."],
   ["Connection setup", "connectorsStatus", "Could not read which connections are on."],
 ]) {

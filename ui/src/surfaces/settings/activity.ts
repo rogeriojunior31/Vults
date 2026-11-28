@@ -132,7 +132,7 @@ export function gridCard(a: Activity, view: ActivityView, on: Pick<ActivityActio
   } else if (view.github.state === "off") {
     about = "";
     body = [
-      el("p", { class: "note", text: t("Your GitHub contribution calendar shows here once the GitHub connector is on. It is asked through the gh you are logged into, once when this tab opens.") }),
+      el("p", { class: "note", text: t("Shows your GitHub contributions when the GitHub connector is on, fetched once through gh when this tab opens.") }),
       el("div", { class: "actions" }, button(t("Open Connectors"), () => on.connectors())),
     ];
   } else if (view.github.state === "error") {
@@ -167,12 +167,12 @@ export function historyCard(a: Activity | null, view: Pick<ActivityView, "confir
     { class: "card rows" },
     row(
       t("Keep a history"),
-      t("Each finished turn is kept for 12 weeks, and each day's totals for a year, for this page. Off, nothing new is kept and what is there stays."),
+      t("Keeps turns for 12 weeks and daily totals for a year. Off, nothing new is kept; existing data stays."),
       toggle(a?.history ?? true, on.history),
     ),
     row(
       confirming ? t("Clear the history?") : t("Clear history"),
-      confirming ? t("Every kept turn and day, the audit log of your answers and Zeca's traces are removed. This can't be undone.") : t("Removes every kept turn and day, the audit log of your answers and Zeca's traces from this computer."),
+      confirming ? t("Removes all history, the audit log and Zeca's traces. This can't be undone.") : t("Removes all history, the audit log and Zeca's traces from this computer."),
       clear,
     ),
   );

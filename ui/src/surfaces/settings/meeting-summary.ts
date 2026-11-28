@@ -30,7 +30,7 @@ export function createMeetingSettings(api: MeetingSettingsBackend, configure: ()
     input.setAttribute("aria-busy", String(saving));
     destination.textContent = chosen
       ? t("Transcript text goes to {provider} ({model}). No audio is sent.", { provider: chosen.label, model: chosen.model || t("Choose a model") })
-      : t("Choose an API provider and model in Chat & voice before enabling meeting summaries.");
+      : t("Choose an API provider and model in Chat & voice first.");
     const error = message === "failed" || failed || providerFailed;
     notice.textContent = saving ? t("Saving…") : loading ? t("Reading meeting settings…")
       : message === "failed" ? t("Could not confirm the change. Reload saved settings or try again.")
@@ -41,9 +41,9 @@ export function createMeetingSettings(api: MeetingSettingsBackend, configure: ()
     reload.textContent = t("Reload meeting settings"); (reload as HTMLButtonElement).disabled = loading || saving;
     provider.textContent = t("Chat & voice");
     element.replaceChildren(
-      row(t("Enable meeting summaries"), t("Off by default. Explicit generation sends transcript text to the selected API chat model. Up to 20 attempts per rolling 24 hours, including local calls and failures; provider charges may apply."), input),
+      row(t("Enable meeting summaries"), t("Off by default. Generating sends the transcript to the chosen API model. Up to 20 tries a day; the provider may charge."), input),
       destination,
-      el("p", { class: "hint", text: t("Generation stops after 120 seconds or when you cancel, leave Meetings, lock the screen or change provider settings. Failure keeps your local transcript. Notes stay only on this page and never execute tasks.") }),
+      el("p", { class: "hint", text: t("Stops after 120 seconds, or when you cancel or leave. Your transcript is kept if it fails. Notes never run tasks.") }),
       el("div", { class: "actions" }, provider, reload), notice,
     );
     element.setAttribute("aria-busy", String(loading || saving));

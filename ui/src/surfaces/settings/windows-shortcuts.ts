@@ -41,7 +41,7 @@ export function createWindowsShortcuts(port: Port, onReady: () => void = () => {
       message = reason.includes("shortcut-conflict")
         ? t("A shortcut is already used or reserved. Your previous shortcuts are unchanged.")
         : reason.includes("shortcut-duplicate") ? t("Choose a different combination for each action.")
-        : t("Could not apply shortcuts. Your previous shortcuts are unchanged. Try again.");
+        : t("Could not apply shortcuts; the previous ones are kept. Try again.");
     } finally { busy = false; render(); }
   }
   function render(): HTMLElement {
@@ -54,7 +54,7 @@ export function createWindowsShortcuts(port: Port, onReady: () => void = () => {
       if (readFailed) root.append(button(t("Try again"), () => { void refresh(); }));
       return root;
     }
-    root.append(el("p", { class: "hint", text: t("Windows checks conflicts with other registered global shortcuts. Local shortcuts inside other apps cannot be detected. Windows keys and typing keys are excluded to preserve system shortcuts and AltGr.") }));
+    root.append(el("p", { class: "hint", text: t("Windows checks conflicts with other global shortcuts, not with shortcuts inside apps. The Windows key and typing keys are not allowed.") }));
     const updateButtons = () => {
       const apply = root.querySelector<HTMLButtonElement>("[data-shortcuts-apply]");
       if (apply) apply.disabled = busy || !dirty();
