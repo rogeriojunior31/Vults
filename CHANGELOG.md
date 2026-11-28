@@ -6,6 +6,8 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Fixed
 
+- **Zeca's chat**: a long task no longer ends after ten minutes with *took too long to answer*; a turn runs as long as it keeps reporting, and only one silent for 15 minutes stops.
+
 - **Zeca's chat**: a saved conversation whose Claude Code session or Codex thread is gone (history cleared, another computer) goes on in a fresh one from what was said, instead of failing with *No conversation found*.
 
 - **Zeca's chat, full access**: it asks nothing any more. Before, a destructive command still asked, and after the first `gh`, `curl` or web read every later command asked for the rest of the conversation. Only a policy of yours that denies still denies.

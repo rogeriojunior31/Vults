@@ -182,8 +182,9 @@ impl Drop for PromptFile {
     }
 }
 
-/// A turn thinking this long (not counting time spent waiting for the user) is stuck.
-const TURN_TIMEOUT: Duration = Duration::from_secs(600);
+/// A turn this long without a word, a tool or a card is stuck. A long task that keeps reporting
+/// runs as long as it needs; a card waits at most [`DECISION_TIMEOUT`], within this.
+const TURN_IDLE: Duration = Duration::from_secs(900);
 /// A permission nobody answers is a no.
 const DECISION_TIMEOUT: Duration = Duration::from_secs(600);
 /// A usage read that takes longer is an app-server in trouble; the next poll tries again.
@@ -1497,29 +1498,51 @@ impl Chat {
         }
         let interrupter = self.driver.as_ref().map(|d| d.interrupter());
         let stopped = std::sync::atomic::AtomicBool::new(false);
-        let run = tokio::time::timeout(TURN_TIMEOUT, self.run(&turn, &out, approver.as_ref(), &stopped));
+        // What the turn says goes through here: each delta is a sign of life for the idle watch.
+        let (relay, mut relayed) = mpsc::channel::<Delta>(64);
+        let run = self.run(&turn, &relay, approver.as_ref(), &stopped);
         tokio::pin!(run);
-        let last = tokio::select! {
-            // A press on Stop wins over whatever the turn was about to say: the chat hears
-            // Stopped at once, and nothing after it, while the CLI ends its turn.
-            biased;
-            Ok(()) = &mut stop, if !stop_gone => {
-                stopped.store(true, std::sync::atomic::Ordering::SeqCst);
-                let _ = out.send(Delta::Stopped).await;
-                if let Some(i) = interrupter {
-                    let _ = i.interrupt().await;
-                    let _ = tokio::time::timeout(STOP_GRACE, &mut run).await;
+        let mut idle = tokio::time::Instant::now() + TURN_IDLE;
+        let last = loop {
+            tokio::select! {
+                // A press on Stop wins over whatever the turn was about to say: the chat hears
+                // Stopped at once, and nothing after it, while the CLI ends its turn.
+                biased;
+                Ok(()) = &mut stop, if !stop_gone => {
+                    stopped.store(true, std::sync::atomic::Ordering::SeqCst);
+                    let _ = out.send(Delta::Stopped).await;
+                    if let Some(i) = interrupter {
+                        let _ = i.interrupt().await;
+                        // Its last words are dropped, but read: a full relay must not hold it up.
+                        let _ = tokio::time::timeout(STOP_GRACE, async {
+                            loop {
+                                tokio::select! {
+                                    _ = &mut run => break,
+                                    Some(_) = relayed.recv() => {}
+                                }
+                            }
+                        })
+                        .await;
+                    }
+                    return;
                 }
-                return;
-            }
-            result = &mut run => match result {
-                Ok(Ok(())) => Delta::Done,
-                Ok(Err(message)) => Delta::Error { message },
-                Err(_) => Delta::Error {
-                    message: format!("{name} took too long to answer."),
+                Some(delta) = relayed.recv() => {
+                    idle = tokio::time::Instant::now() + TURN_IDLE;
+                    let _ = out.send(delta).await;
+                }
+                result = &mut run => break match result {
+                    Ok(()) => Delta::Done,
+                    Err(message) => Delta::Error { message },
                 },
-            },
+                () = tokio::time::sleep_until(idle) => break Delta::Error {
+                    message: format!("{name} stopped responding."),
+                },
+            }
         };
+        // What it said just before it ended, then how it ended.
+        while let Ok(delta) = relayed.try_recv() {
+            let _ = out.send(delta).await;
+        }
         let _ = out.send(last).await;
     }
 

@@ -240,6 +240,8 @@ With the memory on, what Zeca remembers and recalls joins as well: see [Zeca's m
   their own keyboard-focusable scrolling area. Links stay text, with their address beside the label;
   a bare address shows as one. `~~text~~` strikes through, and `- [ ]` / `- [x]` lists get their boxes.
 - A turn that fails says why, with **Try again**: it sends the same words and files once more.
+  A long task runs as long as it keeps reporting; only a turn silent for 15 minutes (no words, no
+  tool, no card) ends as *stopped responding*.
 - While a turn runs, the line under the conversation says what the agent is doing now (*Running
   cargo test…*, *Editing lib.rs…*), with how long the turn has run once it takes longer than three
   seconds. Once it ends, its **Activity** says how long it took.

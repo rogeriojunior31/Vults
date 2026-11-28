@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 078af6d1c291 -->
+<!-- source: b6031a7949f5 -->
 
 Os painéis laterais redimensionáveis seguem o ponteiro que iniciou o arraste, ignoram toques adicionais e encerram o arraste quando a janela perde o foco. O cancelamento preserva a largura atual e mantém os rascunhos. Quando o espaço limita um painel, o arraste e o redimensionamento pelo teclado partem da largura visível; reduzir apenas o espaço disponível não sobrescreve a largura salva. Os controles de redimensionar e recolher usam a mesma cor de foco de teclado que o restante do tema selecionado.
 
@@ -264,7 +264,8 @@ Com a memória ligada, o que o Zeca lembra e o que ele recupera também entram: 
   texto, com o endereço ao lado do rótulo; um endereço solto aparece como um. `~~texto~~` risca o
   texto, e listas `- [ ]` / `- [x]` ganham as suas caixas.
 - Um turno que falha diz por quê, com **Try again**: ele envia as mesmas palavras e arquivos mais uma
-  vez.
+  vez. Uma tarefa longa roda enquanto continuar dando sinal; só um turno calado por 15 minutos (sem
+  palavras, ferramenta ou card) termina como *stopped responding*.
 - Enquanto um turno roda, a linha embaixo da conversa diz o que o agente está fazendo agora
   (*Executando cargo test…*, *Editando lib.rs…*), com quanto tempo o turno já rodou depois que ele
   passa de três segundos. Quando ele termina, a sua **Atividade** diz quanto tempo levou.
