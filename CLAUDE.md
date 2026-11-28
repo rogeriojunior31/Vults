@@ -35,7 +35,7 @@ Anything copied from older prototypes is cleaned before it is committed.
 ## Stack
 
 - Rust (edition 2024) for every backend crate and tool; TypeScript only to render the UI (Tauri 2).
-- Kotlin only for the Android shell, over the Rust core (ADR 0002).
+- Kotlin only for the Android shell, over the Rust core.
 - No Swift, no Go, no Python sidecars: every extra runtime costs memory, start-up time,
   packaging and safety. A model the app needs runs in Rust or not at all.
 - No GPL code in the binary; check each local engine's and model's license before adding it.
@@ -62,8 +62,8 @@ vults/
 │   ├── store/            # the local database: one vults.sqlite, numbered migrations, the history of turns, the audit log, consents, traces
 │   ├── connectors/       # Vults Connect: Connector trait + polling runtime (snapshot diffs) + GitHub via gh
 │   ├── platform/         # Linux surface placement (layer-shell + input region), tray, global shortcuts, jump-to-terminal; no Tauri
-│   ├── zeca/             # Zeca's brain (ADR 0005): a read-only view of the flock, his memory in git; no vults-core
-│   ├── link/             # the paired phone (ADR 0002): pairing by QR, sealed envelopes, signed answers for core's ledger; no IO
+│   ├── zeca/             # Zeca's brain: a read-only view of the flock, his memory in git; no vults-core
+│   ├── link/             # the paired phone: pairing by QR, sealed envelopes, signed answers for core's ledger; no IO
 │   ├── relay/            # the phone's relay: store-and-forward of sealed envelopes (axum, Docker), and its client through the gate
 │   ├── evals/            # evals with cassettes (dev only): policy, redaction, prompts, injection; --features evals
 │   ├── spike/            # the spike kit (dev only): fake model, fake app, a terminal for TUIs; scripts/spike.sh records an agent
@@ -74,7 +74,6 @@ vults/
 │   └── brand/            # the name in one place; generates ui/src/brand.ts (a test checks it is fresh)
 ├── design/               # sprite sources (design/mascots/zeca/zeca.py generates the sprite JSON)
 ├── docs/                 # user docs (guide/, reference/), published on each release; docs change in the same PR as the feature
-│   ├── adr/              # decision records
 │   └── dev/              # ROADMAP.md (what is left) and releasing.md, not published
 ├── tests/                # automated checks
 ├── packaging/            # AUR PKGBUILDs (vults, vults-git), .desktop entry
@@ -85,7 +84,7 @@ vults/
 Three layers, and a crate only depends on its own or a lower one (`scripts/check-layers.sh`, CI):
 **Core** (agents, sessions, decisions), **Connect** (connectors, chat, voice, media) and
 **Experience** (app, platform, ui). Zeca's body lives in Experience; his brain, when it lands, is a
-`zeca` crate in Connect (ADR 0005). He uses Chat, Voice and Connect, none of them knows about him,
+`zeca` crate in Connect. He uses Chat, Voice and Connect, none of them knows about him,
 and he never answers a permission. See `docs/contributing/architecture.md`, *Layers*.
 
 ## Run
@@ -106,7 +105,7 @@ synchronously: `requestAnimationFrame` is paused while WebKit thinks the page is
 ## Priorities
 
 Linux first and only, until everything is refined; Windows and macOS come at the end. The one
-exception is the Android companion that answers cards (ADR 0002). Order of focus:
+exception is the Android companion that answers cards. Order of focus:
 it works, the UI, the docs; distribution after.
 
 ## UI and prototypes
@@ -120,20 +119,14 @@ application.
 
 ## Rules that never bend
 
-Each rule has its reason in the ADR of the same number in `docs/adr/`: 0001 for rule 1; 0002 for
-rule 2 (clicks, rules, policies, destructive calls, voice, the phone and the chat's access); 0003
-for rule 3; 0004 for rule 4 (the keyring, no telemetry, voice and audio, the update check and
-requests on the user's behalf). Changing one starts with an edit to
-its living record, with a dated line in its *History* ([how to write one](docs/adr/README.md#writing-one)).
-
 1. **Never block an agent.** The hook exits 0 with empty stdout on any failure.
 2. A permission is only answered by a human: a click (`core::Intent::Decide`, `DecideAlways`), an
    answer from a paired phone signed by its key (biometrics for an approval), an exact *Always*
    rule they made, or a policy they wrote, saw as a diff and accepted with a click (destructive
    actions always ask, rules included, a deny beats an allow, every answer is audited). In Zeca's
    chat only, also what they chose in Settings for its cards: their policies, or full access
-   (destructive actions still ask, a policy's deny or ask still holds, content from outside brings
-   cards back, every answer is audited).
+   (the user's choice to be asked nothing: everything runs, only a policy's deny still denies,
+   every answer is audited).
 3. Never write an agent's config without a dated backup, a diff the user saw, and a click.
    Preserve third-party hooks. Never write Codex's `trusted_hash`.
 4. Secrets only in the OS keyring. No telemetry. The app makes a request on its own only when the
@@ -155,6 +148,11 @@ node scripts/check-project-search.mjs  # retained project search, no browser ser
 node scripts/check-surface-continuity.mjs  # Nest/Quick handoff, drafts, owners and card visibility
 node scripts/check-windows-drop.mjs  # Explorer attachment lifecycle and native transport failures
 node scripts/check-card-arming.mjs  # a permission card ignores clicks in its first 600 ms
+node scripts/check-chat-queue.mjs  # messages written mid-turn queue, go after it, return on Stop
+node scripts/check-chat-paths.mjs  # @ lists the folder's files and folders; a dropped folder goes in by path
+node scripts/check-chat-asks.mjs  # an agent's question gets options; typing while a card waits answers it
+node scripts/check-chat-thread.mjs  # edits show their diff, the status line says what runs, ↑/↓ history, Ctrl+F, kept nodes
+node scripts/check-usage-format.mjs  # tokens as 1.25K or 1M, a plan window's pace
 cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace

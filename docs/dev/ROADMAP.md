@@ -2,7 +2,7 @@
 
 **What is left, and nothing else.** One line per task, most urgent first inside each section. A
 finished task is deleted from here in the PR that finishes it, and that PR adds its line to
-[CHANGELOG.md](../../CHANGELOG.md). Why a rule holds lives in the [ADRs](../adr/README.md).
+[CHANGELOG.md](../../CHANGELOG.md).
 
 `P0` blocks the next release · `P1` next · `P2` after · `P3` later or only if decided.
 Size: `S` up to a day · `M` a few days · `L` a week or more (split before starting).
@@ -19,10 +19,75 @@ Read them there when a task below names a step from them.
 
 - Released: **0.1.9** (tagged 2026-11-27; its draft release waits for the R3 smoke and the owner's Publish). Everything merged since is under *Unreleased* in the changelog.
 - Next release: **0.1.10**, from current `main`.
-- Current focus, set by the owner on 2026-11-11: **Windows functional validation**. Further connector
-  work (GitLab/Gitea CP3 onwards, Notion) waits until it is done.
+- Current focus, set by the owner on 2026-11-28: **what t3code does well, first** (the section below,
+  planned in [t3-parity.md](t3-parity.md)); then Windows functional validation and the rest. Further
+  connector work (GitLab/Gitea CP3 onwards, Notion) waits.
 
-## Now
+## t3code first
+
+Every id is a step in [t3-parity.md](t3-parity.md): what it does, where it goes, its size and its
+rules. Its section 0 is the contract for all of them: the shared pieces built once, and the
+checklist each step meets in its PR (layers, rules, states, four languages, look, tests, docs, the
+running app). Done before this list: Labs (1), Chat folders (2), Settings pages, provider marks, the
+Agents page and shorter copy (3).
+
+**A. Quick wins** (no dependency outside their section)
+- [ ] T1 · New-conversation engine and model in Settings · P1 · S
+- [ ] X3 · Palette over conversations, Settings pages and themes; Settings search · P1 · S-M
+- [ ] X4 · Fallback model when an engine is at its limit (new conversations only) · P1 · S
+- [ ] X10b · Save a cut turn's partial reply and offer *Continue* (asking before quitting is done) · P2 · S
+- [ ] U2 · Codex's reset credits (count left, next expiry) from the same read · P1 · S
+- [ ] X12, X13, X14, X15 · Skills in `/`; pace on quotas; favorite models; Nest hotkeys · P2 · S
+- [ ] X8, X9 · Remove a voice model and space used; logs folder and a copied report · P2 · S
+- [ ] Section 3, Providers 4-5 and Voice 3-4 · Models detail; version advisory; microphone test; *Test model* · P2 · S-M
+
+**B. Connections: read, review and approve** (section 12)
+- [ ] C1, C2 · UI reads for an item; the detail pane (header, labels, body, timeline, linked PRs); moves the pane to `ui/src/pane.ts` · P1 · M
+- [ ] C3 · The Issues tab: involves me, state, sort, search, labels, grouped by repository · P1 · M
+- [ ] C4, C5 · Comment, close or reopen, labels, assignees, each a prepared-write card (built here) · P1 · S-M
+- [ ] C6, C7 · PR Summary and Timeline; review with Comment, Approve or Request changes · P1 · M
+- [ ] C8, C9, C10, C11 · Code tab with threads; inline comments and Resolve; viewed files; merge method and rerun · P2 · L
+- [ ] C12 · Docs and checks for each slice, in the slice's PR · P1 · M
+
+**C. The chat as a workspace** (sections 9, 7, 10)
+- [ ] W1, W2 · The workspace bar: repo, branch chip, worktree list with *Chat here* · P1 · S-M
+- [ ] W3 + X2 · *Open in* the editors found on this computer (the editors table) · P1 · M
+- [ ] W4, W5 · Create PR from the chat (prepared-write card); Open PR or issue, checks dot · P1 · M · Needs: C4
+- [ ] T2 · Pin, archive (list and Unarchive), confirm delete · P1 · M · Needs: C2
+- [ ] X5, X6 · Ask about lines in Changes, quote a reply; *Work on this* from an issue or PR · P2 · M · Needs: C2
+- [ ] T3, T4, T5 · Titles by a model; fork from a reply; search every conversation · P2 · M
+- [ ] W6 · Docs and checks for the bar · P1 · S
+
+**D. Usage like t3code's** (section 11)
+- [ ] U4 · Local usage scan of Claude's and Codex's transcripts, per hour, model and token kind (replaces most of W9b) · P1 · L
+- [ ] U5 · Cost math: 1-hour cache writes, tiers, split by kind, savings, each figure's source · P1 · M
+- [ ] U6 · The Usage page: Cost, Tokens, Limits; 24 h to 90 days; the SVG chart; tiles; table; limits with resets and pace · P1 · L · Needs: U4, U5, C2
+- [ ] U7, U8 · Retention, price overrides and aliases; docs and checks · P2 · M
+
+**E. Scheduled tasks** (section 5: the vultures that fly in, work and leave)
+- [ ] S1-S4 · Design and rule 2, the Lab, the store, the gate feature `ROUTINES` · P1 · M
+- [ ] S5 · A specialist's run on the wire with its own bird (closes UX8-PROJ) · P1 · M
+- [ ] S6-S7 · A run with no window, access capped; the scheduler · P1 · L
+- [ ] S8-S9 · The flight in and out on the island; notifications · P1 · M
+- [ ] S10-S12 · Specialists, Scheduled tasks (editor with the vulture), the *Scheduled* mark, docs · P1 · L · Needs: C2
+
+**F. Deeper work**
+- [ ] Section 4 · Code: projects with their context, handoff v2, git-backed Changes, a worktree per conversation · P2 · L
+- [ ] X7, X11 · Steer a running turn; Zeca hands a task to a specialist (Labs) · P2 · M
+- [ ] B1-B2 · Open links in; a session's local server with *Open* · P2 · S-M
+- [ ] B3, T7 · Preview window; resume after a usage limit (Lab) · P3 · L
+
+**G. Icons across the whole app** (section 13, after A to F so each surface is redrawn once)
+- [ ] I1 · Inventory and a check against new hand-drawn icons and glyphs · P1 · S
+- [ ] I2, I3, I4 · The island, the Nest, the widget, the dictation overlay and Settings leftovers in Lucide and marks · P1 · M
+- [ ] I5, I6, I7 · Tray icons per state, the app icon at every size, DESIGN.md and screenshots · P2 · M
+
+**H. Environments** (section 6): other machines over SSH, after F · P3 · L
+
+**To decide first (ADR):** U9, Claude's reset credits and *Redeem* (they need the CLI's token and a
+direct call to Anthropic); B4, agent access to a preview browser.
+
+## Now (after t3code first)
 
 1. WIN · Windows functional validation (below)
 2. Native acceptance of merged work: FF1, FF3, FF5, VC4, VC6
@@ -91,7 +156,7 @@ CHANGELOG line. Every config write follows rule 3.
 - [ ] FF9b · Verify against real sessions: Claude plan-ready card, session name from `/rename`, Antigravity questions, wrapper-started sessions · P2 · S each
 - [ ] NEW-P2 · Cline CLI, Kiro CLI, a recorded real Cursor session, Amp, Pi, Hermes live turn · P2 · M each
 - [ ] NEW-P3 · Lossless YAML writer then Goose; Crush, Grok Build, Muse Code; ACP rows for Goose, Auggie, Cline, Hermes · P3 · M each
-- [ ] G1/G2 · An open reply for any tool (`--reply vults`, fixed allow/deny JSON, rules keyed by tool name, protocol VERSION 9). Decide first; the retired proposal is ADR 0027 at the archive commit · P3 · L
+- [ ] G1/G2 · An open reply for any tool (`--reply vults`, fixed allow/deny JSON, rules keyed by tool name, protocol VERSION 9). Decide first · P3 · L
 - [ ] QW · Qwen `write_file` diff into hunks · P3 · S
 - [ ] F4 · Public issues per agent from *Adding an agent*, on the maintainer's go · P3 · S
 
@@ -105,6 +170,10 @@ CHANGELOG line. Every config write follows rule 3.
 - [ ] Z8 · Warn on a fetch's own card before the call · P2 · S
 - [ ] M7f · The broader `vults-zeca` MCP for Codex through the installer · P2 · M
 - [ ] Z6f · OpenAI Responses API with native compaction, once testable with a key · P3 · M
+- [ ] T1-T6 · Conversations like t3code's Threads: new-conversation defaults in Settings, pin and archive, titles by a model, fork from a reply, search every conversation, copy as Markdown (docs/dev/t3-parity.md §7) · P2 · M
+- [ ] T7 · Resume after a usage limit resets; settle idle conversations (Lab first) · P3 · L
+- [ ] B1-B2 · Open links in the system browser or a Vults window; a session's local server on its card with Open (t3-parity §8) · P2 · S-M
+- [ ] B3-B4 · A preview window, then agent access to it through the `vults-zeca` MCP, each act a card (Lab first) · P3 · L
 - [ ] LATER · Each needs a design pass first: routines (K4), proposals from repeated denials (K5), skills (K6), Zeca as an ACP agent (K10), Studio library (UX9), scoped investigations (UX10) · P3
 
 ## Dictation
@@ -127,13 +196,13 @@ CHANGELOG line. Every config write follows rule 3.
 
 ## Activity
 
-- [ ] W9b · Cost of watched sessions: loopback OTLP receiver, telemetry settings via the installer, tokens mapped to sessions · P2 · L
+- [ ] W9b · Cost of watched sessions: reconsider after U4 (the local usage scan covers most of it); what is left maps tokens to live sessions · P3 · M · Needs: U4
 - [ ] FF9e · Compare the weekly recap with the sibling app; real gaps become tasks · P3 · S
 
 ## Settings and distribution
 
 - [ ] FF4.5 · What's new after an update, 1 to 4 items per version, four languages, a CI check · P2 · M
-- [ ] UPD · Signed updater with channels, after a signing key exists (ADR 0004) · P2 · L
+- [ ] UPD · Signed updater with channels, after a signing key exists · P2 · L
 - [ ] LANG · More UI languages; Arabic needs a right-to-left pass first · P3 · M each
 - [ ] PKG · AppImage, Flatpak, macOS CI, Windows code signing · P3
 - [ ] X7 · macOS beta · P3 · L
@@ -152,11 +221,11 @@ CHANGELOG line. Every config write follows rule 3.
 - FF10 · Screen capture for agents (Screenshot portal to the clipboard): yes or no
 - FF11 · Zeca reacts to the machine: yes or no on tone
 - X9-GNOME · Ship a GNOME Shell extension or not
-- Wake word stays declined; reopening it is an edit to ADR 0004
+- Wake word stays declined
 
 ## How to work a task
 
-1. Read `CLAUDE.md`, `docs/contributing/architecture.md` and the ADRs the task touches.
+1. Read `CLAUDE.md`, `docs/contributing/architecture.md` and the rules that never bend.
 2. One branch, one PR per task; tests first; docs, UI strings in four languages and pt-BR docs in
    the same PR.
 3. Run *Before every commit* from `CLAUDE.md`, then a review pass.

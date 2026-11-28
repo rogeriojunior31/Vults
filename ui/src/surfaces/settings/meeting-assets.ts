@@ -47,21 +47,21 @@ export function createMeetingAssets(api: MeetingAssetsBackend) {
   const draw = () => {
     title.textContent = t("Meeting speaker models (experimental)");
     packageTitle.textContent = t("Package details and licenses");
-    about.textContent = t("Prepare optional local analysis files. Installing them does not enable speaker labels, recording or summaries; meeting quality validation is still pending.");
+    about.textContent = t("Optional local analysis files; installing them turns nothing on. Meeting quality is not validated yet.");
     contents.textContent = t("Download: {size} MB from GitHub release servers. Includes pyannote segmentation-3.0 (MIT), CAM++ (Apache-2.0) and ONNX Runtime 1.31.0 CPU (MIT), with licenses and third-party notices.", { size: ((value?.downloadBytes ?? 46647585) / 1e6).toFixed(1) });
-    policy.textContent = t("Installation continues if you leave this page. Cancel here or quit the app to stop it. Each request, including redirects, counts toward a limit of 24 in 24 hours. No automatic retry or update check.");
+    policy.textContent = t("Keeps installing if you leave this page; cancel here or quit the app to stop. Up to 24 requests (redirects included) in 24 hours, with no automatic retry or update check.");
     const label = value ? t(phases[value.phase]) : t("Reading installation status…");
     if (phase.textContent !== label) phase.textContent = label;
-    const error = failed ? t("Could not update installation status. Review again to reconnect; a running installation may continue.")
-      : value?.error === "admission" ? t("The download was blocked by its request limit or local request ledger. Review again later; restarting the app does not reset the limit.")
-      : value?.error === "verification" ? t("Installed files or the local request ledger could not be verified. Existing files were preserved. Review again after checking local storage.")
-      : value?.error ? t("Installation failed. Existing versions were preserved. Check the connection and local storage, then review again.") : "";
+    const error = failed ? t("Could not update the status. Review again to reconnect; an installation may still be running.")
+      : value?.error === "admission" ? t("Blocked by the request limit or local ledger. Review again later; restarting the app does not reset it.")
+      : value?.error === "verification" ? t("Could not verify the files or local ledger; existing files were kept. Check local storage, then review again.")
+      : value?.error ? t("Installation failed; existing versions were kept. Check the connection and storage, then review again.") : "";
     if (feedback.textContent !== error) feedback.textContent = error; feedback.hidden = !error;
     progress.hidden = value?.phase !== "downloading" || !value.total;
     progress.max = value?.total || 1; progress.value = value?.downloaded ?? 0;
     progress.setAttribute("aria-label", t("Meeting model download progress"));
     amount.hidden = progress.hidden;
-    amount.textContent = t("{artifact}: {done} of {total} MB downloaded. Verification follows the download.", { artifact: artifacts[value?.artifact as keyof typeof artifacts] ?? "", done: ((value?.downloaded ?? 0) / 1e6).toFixed(1), total: ((value?.total ?? 0) / 1e6).toFixed(1) });
+    amount.textContent = t("{artifact}: {done} of {total} MB downloaded, then verified.", { artifact: artifacts[value?.artifact as keyof typeof artifacts] ?? "", done: ((value?.downloaded ?? 0) / 1e6).toFixed(1), total: ((value?.total ?? 0) / 1e6).toFixed(1) });
     consentText.textContent = t("I agree to download and install the optional package described in Package details and licenses.");
     consent.hidden = value?.phase !== "review" || failed;
     check.disabled = busy;

@@ -3,7 +3,9 @@
 
 mod antigravity;
 mod audit;
+mod awake;
 mod chat;
+mod chat_paths;
 mod connector_snapshots;
 mod connectors;
 mod context;
@@ -48,6 +50,7 @@ mod records;
 mod roosts;
 mod runtime;
 mod session_presence;
+mod session_transcript;
 mod settings;
 mod shortcut_settings;
 mod sleep;
@@ -126,7 +129,7 @@ fn layer_spec(label: &str) -> Option<vults_platform::linux::LayerSpec> {
 ///
 /// # Safety
 /// Call first thing in `main`, before any other thread exists.
-#[cfg(windows)]
+#[cfg(any(windows, unix))]
 pub unsafe fn widen_cli_path() {
     // SAFETY: forwarded from the caller.
     unsafe { paths::widen_cli_path() }
@@ -203,7 +206,15 @@ pub fn run() {
             installer::install_apply,
             chat::chat_send,
             chat::chat_pick_files,
+            chat::chat_pick_folder,
+            chat::chat_check_folder,
+            chat::chat_recent_folders,
             chat::chat_reset,
+            chat::chat_switch_engine,
+            chat::chat_sign_in,
+            chat::chat_paths,
+            chat::chat_paste,
+            chat::chat_reply,
             chat::chat_models,
             chat::chat_conversations,
             chat::specialist_chat_conversations,
@@ -272,6 +283,7 @@ pub fn run() {
             open::editor_found,
             runtime::decide_always,
             runtime::decide_plan,
+            runtime::revise_plan,
             runtime::question_answer,
             runtime::question_release,
             runtime::card_skip,
@@ -369,6 +381,7 @@ pub fn run() {
             settings::set_memory_suggest,
             settings::set_sleep,
             settings::set_antigravity_approvals,
+            settings::set_lab,
             memory::memory_command,
             memory::memory_view,
             memory::memory_decide,
@@ -380,6 +393,7 @@ pub fn run() {
             phone::set_phone_listen,
             phone::phone_pair,
             phone::phone_pair_cancel,
+            phone::phone_pair_copy,
             phone::phone_revoke,
             settings::set_web_engine,
             settings::set_searxng_url,
@@ -389,6 +403,7 @@ pub fn run() {
             settings::set_visitors,
             settings::set_notifications,
             settings::set_quiet_when_watching,
+            settings::set_keep_awake,
             settings::set_dnd,
             settings::set_zeca,
             panel::set_presence,
@@ -585,6 +600,7 @@ pub fn run() {
             runtime::start(handle.clone());
             // After the runtime: a lock already on at start reaches its inbox.
             lock::start(&handle);
+            awake::start(&handle);
             // After the runtime too: its first read asks whether the screen is locked.
             pricing::start(&handle);
             update::start(&handle);
@@ -1883,6 +1899,33 @@ fn set_shown(webview: &tauri::Webview, on: bool) {
     {
         let _ = if on { webview.show() } else { webview.hide() };
     }
+    #[cfg(windows)]
+    low_memory(webview, !on);
+}
+
+/// Asks WebView2 to trim what a hidden webview holds, and to give it back once shown. Best effort:
+/// an older runtime without the setting is left as it is.
+#[cfg(windows)]
+fn low_memory(webview: &tauri::Webview, low: bool) {
+    use webview2_com::Microsoft::Web::WebView2::Win32::{
+        COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW, COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_NORMAL,
+        ICoreWebView2_19,
+    };
+    use windows_core::Interface;
+    let _ = webview.with_webview(move |p| {
+        let level = if low {
+            COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_LOW
+        } else {
+            COREWEBVIEW2_MEMORY_USAGE_TARGET_LEVEL_NORMAL
+        };
+        let set = || -> windows_core::Result<()> {
+            let core = unsafe { p.controller().CoreWebView2()? }.cast::<ICoreWebView2_19>()?;
+            unsafe { core.SetMemoryUsageTargetLevel(level) }
+        };
+        if let Err(e) = set() {
+            tracing::debug!(error = %e, "webview memory target not set");
+        }
+    });
 }
 
 /// Whether the Nest is open and in sight: the island asks when it starts (ADR 0006).

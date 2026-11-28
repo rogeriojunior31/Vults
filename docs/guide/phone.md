@@ -24,7 +24,8 @@ day, each kept in the local trace ([Safety](../safety.md)).
 Press **Pair**: a QR shows for two minutes. Scan it with the phone. The QR holds this computer's
 public key, the relay's address and a one-time secret; only a phone that saw it can pair, and it
 pairs one phone. Below the QR, **The code's text, for the command-line test client** gives the same
-code as text. The phone then shows under **Paired phones**.
+code as text: **Show the code's text** shows it, and **Copy** copies it with clipboard history and
+cloud sync left out, since it holds the secret. The phone then shows under **Paired phones**.
 
 ## Answering
 

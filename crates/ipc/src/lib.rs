@@ -41,8 +41,21 @@ enum Signal {
     Decide(Decision),
     /// Allow, and the agent accepts the session's edits (a Claude Code plan's own choice).
     AllowAcceptingEdits,
+    /// No, with the user's words for the agent (a Claude Code plan's "what to change").
+    DenyWith(String),
     Answer(Vec<Answer>),
     Decline,
+}
+
+impl Signal {
+    /// A human's answer that goes back to the hook. Every answer a click can give is listed here:
+    /// one missing is dropped silently, and the agent asks in its terminal instead.
+    fn is_human(&self) -> bool {
+        match self {
+            Signal::Decide(_) | Signal::AllowAcceptingEdits | Signal::DenyWith(_) | Signal::Answer(_) => true,
+            Signal::Ack | Signal::Decline => false,
+        }
+    }
 }
 
 impl ReplyHandle {
@@ -74,6 +87,11 @@ impl ReplyHandle {
     /// Allows a plan, and asks the agent to accept the session's edits without asking.
     pub fn allow_accepting_edits(&self) {
         let _ = self.0.try_send(Signal::AllowAcceptingEdits);
+    }
+
+    /// Denies, and tells the agent why in the user's own words.
+    pub fn deny_with(&self, reason: String) {
+        let _ = self.0.try_send(Signal::DenyWith(reason));
     }
 
     /// The user's replies to a question, one per question (checked in `core`).
@@ -119,6 +137,7 @@ impl LocalReply {
                     Signal::Decide(d) => return Local::Decide(d),
                     // A session Vults drives keeps its own mode: the plan is a plain allow.
                     Signal::AllowAcceptingEdits => return Local::Decide(Decision::Allow),
+                    Signal::DenyWith(_) => return Local::Decide(Decision::Deny),
                     Signal::Answer(a) => return Local::Answer(a),
                     Signal::Decline => return Local::Decline,
                 }
@@ -270,18 +289,45 @@ async fn serve_unix(
 }
 
 #[cfg(windows)]
-async fn serve_pipe(name: String, incoming: mpsc::Sender<Incoming>, slots: Arc<Semaphore>) -> io::Result<()> {
-    use tokio::net::windows::named_pipe::ServerOptions;
+/// Whether the hook's pipe is still waiting for its name (another program holds it): no agent
+/// event reaches this run meanwhile.
+static ENDPOINT_BUSY: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
+/// Whether hook events can't reach this run yet because another program holds the endpoint.
+/// Only Windows' pipe can be held by another program; a Unix socket is this user's alone.
+pub fn endpoint_busy() -> bool {
+    #[cfg(windows)]
+    return ENDPOINT_BUSY.load(std::sync::atomic::Ordering::Relaxed);
+    #[cfg(not(windows))]
+    false
+}
+
+/// An instance of the hook's pipe that only this user (and administrators, SYSTEM) may open.
+#[cfg(windows)]
+fn private_pipe(name: &str, first: bool) -> io::Result<tokio::net::windows::named_pipe::NamedPipeServer> {
+    let mut options = tokio::net::windows::named_pipe::ServerOptions::new();
+    options.first_pipe_instance(first).reject_remote_clients(true);
+    // SAFETY: the attributes, when given, outlive the call (`private_pipe` frees them after).
+    vults_peer::private_pipe(|attributes| unsafe {
+        options.create_with_security_attributes_raw(name, attributes)
+    })
+}
+
+#[cfg(windows)]
+async fn serve_pipe(name: String, incoming: mpsc::Sender<Incoming>, slots: Arc<Semaphore>) -> io::Result<()> {
     use std::time::Duration;
     // first_pipe_instance: refuse to serve on a name somebody else already owns. That may be this
     // app's previous run still closing (an update, a restart): waited for, never given up on, or
     // this run would see no hook event for its whole life.
     let mut wait = Duration::from_millis(100);
     let mut server = loop {
-        match ServerOptions::new().first_pipe_instance(true).create(&name) {
-            Ok(server) => break server,
+        match private_pipe(&name, true) {
+            Ok(server) => {
+                ENDPOINT_BUSY.store(false, std::sync::atomic::Ordering::Relaxed);
+                break server;
+            }
             Err(_) if !incoming.is_closed() => {
+                ENDPOINT_BUSY.store(true, std::sync::atomic::Ordering::Relaxed);
                 tokio::time::sleep(wait).await;
                 wait = (wait * 2).min(Duration::from_secs(5));
             }
@@ -296,7 +342,7 @@ async fn serve_pipe(name: String, incoming: mpsc::Sender<Incoming>, slots: Arc<S
             // An instance whose connect failed is not trusted to connect again: retrying on it could
             // leave every later hook event unheard until the app restarts. A fresh one replaces it.
             tokio::time::sleep(Duration::from_millis(200)).await;
-            if let Ok(fresh) = ServerOptions::new().create(&name) {
+            if let Ok(fresh) = private_pipe(&name, false) {
                 server = fresh;
             }
             continue;
@@ -304,7 +350,7 @@ async fn serve_pipe(name: String, incoming: mpsc::Sender<Incoming>, slots: Arc<S
         // The next instance before this client is served; one that fails to open is tried again
         // (the client meanwhile waits in its buffer), never the end of the server.
         let next = loop {
-            match ServerOptions::new().create(&name) {
+            match private_pipe(&name, false) {
                 Ok(next) => break next,
                 Err(_) if !incoming.is_closed() => tokio::time::sleep(Duration::from_millis(200)).await,
                 Err(e) => return Err(e),
@@ -395,6 +441,13 @@ async fn handle<S: AsyncRead + AsyncWrite + Unpin>(mut conn: S, incoming: mpsc::
             reason: None,
             then: Some(protocol::Then::AcceptEdits),
         },
+        Some(Signal::DenyWith(reason)) => Reply::Decision {
+            v,
+            id,
+            decision: Decision::Deny,
+            reason: Some(reason),
+            then: None,
+        },
         Some(Signal::Answer(answers)) => Reply::Answer { v, id, answers },
         _ => return,
     };
@@ -410,7 +463,7 @@ async fn wait_for_decision<S: AsyncWrite + Unpin>(
     conn: &mut S,
     id: &str,
 ) -> Option<Signal> {
-    let human = |s: Signal| matches!(s, Signal::Decide(_) | Signal::Answer(_)).then_some(s);
+    let human = |s: Signal| s.is_human().then_some(s);
     match timeout(limits::ACK_TIMEOUT, rx.recv()).await {
         Ok(Some(Signal::Ack)) => {}
         // A click that beats the ack is still a click.
@@ -644,5 +697,42 @@ mod tests {
         let (path, _rx) = start("perms").await;
         let mode = std::fs::metadata(&path).unwrap().permissions().mode() & 0o777;
         assert_eq!(mode, 0o600);
+    }
+}
+
+#[cfg(test)]
+mod decision_tests {
+    #![allow(clippy::unwrap_used)]
+    use super::*;
+
+    /// Each answer a click can give reaches the hook, past the card's acknowledgement.
+    #[test]
+    fn every_kind_of_click_reaches_the_hook() {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_time()
+            .build()
+            .unwrap();
+        for click in [
+            Signal::Decide(Decision::Allow),
+            Signal::Decide(Decision::Deny),
+            Signal::AllowAcceptingEdits,
+            Signal::DenyWith("Keep the old API.".into()),
+            Signal::Answer(Vec::new()),
+        ] {
+            let name = format!("{click:?}");
+            let (tx, mut rx) = mpsc::channel(4);
+            tx.try_send(Signal::Ack).unwrap();
+            tx.try_send(click).unwrap();
+            let got = runtime.block_on(wait_for_decision(&mut rx, &mut tokio::io::sink(), "r1"));
+            assert!(got.is_some(), "{name} never reached the hook");
+        }
+        let (tx, mut rx) = mpsc::channel(4);
+        tx.try_send(Signal::Ack).unwrap();
+        tx.try_send(Signal::Decline).unwrap();
+        assert!(
+            runtime
+                .block_on(wait_for_decision(&mut rx, &mut tokio::io::sink(), "r1"))
+                .is_none()
+        );
     }
 }

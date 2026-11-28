@@ -97,14 +97,14 @@ export function createCleanupSettings(api: CleanupBackend, providerSettings: () 
     const toggle = check(on, "cleanup", value => void write(() => api.enable(value), () => ({ dictationCleanup: value })));
     toggle.disabled = saving || !data || (!on && (!ready || !available || loading));
     const notice = el("p", { class: `note${error || failed ? " error" : ""}`, text: saving ? t("Saving…") : message === "saved" ? t("Saved.") : message === "budget"
-      ? t("Clean-up cannot verify its saved request budget. Local dictation still works.") : message === "failed" ? t("Could not confirm the change. Reload saved settings or try again.")
+      ? t("Clean-up can't check its request budget. Local dictation still works.") : message === "failed" ? t("Could not confirm the change. Reload saved settings or try again.")
       : message === "refresh" ? t("The style was saved, but the app list could not refresh. Reload to check.") : failed ? t("Could not read clean-up settings. Reload to try again.") : loading ? t("Reading clean-up settings…") : "" });
     notice.hidden = !notice.textContent || (on && messageScope !== "settings"); notice.setAttribute("role", error || failed ? "alert" : "status");
     const reload = button(t("Reload clean-up settings"), () => void refresh()); reload.dataset.styleControl = "reload"; (reload as HTMLButtonElement).disabled = loading || saving;
     const destination = provider ? t("Text and spelling/style context go to {provider} ({model}). No audio is sent.", { provider: provider.label, model: provider.model }) : t("Choose an API provider in Chat & voice before enabling clean-up.");
     const providerLink = button(t("Chat & voice"), providerSettings); providerLink.dataset.styleControl = "provider";
     const processing = el("details", { class: "cleanup-processing" }, el("summary", { text: t("Processing and costs") }),
-      el("p", { class: "hint", text: t("Off by default. Up to 2,000 attempts in any rolling 24 hours, including local calls. Provider charges may apply. Failure keeps your local text.") }),
+      el("p", { class: "hint", text: t("Off by default. Up to 2,000 requests per 24 hours; your provider may charge. If it fails, your local text stays.") }),
       el("p", { class: "hint", text: provider?.local ? t("The selected provider uses a local endpoint on this computer.") : t("With a cloud provider, dictated text leaves this computer when clean-up is enabled.") }));
     processing.dataset.setting = "cleanup-processing"; processing.open = processingExpanded;
     processing.addEventListener("toggle", () => { processingExpanded = processing.open; });
@@ -122,17 +122,17 @@ export function createCleanupSettings(api: CleanupBackend, providerSettings: () 
     }
     if (on && data) {
       const choices = el("section", { class: "card rows" },
-        row(t("Write in"), t("Keep the spoken language or translate the final text. As spoken never calls a model or translates."), select([{ value: null, label: t("The spoken language") }, ...OUTPUT_LANGUAGES.map(l => ({ value: l.id as DictationOutputLanguage | null, label: t(l.name) }))], data.dictationWriteIn, "language", value => options({ dictationWriteIn: value }))),
-        row(t("Agent sessions in English"), t("Use English and Prompt only for recognized flock sessions. Other apps keep your Write in choice."), check(data.dictationSessionsEnglish, "english", value => options({ dictationSessionsEnglish: value }))),
-        el("p", { class: "hint", text: t("Choices apply to the next recording. Questions stay questions; the model never answers or runs your words.") }),
-        el("p", { class: "hint", text: t("Timeouts keep local text: four seconds normally, eight for translation, twelve for Prompt. Turning clean-up off cancels filtering.") }));
-      const defaults = el("section", { class: "dictation-style-defaults" }, el("h3", { text: t("Default style") }), el("p", { class: "hint style-default-scope", text: t("Used only for apps without an app rule or built-in default. Recognized agent sessions always use Prompt.") }), styleCards(true, data.dictationStyle, style => options({ dictationStyle: style })), el("p", { class: "hint", text: t("The examples illustrate each style; they are not generated previews.") }));
+        row(t("Write in"), t("Keep the spoken language or translate. As spoken never calls a model."), select([{ value: null, label: t("The spoken language") }, ...OUTPUT_LANGUAGES.map(l => ({ value: l.id as DictationOutputLanguage | null, label: t(l.name) }))], data.dictationWriteIn, "language", value => options({ dictationWriteIn: value }))),
+        row(t("Agent sessions in English"), t("English and Prompt for flock sessions only. Other apps keep your Write in choice."), check(data.dictationSessionsEnglish, "english", value => options({ dictationSessionsEnglish: value }))),
+        el("p", { class: "hint", text: t("Applies from the next recording. The model never answers or runs what you say.") }),
+        el("p", { class: "hint", text: t("If clean-up takes too long (4 s, 8 s to translate, 12 s for Prompt), your local text stays.") }));
+      const defaults = el("section", { class: "dictation-style-defaults" }, el("h3", { text: t("Default style") }), el("p", { class: "hint style-default-scope", text: t("For apps without their own style. Agent sessions always use Prompt.") }), styleCards(true, data.dictationStyle, style => options({ dictationStyle: style })), el("p", { class: "hint", text: t("The examples illustrate each style; they are not generated previews.") }));
       defaults.setAttribute("aria-label", t("Default style"));
       const details = el("details", { class: "settings-disclosure dictation-app-styles" }, el("summary", { text: t("Style per app") }));
       details.dataset.setting = "Style per app"; details.dataset.styleControl = "apps"; details.open = expanded;
       details.addEventListener("toggle", () => { expanded = details.open; });
-      const body = el("div", { class: "disclosure-body" }, el("p", { class: "hint", text: t("Terminals and editors default to As spoken, mail to Polished and chats to Natural. App choices override these defaults; recognized flock sessions keep Prompt. Missing focus keeps local text.") }));
-      if (appsFailed) body.append(el("p", { class: "note error", text: t("Could not load app styles. The last list may be out of date. Reload to try again.") }));
+      const body = el("div", { class: "disclosure-body" }, el("p", { class: "hint", text: t("Defaults: As spoken in terminals and editors, Polished in mail, Natural in chats. Your app choices win; flock sessions keep Prompt.") }));
+      if (appsFailed) body.append(el("p", { class: "note error", text: t("Could not load app styles. Reload to try again.") }));
       const appChoices = [{ value: null, label: t("Use app default") }, ...STYLES.map(s => ({ value: s.id as DictationStyle | null, label: t(s.name) }))];
       const appIds = [...new Set([...Object.keys(PRESETS), ...Object.keys(apps ?? {})])];
       for (const id of appIds) {

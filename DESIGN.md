@@ -1,7 +1,7 @@
 # Vults UI rules
 
 Use these rules for UI changes and new prototypes. The production components and
-the shared theme define the visual baseline. ADRs define behavior and authority;
+the shared theme define the visual baseline. CLAUDE.md defines behavior and authority;
 this document defines how the UI presents them.
 
 ## Identity and theme
@@ -31,8 +31,13 @@ this document defines how the UI presents them.
 - With no sessions, the Nest's habitat keeps its heading while its empty sky recedes.
   The existing welcome bird, explanation and agent setup action lead the empty state.
   Populated habitats retain their scene and bird positions.
-- Reuse the existing icon vocabulary and font stack. Do not introduce a second
-  icon set, downloaded font, component framework or theme for a prototype.
+- Icons are Lucide's line drawings (as t3code uses them), kept by name in
+  `ui/src/island/icons.ts`; only the flock keeps the product's own drawing. Add an icon by
+  taking Lucide's, never by drawing a second style. Reuse the font stack. Do not introduce a
+  second icon set, downloaded font, component framework or theme for a prototype.
+- A provider, agent or connection is shown with its official mark beside its name
+  (`ui/src/brands.ts`, `brandMark()`), in the brand's color unless black or white, which take the
+  text's color; one without a mark gets its initials. A mark only names; status stays a dot and words.
 
 | Role | Production token | Current value |
 | --- | --- | --- |
@@ -87,14 +92,14 @@ truth when that theme changes. Keep `--agent-*` colors as agent identity.
   context and details, rather than enlarging every control.
 - Preserve selected session, area, filters, source, conversation and unsent draft
   across layout changes. A resize does not create a conversation or execution.
-- Honor the current registered capabilities and size rules in ADR 0006. The
+- Honor the current registered capabilities and size rules. The
   paired widths (560/680/760 logical px) are an optional shared Mini/Quick preference.
   Default keeps Mini 340 x 38 and Quick 440 CSS px internally (492 in Chat), with a
   1.14 UI zoom inside the fixed 880 x 640 logical-pixel overlay. Bound content by the
   available screen and viewport without overwriting the saved preference or resizing
   the mapped surface. Mini stays 38 logical pixels high at every width; a wider choice must
   not make the resting bar taller. Selected Quick widths remain capped at 600 logical pixels
-  including zoom and inline dictation feedback. General > Appearance and Quick's General page
+  including zoom and inline dictation feedback. Settings > Appearance and Quick's General page
   edit the same shared width preference, with cross-view refresh and the same save-failure behavior. Native placement, display scaling and input behavior still need
   desktop acceptance.
 - Room/Full share one header row with their tab navigation. At narrow widths,
@@ -103,7 +108,11 @@ truth when that theme changes. Keep `--agent-*` colors as agent identity.
   a 48 px rail. Arrow keys resize, Home/End reach the bounds and Enter folds;
   folding keeps selection and drafts. Below 900 px, each page keeps its existing
   narrow navigation instead of showing a rail.
-- Permanent preferences stay behind the gear. Settings > Dictation is one page
+- Permanent preferences stay behind the gear, one topic per page with titled sections
+  (t3code's arrangement): Your companion (Zeca: his portrait, switch, look, species and
+  memory; Chat & voice), Experience (General, Appearance, Island, Sound and notifications,
+  Keyboard shortcuts, Dictation, Flock), Work and System. A page leads with its title and
+  one sentence of scope; a section never repeats its page's name. Settings > Dictation is one page
   using the existing global Settings navigation, with Voice input, Recording, Text
   delivery, and History and privacy sections. Recognition and optional command,
   conversation, meeting and agent features use labeled disclosures on that page.
@@ -229,8 +238,8 @@ truth when that theme changes. Keep `--agent-*` colors as agent identity.
   Reactions communicate presence and never grant approval authority.
 - With Zeca off, preserve the independent flock, records, costs and other surfaces.
   New specialist Chat behavior must follow its agreed capability contract.
-- Memory-off guidance opens the Memory section of the existing Chat & voice
-  preferences, with a return to Memory in the Nest and no automatic activation.
+- Memory-off guidance opens the Memory section of Settings > Zeca, with a return to
+  Memory in the Nest and no automatic activation.
   Unknown write or Undo failures describe an unconfirmed result; technical detail
   stays in a disclosure. Recovery refreshes the current memory without replaying
   the change, and stale reads keep mutation controls disabled.

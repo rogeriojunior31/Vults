@@ -56,17 +56,17 @@ export function createRealtimeSettings(api: RealtimeSettingsBackend, configureKe
       : conflict ? t("Voice settings changed elsewhere. Reload before saving your changes.")
       : message === "load-failed" ? t("Could not read voice settings. Reload to try again.")
       : message === "save-failed" ? t("Could not confirm the change. Reload saved settings or try again.")
-      : dirty && !valid ? t("Choose a supported model and a valid USD limit with up to six decimal places. Enabling voice requires a positive limit.")
+      : dirty && !valid ? t("Choose a supported model and a USD limit above zero.")
       : message === "saved" ? t("Saved.") : "";
     notice.hidden = !notice.textContent; notice.classList.toggle("error", error);
     notice.setAttribute("role", error ? "alert" : "status");
     element.setAttribute("aria-busy", String(loading || saving));
     element.replaceChildren(
-      row(t("Enable voice conversation"), t("Off by default. When you start a conversation, microphone audio and cached flock context go to OpenAI. API charges apply."), on),
-      row(t("Model"), t("This choice is separate from your Chat model and CLI subscription."), model),
-      row(t("Budget (USD / 24 hours)"), t("A rolling limit for realtime voice. Unsettled requests retain their reserved cost. Zero disables remote voice."), budget, t("Use a decimal point or comma; do not use thousands separators.")),
+      row(t("Enable voice conversation"), t("Off by default. Your mic audio and flock context go to OpenAI. API charges apply."), on),
+      row(t("Model"), t("Separate from your Chat model and CLI subscription."), model),
+      row(t("Budget (USD / 24 hours)"), t("Spending limit for realtime voice. Zero turns remote voice off."), budget, t("Use a point or comma for decimals, no thousands separators.")),
       el("p", { class: "hint", text: t("Voice never answers a permission card. Codex consultation is unavailable.") }),
-      el("p", { class: "hint", text: t("Saving does not start recording. Open Voice conversation under Work to record a turn.") }),
+      el("p", { class: "hint", text: t("Saving does not record. Open Voice conversation under Work to talk.") }),
       el("div", { class: "actions" }, save, reload, key), notice,
     );
     if (focused?.isConnected) focused.focus({ preventScroll: true });

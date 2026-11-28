@@ -115,7 +115,7 @@ pill has no room over the heads and keeps its badges.
 
 - Zeca is never a session's bird: he sits on the empty wire and in the chat. The session in front (the one that needs
   you, the one you picked, or the first to arrive) takes his spot in its own bird; every other session is a vult.
-  With Zeca turned off (Settings → Flock & Zeca) an empty wire stays empty: no idle Zeca, no signature of his.
+  With Zeca turned off (Settings → Zeca) an empty wire stays empty: no idle Zeca, no signature of his.
 - A new session's vult glides in from the right and lands; a session that ends takes off and flies away.
 - Each running subagent sends out a scout: a Cathartes (the vultures that find food by smell)
   takes off from its session's perch and circles low beside it, and flies off when the subagent
@@ -125,7 +125,7 @@ pill has no room over the heads and keeps its badges.
 - Rare visitors: every ten to twenty minutes while sessions are open, a vulture nobody on the wire
   is (an Old World vulture or a condor) glides in from the right, rides the island's thermal once
   and goes on its way, never landing; it passes behind the cards and rows, never over their text.
-  Off in Settings → Flock & Zeca; none with reduced motion or while the island is hidden.
+  Off in Settings → Flock; none with reduced motion or while the island is hidden.
 - An idle or successfully finished session keeps a green circle for 30 seconds, then loses the
   mark and takes off into the shared sky below the island. Core owns the monotonic rest deadline;
   metadata, navigation and returning from the Nest never restart it. The done clip and species'
@@ -161,7 +161,7 @@ pill has no room over the heads and keeps its badges.
 
 ## The species
 
-Zeca is a black vulture unless you pick another species for him in **Settings → Flock & Zeca**. The flock
+Zeca is a black vulture unless you pick another species for him in **Settings → Zeca**. The flock
 draws from the vultures of Brazil by default; the same page widens it to the Americas (with both
 condors) or to every vulture in the world. Every species is built
 from Zeca's rig in `ui/src/character/flock/` (a palette, a size from the real bird's measurements,

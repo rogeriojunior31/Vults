@@ -72,8 +72,10 @@ impl Agent {
             .or_else(|| std::env::var_os("PATH"));
         path.is_some_and(|path| {
             std::env::split_paths(&path).any(|dir| {
-                let file = dir.join(self.program);
-                file.is_file()
+                // On Windows the program is `agy.exe` or npm's `opencode.cmd`.
+                ["", ".exe", ".cmd", ".bat"]
+                    .iter()
+                    .any(|ext| dir.join(format!("{}{ext}", self.program)).is_file())
             })
         })
     }
@@ -87,6 +89,10 @@ const CANCEL_GRACE: Duration = Duration::from_secs(10);
 /// What a message from the agent means.
 #[derive(Debug, PartialEq)]
 enum Msg {
+    /// Its thinking, as it streams (`agent_thought_chunk`): for the activity only.
+    Thought(String),
+    /// Its plan, the whole list each time (`plan`).
+    Plan(Vec<(String, String)>),
     Response {
         id: u64,
         result: Value,
@@ -121,9 +127,16 @@ enum Msg {
         /// Its kind and its input, as far as this message says them.
         kind: Option<String>,
         input: Option<Value>,
+        /// The change it makes, from its `diff` content, as the chat's diff lines.
+        diff: Option<String>,
     },
-    /// The session's cost so far, in US dollars (`usage_update`).
-    Cost(f64),
+    /// What `usage_update` says: the session's cost so far in US dollars, and how full its
+    /// context is (tokens used, and the window), each when it says.
+    Usage {
+        cost: Option<f64>,
+        used: Option<u64>,
+        size: Option<u64>,
+    },
     Other,
 }
 
@@ -174,6 +187,23 @@ fn classify(raw: &str) -> Msg {
 fn update(u: &Value) -> Msg {
     let text = |k: &str| u[k].as_str().unwrap_or_default().to_string();
     match u["sessionUpdate"].as_str() {
+        Some("plan") => Msg::Plan(
+            u["entries"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(|e| {
+                    Some((
+                        e["content"].as_str()?.to_string(),
+                        e["status"].as_str().unwrap_or("pending").to_string(),
+                    ))
+                })
+                .collect(),
+        ),
+        Some("agent_thought_chunk") => match u["content"]["text"].as_str() {
+            Some(t) if !t.is_empty() => Msg::Thought(t.to_string()),
+            _ => Msg::Other,
+        },
         Some("agent_message_chunk") => match u["content"]["text"].as_str() {
             Some(t) if !t.is_empty() => Msg::Text(t.to_string()),
             _ => Msg::Other,
@@ -184,10 +214,13 @@ fn update(u: &Value) -> Msg {
             // What it acts on: the command or the file, which come with the call or a moment after
             // (OpenCode's first word is the tool's own name). A command's is its command only: the
             // folder it names first is not what it runs.
+            // Antigravity names them in PascalCase (`CommandLine`, `AbsolutePath`, `TargetFile`).
             let fields: &[&str] = if u["kind"] == "execute" {
-                &["command", "cmd"]
+                &["command", "cmd", "CommandLine", "commandLine"]
             } else {
                 &[
+                    "AbsolutePath",
+                    "TargetFile",
                     "filePath",
                     "filepath",
                     "file_path",
@@ -221,14 +254,45 @@ fn update(u: &Value) -> Msg {
                 mutates: matches!(u["kind"].as_str(), Some("edit" | "delete" | "move" | "execute")),
                 kind: u["kind"].as_str().map(str::to_string),
                 input,
+                diff: change_of(u),
             }
         }
-        Some("usage_update") if u["cost"]["currency"] == "USD" => u["cost"]["amount"]
-            .as_f64()
-            .filter(|a| a.is_finite() && *a >= 0.0)
-            .map_or(Msg::Other, Msg::Cost),
+        Some("usage_update") => Msg::Usage {
+            cost: (u["cost"]["currency"] == "USD")
+                .then(|| u["cost"]["amount"].as_f64())
+                .flatten()
+                .filter(|a| a.is_finite() && *a >= 0.0),
+            used: u["used"].as_u64().filter(|n| *n > 0),
+            size: u["size"].as_u64().filter(|n| *n > 0),
+        },
         _ => Msg::Other,
     }
+}
+
+/// The change an edit call reports: each `diff` content's old and new text, under its path.
+fn change_of(u: &Value) -> Option<String> {
+    let parts: Vec<String> = u["content"]
+        .as_array()?
+        .iter()
+        .filter(|c| c["type"] == "diff")
+        .filter_map(|c| {
+            // A file URI's path keeps its drive's slash (`/C:/…`, Antigravity): dropped.
+            let path = c["path"].as_str().unwrap_or_default();
+            let path = match path.as_bytes() {
+                [b'/', d, b':', ..] if d.is_ascii_alphabetic() => &path[1..],
+                _ => path,
+            };
+            crate::edit_diff(
+                path,
+                c["oldText"].as_str().unwrap_or_default(),
+                c["newText"].as_str().unwrap_or_default(),
+            )
+        })
+        .collect();
+    crate::diff_bounded(&parts.join(
+        "
+",
+    ))
 }
 
 /// A call's input: its `rawInput`, or else the arguments it streams as its text before it runs
@@ -401,12 +465,33 @@ fn ask_of(call: &Value) -> Option<Ask> {
                     .iter()
                     .filter_map(|k| raw[*k].as_str().map(str::to_string)),
             );
-            paths.sort();
-            paths.dedup();
-            let [path] = paths.as_slice() else {
+            if paths.iter().any(|p| p.contains('\n')) {
+                return None;
+            }
+            // One file, however it is spelled: `\` or `/`, a file URI's `/C:/`, or a name relative
+            // to the folder (OpenCode's input) that the one absolute path ends with.
+            let norm = |p: &str| {
+                let p = p.replace('\\', "/");
+                match p.as_bytes() {
+                    [b'/', d, b':', ..] if d.is_ascii_alphabetic() => p[1..].to_string(),
+                    _ => p,
+                }
+            };
+            let mut absolute: Vec<String> = paths
+                .iter()
+                .map(|p| norm(p))
+                .filter(|p| Path::new(p).is_absolute())
+                .collect();
+            absolute.sort();
+            absolute.dedup();
+            let [path] = absolute.as_slice() else {
                 return None;
             };
-            if !Path::new(path).is_absolute() || path.contains('\n') {
+            let same = |p: &String| {
+                let p = norm(p);
+                Path::new(&p).is_absolute() || path.ends_with(&format!("/{}", p.trim_start_matches("./")))
+            };
+            if !paths.iter().all(same) {
                 return None;
             }
             let path = path.clone();
@@ -492,6 +577,44 @@ struct Conn {
     next_id: u64,
     /// The agent can resume a session (`loadSession`).
     load: bool,
+    /// It resumes without replaying the history (`sessionCapabilities.resume`): preferred, since
+    /// a load replays every tool call again (Antigravity).
+    resume: bool,
+    /// How it can sign in (`authMethods`), for a session it refuses until it does.
+    auth: Vec<String>,
+    /// It can close a session (`sessionCapabilities.close`): a probe's leaves nothing behind.
+    close: bool,
+    /// The config option its session takes a model by (`configOptions`, category `model`):
+    /// newer agents' way (OpenCode); without it, `session/set_model`.
+    model_option: Option<String>,
+    /// The end of what it said on stderr, for the error when it stops.
+    said: Arc<std::sync::Mutex<String>>,
+}
+
+/// Keeps the last line an agent wrote on stderr (read to the end: a full pipe would stall it).
+fn tail_stderr(stderr: tokio::process::ChildStderr) -> Arc<std::sync::Mutex<String>> {
+    let said = Arc::new(std::sync::Mutex::new(String::new()));
+    let kept = said.clone();
+    tokio::spawn(async move {
+        let mut lines = BufReader::new(stderr).lines();
+        while let Ok(Some(line)) = lines.next_line().await {
+            let line = line.trim();
+            if !line.is_empty()
+                && let Ok(mut s) = kept.lock()
+            {
+                *s = vults_core::redact::secrets(&line.chars().take(300).collect::<String>());
+            }
+        }
+    });
+    said
+}
+
+/// A refusal that means the agent wants its user signed in first.
+fn wants_sign_in(error: &str) -> bool {
+    let e = error.to_lowercase();
+    ["auth", "sign in", "log in", "login", "credential"]
+        .iter()
+        .any(|w| e.contains(w))
 }
 
 impl Drop for Conn {
@@ -520,8 +643,8 @@ impl Conn {
             .current_dir(&spec.dir)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            // Never read: a full pipe would stall the agent.
-            .stderr(Stdio::null())
+            // Read to the end in the background, its last line kept for the error.
+            .stderr(Stdio::piped())
             .kill_on_drop(true);
         // Its own process group: a command it left running goes with it.
         #[cfg(unix)]
@@ -533,6 +656,7 @@ impl Conn {
         })?;
         let stdin = child.stdin.take().ok_or("no stdin")?;
         let stdout = child.stdout.take().ok_or("no stdout")?;
+        let said = child.stderr.take().map(tail_stderr).unwrap_or_default();
         let mut conn = Self {
             group: child.id(),
             _child: child,
@@ -540,6 +664,11 @@ impl Conn {
             lines: BufReader::new(stdout).lines(),
             next_id: 1,
             load: false,
+            resume: false,
+            auth: Vec::new(),
+            close: false,
+            model_option: None,
+            said,
         };
         let init = conn
             .call(
@@ -559,7 +688,57 @@ impl Conn {
             ));
         }
         conn.load = init["agentCapabilities"]["loadSession"] == true;
+        conn.resume = init["agentCapabilities"]["sessionCapabilities"]["resume"].is_object();
+        conn.close = init["agentCapabilities"]["sessionCapabilities"]["close"].is_object();
+        conn.auth = init["authMethods"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(|m| m["id"].as_str().map(str::to_string))
+            .collect();
         Ok(conn)
+    }
+
+    /// Notes how a session it opened takes a model.
+    fn opened(&mut self, session: &Value) {
+        if let Some(id) = model_option(session) {
+            self.model_option = Some(id);
+        }
+    }
+
+    /// The session's model: by its config option when it has one, else `session/set_model`.
+    async fn set_model(&mut self, session: &str, model: &str) -> Result<(), String> {
+        match self.model_option.clone() {
+            Some(config) => self
+                .call(
+                    "session/set_config_option",
+                    json!({ "sessionId": session, "configId": config, "value": model }),
+                )
+                .await
+                .map(|_| ()),
+            None => self
+                .call(
+                    "session/set_model",
+                    json!({ "sessionId": session, "modelId": model }),
+                )
+                .await
+                .map(|_| ()),
+        }
+    }
+
+    /// Tells the agent to use the login it keeps (each method it offers, in order, until one
+    /// takes): Vults never sees or asks for the credentials.
+    async fn sign_in(&mut self) -> bool {
+        for method in self.auth.clone() {
+            if self
+                .call("authenticate", json!({ "methodId": method }))
+                .await
+                .is_ok()
+            {
+                return true;
+            }
+        }
+        false
     }
 
     async fn write(&mut self, msg: &Value) -> Result<(), String> {
@@ -595,7 +774,15 @@ impl Conn {
             .next_line()
             .await
             .map_err(|e| e.to_string())?
-            .ok_or_else(|| "the agent stopped".to_string())
+            .ok_or_else(|| {
+                // What it said last on its way out tells why.
+                let said = self.said.lock().map(|s| s.clone()).unwrap_or_default();
+                if said.is_empty() {
+                    "the agent stopped".to_string()
+                } else {
+                    format!("the agent stopped: {said}")
+                }
+            })
     }
 
     /// A call outside a turn: what streams meanwhile (a resumed session's history) is not news,
@@ -623,6 +810,60 @@ impl Conn {
     }
 }
 
+/// The models an agent offers, `(id, name)`, as a session it opens in `dir` lists them; that
+/// session is closed when the agent can, and its process goes with the call.
+pub async fn models(key: &str, dir: &Path) -> Result<Vec<(String, String)>, String> {
+    let agent = agent(key).ok_or("not an ACP agent")?;
+    let mut conn = Conn::spawn(agent, &Spec::in_dir(dir.to_path_buf())).await?;
+    let params = json!({ "cwd": dir.to_string_lossy(), "mcpServers": [] });
+    let mut made = conn.call("session/new", params.clone()).await;
+    if made.as_ref().is_err_and(|e| wants_sign_in(e)) && conn.sign_in().await {
+        made = conn.call("session/new", params).await;
+    }
+    let made = made.map_err(|e| format!("{}: {e}", agent.title))?;
+    let models = model_list(&made);
+    if conn.close
+        && let Some(id) = made["sessionId"].as_str()
+    {
+        let _ = conn.call("session/close", json!({ "sessionId": id })).await;
+    }
+    Ok(models)
+}
+
+/// The id of a session's model option (`configOptions`, category `model`), if it has one.
+fn model_option(session: &Value) -> Option<String> {
+    session["configOptions"]
+        .as_array()?
+        .iter()
+        .find(|o| o["category"] == "model")?["id"]
+        .as_str()
+        .map(str::to_string)
+}
+
+/// A new session's models, `(id, name)` each: its model option's choices (newer agents), else
+/// `models.availableModels`.
+fn model_list(made: &Value) -> Vec<(String, String)> {
+    let option = made["configOptions"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .find(|o| o["category"] == "model");
+    let (list, id, name) = match option {
+        Some(o) => (&o["options"], "value", "name"),
+        None => (&made["models"]["availableModels"], "modelId", "name"),
+    };
+    list.as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|m| {
+            let id = m[id].as_str()?.to_string();
+            let name = m[name].as_str().unwrap_or(&id).to_string();
+            Some((id, name))
+        })
+        .take(200)
+        .collect()
+}
+
 /// A driver for an ACP agent: one process for the conversation, its session resumed by a new
 /// process (`session/load`) when the old one is gone.
 #[derive(Debug)]
@@ -639,6 +880,8 @@ pub struct AcpDriver {
     fresh: bool,
     /// The session's running cost after the last turn.
     seen_cost: Option<f64>,
+    /// Another model was picked since the session took its own: told before the next prompt.
+    repick: bool,
 }
 
 impl AcpDriver {
@@ -653,6 +896,7 @@ impl AcpDriver {
             in_turn: false,
             fresh: false,
             seen_cost: None,
+            repick: false,
         }
     }
 
@@ -662,22 +906,42 @@ impl AcpDriver {
         }
         let mut conn = Conn::spawn(self.agent, &self.spec).await?;
         let cwd = self.spec.dir.to_string_lossy().into_owned();
-        // An agent that can't resume a session starts a new one, its brief sent again.
-        let resume = self.session.clone().filter(|_| conn.load);
+        // An agent that can't resume a session starts a new one, its brief sent again. One that
+        // resumes without replaying is asked that way: a load replays every tool call again.
+        let resume = self.session.clone().filter(|_| conn.load || conn.resume);
+        let method = if conn.resume {
+            "session/resume"
+        } else {
+            "session/load"
+        };
         let resumed = match resume {
-            Some(id) => conn
-                .call(
-                    "session/load",
-                    json!({ "sessionId": id, "cwd": cwd, "mcpServers": [] }),
-                )
-                .await
-                .map_err(|e| format!("{} can't resume its session: {e}", self.agent.title))
-                .map(|_| ()),
+            Some(id) => {
+                let params = json!({ "sessionId": id, "cwd": cwd, "mcpServers": [] });
+                let mut got = conn.call(method, params.clone()).await;
+                if got.as_ref().is_err_and(|e| wants_sign_in(e)) && conn.sign_in().await {
+                    got = conn.call(method, params).await;
+                }
+                got.map_err(|e| format!("{} can't resume its session: {e}", self.agent.title))
+                    .map(|v| conn.opened(&v))
+            }
             None => {
-                let made = conn
-                    .call("session/new", json!({ "cwd": cwd, "mcpServers": [] }))
-                    .await
-                    .map_err(|e| format!("{}: {e}", self.agent.title))?;
+                let params = json!({ "cwd": cwd, "mcpServers": [] });
+                let mut made = conn.call("session/new", params.clone()).await;
+                // Signed in already (its own login), it may still want to be told which way.
+                if made.as_ref().is_err_and(|e| wants_sign_in(e)) && conn.sign_in().await {
+                    made = conn.call("session/new", params).await;
+                }
+                let made = made.map_err(|e| {
+                    if wants_sign_in(&e) {
+                        format!(
+                            "{} isn't signed in. Use Sign in in the engine menu, then try again.",
+                            self.agent.title
+                        )
+                    } else {
+                        format!("{}: {e}", self.agent.title)
+                    }
+                })?;
+                conn.opened(&made);
                 let id = made["sessionId"]
                     .as_str()
                     .filter(|s| !s.is_empty())
@@ -696,12 +960,11 @@ impl AcpDriver {
                 .map_err(|e| format!("{}: {e}", self.agent.title))?;
         }
         if let (Some(model), Some(id)) = (self.spec.model.clone(), self.session.clone()) {
-            // Not every agent takes it (an unstable method): its own default then.
-            let _ = conn
-                .call("session/set_model", json!({ "sessionId": id, "modelId": model }))
-                .await;
+            // One it no longer has (removed since it was picked): its own default then.
+            let _ = conn.set_model(&id, &model).await;
         }
         self.conn = Some(conn);
+        self.repick = false;
         Ok(())
     }
 
@@ -714,6 +977,14 @@ impl AcpDriver {
             connected = self.connect() => connected?,
         }
         let session = self.session.clone().ok_or("no session")?;
+        // A model picked in the middle of the conversation: this session takes it now.
+        if std::mem::take(&mut self.repick)
+            && let (Some(model), Some(conn)) = (self.spec.model.clone(), self.conn.as_mut())
+        {
+            conn.set_model(&session, &model)
+                .await
+                .map_err(|e| format!("{} won't take that model: {e}", self.agent.title))?;
+        }
         let instructions = crate::instructions(&self.spec);
         let system = (!self.primed && !instructions.trim().is_empty()).then_some(instructions);
         let text = prompt(input, system.as_deref());
@@ -735,6 +1006,9 @@ impl AcpDriver {
         // The calls a human allowed: a write or a command that ran without being among them broke
         // the deal (the user's own settings let it run unasked), and the turn stops.
         let mut allowed: std::collections::HashSet<String> = std::collections::HashSet::new();
+        // A change an agent shows only in its permission request (OpenCode), kept until its call
+        // is told.
+        let mut changes: std::collections::HashMap<String, String> = std::collections::HashMap::new();
         loop {
             let line = tokio::select! {
                 biased;
@@ -784,6 +1058,9 @@ impl AcpDriver {
                     options,
                     call,
                 } => {
+                    if let (Some(id), Some(diff)) = (call["toolCallId"].as_str(), change_of(&call)) {
+                        changes.insert(id.to_string(), diff);
+                    }
                     let ask = said.ask(&call, ask);
                     let allow = match ask {
                         Some(ask) if !stopping => {
@@ -809,6 +1086,8 @@ impl AcpDriver {
                 }
                 Msg::Request { id: req } => conn.refuse(&req).await?,
                 Msg::Text(t) => sink.event(Event::Text(t)).await,
+                Msg::Thought(t) => sink.event(Event::Reasoning(t)).await,
+                Msg::Plan(steps) => sink.event(Event::Plan(steps)).await,
                 Msg::Tool {
                     id,
                     tool,
@@ -817,16 +1096,19 @@ impl AcpDriver {
                     mutates,
                     kind,
                     input,
+                    diff,
                 } => {
                     said.note(&id, kind, input);
+                    // What its own settings allow it runs unasked, as in its terminal: the
+                    // activity says so, and the turn goes on.
                     if mutates && end == Some(true) && !allowed.contains(&id) {
-                        let _ = conn
-                            .write(&json!({ "jsonrpc": "2.0", "method": "session/cancel", "params": { "sessionId": session } }))
-                            .await;
-                        return Err(format!(
-                            "{} ran a tool without asking: its own settings allow it. The turn was stopped.",
-                            self.agent.title
-                        ));
+                        let (tool, _) = tools.get(&id).cloned().unwrap_or((tool.clone(), false));
+                        let what = detail.clone().unwrap_or_default();
+                        sink.event(Event::Unasked {
+                            target: target(&tool, &what),
+                            tool,
+                        })
+                        .await;
                     }
                     let (tool, told) = tools.entry(id.clone()).or_insert((tool, false)).clone();
                     // Its step is told once it says what it acts on, or when it ends without.
@@ -841,12 +1123,33 @@ impl AcpDriver {
                         .await;
                         tools.insert(id.clone(), (tool, true));
                     }
+                    // Its change, once told: the update or the request that carries it may come
+                    // before or after.
+                    if let Some(diff) = diff {
+                        changes.insert(id.clone(), diff);
+                    }
+                    if tools.get(&id).is_some_and(|(_, told)| *told)
+                        && let Some(diff) = changes.remove(&id)
+                    {
+                        sink.event(Event::ToolDiff { id: id.clone(), diff }).await;
+                    }
                     if let Some(ok) = end {
                         sink.event(Event::ToolEnd { id: id.clone(), ok }).await;
                         tools.remove(&id);
                     }
                 }
-                Msg::Cost(total) => cost = Some(total),
+                Msg::Usage {
+                    cost: total,
+                    used,
+                    size,
+                } => {
+                    if total.is_some() {
+                        cost = total;
+                    }
+                    if used.is_some() {
+                        sink.event(Event::Context { used, window: size }).await;
+                    }
+                }
                 _ => {}
             }
         }
@@ -890,6 +1193,14 @@ impl AgentDriver for AcpDriver {
 
     fn session(&self) -> Option<&str> {
         self.session.as_deref()
+    }
+
+    fn set_pick(&mut self, model: Option<String>, effort: Option<vults_agents::driver::Effort>) {
+        if model.is_some() && model != self.spec.model {
+            self.repick = true;
+        }
+        self.spec.model = model;
+        self.spec.effort = effort;
     }
 }
 
@@ -942,6 +1253,68 @@ pub fn inside(dir: &Path, path: &str) -> bool {
 mod tests {
     #![allow(clippy::unwrap_used)]
     use super::*;
+
+    #[test]
+    fn an_edit_named_relative_and_absolute_is_one_file() {
+        let abs = if cfg!(windows) {
+            "C:/w/src/hello.txt"
+        } else {
+            "/w/src/hello.txt"
+        };
+        let call = |input: &str| json!({"toolCallId":"c","kind":"edit","rawInput":{"filepath":input},"content":[{"type":"diff","path":abs,"oldText":"","newText":"hi"}]});
+        let ask = ask_of(&call("src/hello.txt")).expect("asked");
+        assert_eq!(ask.input["paths"][0], abs);
+        assert!(
+            ask_of(&call("other.txt")).is_none(),
+            "a different file is never the same"
+        );
+    }
+
+    #[test]
+    fn a_refusal_for_a_login_is_told_apart() {
+        assert!(wants_sign_in("Authentication required"));
+        assert!(wants_sign_in("please log in with Google"));
+        assert!(!wants_sign_in("session not found"));
+    }
+
+    #[test]
+    fn a_new_session_lists_its_models() {
+        let made = json!({"sessionId":"s","models":{"availableModels":[{"modelId":"gemini-4-hydrogen-high","name":"Gemini 4 Hydrogen (High)"},{"modelId":"bare"}],"currentModelId":"gemini-4-hydrogen-high"}});
+        let newer = json!({"configOptions":[{"id":"model","category":"model","options":[{"value":"opencode/big-pickle","name":"Big Pickle"}]}]});
+        assert_eq!(
+            model_list(&newer),
+            [("opencode/big-pickle".to_string(), "Big Pickle".to_string())]
+        );
+        assert_eq!(model_option(&newer).as_deref(), Some("model"));
+        assert_eq!(
+            model_list(&made),
+            [
+                (
+                    "gemini-4-hydrogen-high".to_string(),
+                    "Gemini 4 Hydrogen (High)".to_string()
+                ),
+                ("bare".to_string(), "bare".to_string())
+            ]
+        );
+    }
+
+    #[test]
+    fn its_thinking_goes_to_the_activity() {
+        let thought = r#"{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"s","update":{"sessionUpdate":"agent_thought_chunk","content":{"type":"text","text":"Reading the file first."}}}}"#;
+        assert_eq!(classify(thought), Msg::Thought("Reading the file first.".into()));
+    }
+
+    #[test]
+    fn an_edit_call_brings_its_diff() {
+        let call = r#"{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"s","update":{"sessionUpdate":"tool_call","toolCallId":"c","kind":"edit","title":"Edit","rawInput":{"filePath":"/w/a.txt"},"content":[{"type":"diff","path":"/w/a.txt","oldText":"old","newText":"new"}]}}}"#;
+        assert!(
+            matches!(classify(call), Msg::Tool { diff: Some(ref d), .. } if d == "@@ /w/a.txt
+-old
++new"),
+            "{:?}",
+            classify(call)
+        );
+    }
 
     #[cfg(unix)]
     #[tokio::test]
@@ -1121,7 +1494,14 @@ mod tests {
         let done = r#"{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"s","update":{"sessionUpdate":"tool_call_update","toolCallId":"t1","status":"failed"}}}"#;
         assert!(matches!(classify(done), Msg::Tool { end: Some(false), .. }));
         let cost = r#"{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"s","update":{"sessionUpdate":"usage_update","used":11766,"size":200000,"cost":{"amount":0.25,"currency":"USD"}}}}"#;
-        assert_eq!(classify(cost), Msg::Cost(0.25));
+        assert_eq!(
+            classify(cost),
+            Msg::Usage {
+                cost: Some(0.25),
+                used: Some(11766),
+                size: Some(200000)
+            }
+        );
         // Anything else asked of us (we offered no file system) is refused.
         let fs = r#"{"jsonrpc":"2.0","id":1,"method":"fs/write_text_file","params":{"path":"/w/a","content":"x"}}"#;
         assert!(matches!(classify(fs), Msg::Request { .. }));
@@ -1172,7 +1552,7 @@ mod tests {
         }
         assert!(agent("claude").is_none());
         let keys: Vec<&str> = agents().iter().map(|a| a.name).collect();
-        assert_eq!(keys, ["opencode", "qwen", "copilot", "kimi"]);
+        assert_eq!(keys, ["antigravity", "opencode", "qwen", "copilot", "kimi"]);
         // OpenCode asks before each tool only through the config handed to its process.
         assert!(
             agent("opencode").is_some_and(|a| a.env.iter().any(|(k, _)| *k == "OPENCODE_CONFIG_CONTENT"))

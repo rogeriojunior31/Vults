@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 2cbbf5300292 -->
+<!-- source: cffffea8d29f -->
 
 Os painéis laterais redimensionáveis seguem o ponteiro que iniciou o arraste, ignoram toques adicionais e encerram o arraste quando a janela perde o foco. O cancelamento preserva a largura atual e mantém os rascunhos. Quando o espaço limita um painel, o arraste e o redimensionamento pelo teclado partem da largura visível; reduzir apenas o espaço disponível não sobrescreve a largura salva. Os controles de redimensionar e recolher usam a mesma cor de foco de teclado que o restante do tema selecionado.
 
@@ -12,12 +12,13 @@ de API que você configurou, veja abaixo); na ilha um controle compacto mostra o
 do modelo, com fundo ao passar o mouse ou enquanto está aberto. Seu menu traz o motor, o modelo
 e o esforço. No Quick, as ações da conversa ficam ao lado do Zeca, e o motor fica abaixo do rascunho.
 Seu menu abre para cima usando a largura do rodapé, com uma única área de rolagem para listas
-longas e opções de motor, modelo e esforço que quebram linha. Uma conversa iniciada explica
-seu modelo fixado dentro do menu, sem uma dica flutuante cobrindo as opções.
+longas e opções de motor, modelo e esforço que quebram linha, também numa conversa já iniciada.
 O Chat no Quick é um pouco mais largo que as outras abas (cerca de 561 pixels lógicos após o zoom).
-O chat vazio no Quick fica baixo: o Zeca usa seu retrato original em 3x ao lado de
-uma saudação, com o rascunho e os controles logo abaixo. O título some e o retrato
-passa para 2x quando chegam mensagens. A superfície cresce com o conteúdo real da conversa
+O chat vazio no Quick fica baixo e discreto: o retrato original do Zeca em 3x, sem nome,
+saudação ou explicação, e *Pergunte qualquer coisa…* no rascunho, com os controles logo abaixo.
+Quando chegam mensagens, o retrato dá o seu espaço a elas e o cabeçalho encolhe até os seus
+botões. Respostas longas mantêm código, diffs e saída de ferramentas em blocos de rolagem
+próprios e mais baixos, e nada na conversa rola para o lado. A superfície cresce com o conteúdo real da conversa
 até atingir a altura disponível da ilha; então só a conversa rola. Começar uma conversa
 vazia libera a altura anterior. Abrir, carregar e fechar o menu de motor não muda essa altura:
 o menu fica sobre a conversa e rola dentro do espaço acima do rodapé. Uma área baixa mantém
@@ -31,9 +32,23 @@ para priorizar leitura e envio; voltar a uma área mais alta retoma a mesma cena
 
 Os motores vêm em dois grupos, **Your setup** (os
 CLIs do Claude Code e do Codex, cada um *Signed in*, *Installed* ou *Not installed*: o Vults só olha
-se o CLI e o arquivo de login dele estão lá, nunca os lê) e **Vults harness** (a API, *Ready* com uma chave ou um modelo local),
-com **Engines in Settings ›** embaixo. **New** (**+** na ilha) começa uma conversa nova, e trocar de provedor
-também; a anterior fica na lista (veja [Conversas](#conversations)). **Esc** primeiro fecha um seletor aberto e depois fecha o chat; a conversa continua lá quando você volta.
+pergunta ao próprio CLI, `claude auth status` ou `codex login status`, e lê só se ele tem login,
+usando como reserva se o arquivo de login existe; **Sign in** ao lado de um sem login abre um
+terminal com o login do próprio CLI, que o Vults nunca vê; depois, cada agente que fala ACP e está
+instalado aqui (Qwen Code, Copilot CLI e Kimi Code só depois de ligados em **Settings → Labs**,
+até cada um ser testado num turno de verdade), como Antigravity (`agy acp`, com a telemetria dele desligada), OpenCode, Qwen Code,
+Copilot CLI ou Kimi Code, que usa o próprio modelo e as próprias configurações de permissão, como
+no terminal dele: o que ele pede vira um card, e o que as configurações dele permitem ele roda, com a
+**Atividade** do turno dizendo *Rodou pelas configurações do próprio agente, sem perguntar*; o menu de modelo lista os modelos do próprio agente (perguntados uma vez a uma sessão que ele abre
+numa pasta do próprio Vults, e então guardados), e um escolhido no meio da conversa vale a partir do
+próximo turno; Antigravity e OpenCode também têm **Sign in**, que abre `agy acp --login` ou
+`opencode auth login` num terminal. As edições deles mostram os diffs, e o contexto do Antigravity
+enche o medidor ao lado de **Send**) e **Vults harness** (a API, *Ready* com uma chave ou um modelo local),
+com **Engines in Settings ›** embaixo. **New** (**+** na ilha) começa uma conversa nova; a anterior fica na lista (veja
+[Conversas](#conversations)). Escolher outro motor num chat vazio começa com ele; numa conversa já
+em andamento, o outro motor assume: as linhas ficam, uma nota diz quem continua, e o primeiro turno
+dele começa com o que já foi dito (a sua primeira mensagem e as linhas mais recentes, no máximo
+cerca de 12.000 tokens). **Esc** primeiro fecha um seletor aberto e depois fecha o chat; a conversa continua lá quando você volta.
 Só um seletor fica aberto por vez. **↑/↓** no botão abre a lista e foca uma opção;
 **↑/↓**, **Home** e **End** percorrem as opções sem aplicá-las. **Enter** ou um clique escolhe;
 **Esc** devolve o foco ao botão. Clicar fora fecha a lista. O carregamento dos modelos mantém
@@ -68,7 +83,7 @@ opcional/Enviar à direita; o clipe mantém o nome acessível
 e a dica **Anexar um arquivo**. Os cartões de arquivos ficam numa faixa própria acima dele. Suas mensagens ficam em balões à direita;
 as respostas seguem na coluna da conversa.
 
-O chat é do Zeca: com ele desligado (**Settings → Flock & Zeca → Zeca**) não há Chat nem
+O chat é do Zeca: com ele desligado (**Settings → Zeca → Zeca**) não há Chat nem
 microfone do Chat, e arquivos soltos na ilha não são aceitos. O [ditado local independente](dictation.md#dictate-into-any-app)
 continua funcionando, inclusive sua tecla de fala. Veja [Sem o Zeca](island.md#without-zeca).
 Altere as teclas globais em Configurações do Sistema → Atalhos; Settings > General mostra os
@@ -81,6 +96,15 @@ vínculos informados pelo desktop.
 Antes da primeira mensagem, a pasta (*in vults ▾*, no topo no Nest, embaixo do campo na ilha) diz onde a conversa vai trabalhar: a
 pasta da sessão em primeiro plano, a menos que você escolha outra das sessões no fio, ou uma pasta
 vazia só dela. Depois que a conversa começa, ela fica lá até **New**.
+
+O menu dela lista as pastas onde seus agentes trabalham agora, depois **Recentes** (as pastas onde
+conversas anteriores trabalharam e que ainda existem), um campo para digitar ou colar o caminho de
+uma pasta (`~/` é a sua pasta pessoal; uma que não existe avisa), **Escolher uma pasta…** (o seletor
+do sistema) e *An empty folder*. Uma única pasta arrastada para um chat que ainda não começou vira o
+lugar onde ele trabalha; depois que começou, uma pasta arrastada vai para o rascunho pelo caminho. No
+**By project** do Nest, *Conversar aqui* ao lado de um repositório ou worktree abre o chat ali (uma
+conversa nova, se a atual já começou). Uma pasta que não existe mais na hora de enviar para a
+mensagem com um aviso, em vez de trabalhar em outro lugar.
 
 ![O Chat na ilha em Quick: a saudação do Zeca, o campo de mensagem e os seletores de modelo, pasta e acesso](../../assets/island-chat.png)
 
@@ -110,13 +134,19 @@ Se uma CLI não conseguir listar os modelos, o seletor mostra uma explicação e
 mantém seu rascunho e sua escolha de modelo. Feche e reabra o seletor para tentar
 de novo; digitar ou atualizar o chat não repete continuamente a consulta que falhou.
 
-A escolha é lembrada por pasta e por motor: uma conversa nova naquela pasta começa com ela. Como a
-pasta, ela fica fixa quando a conversa começa, então uma resposta nunca troca de modelo no meio;
-**New** começa outra. O modelo do chat por API é escolhido em **Settings → Chat & voice**.
+A escolha é lembrada por pasta e por motor: uma conversa nova naquela pasta começa com ela. Ela
+também pode mudar no meio da conversa: o próximo turno roda com o novo modelo e esforço, e a
+conversa continua; uma resposta que já está chegando mantém o que começou usando. O modelo do chat por API é escolhido em **Settings → Agents → API providers**.
 
 <a id="referencing-the-flock"></a>
 
 ## Mencionando o bando
+
+Numa conversa com pasta, **@** e algumas letras também listam os arquivos e pastas dela
+(`File: src/main.rs`, `Folder: src/auth`), primeiro. Escolher um coloca o caminho no rascunho como
+texto, como `@src/main.rs`, para o agente abrir onde roda; controle de versão, dependências e
+pastas de build ficam de fora. Uma pasta solta no chat entra do mesmo jeito, pelo caminho completo,
+e nunca é copiada.
 
 Digite **@** no rascunho para encontrar uma sessão ou projeto aberto. Busque pelo projeto,
 agente, pasta ou ID da sessão. **↑/↓** percorrem as sugestões; **Enter**, **Tab** ou um clique
@@ -128,7 +158,11 @@ selecionar até oito referências, incluindo várias sessões numa mensagem.
 Uma referência de sessão seleciona aquele agente e ID exatos. Uma referência de projeto
 seleciona as sessões do bando naquela pasta exata, incluindo seus diferentes agentes.
 Ao enviar, o contexto do bando e as ferramentas que o consultam leem somente essas seleções
-naquele turno. Isso funciona nos motores CLI e API. As referências não mudam a pasta de
+naquele turno. Isso funciona nos motores CLI e API. Uma referência a uma sessão do Claude Code ou do Codex
+também leva o que foi dito nela, lido da transcrição do próprio agente: a primeira mensagem e as
+mais recentes que cabem em cerca de 6 mil tokens, só as palavras (chamadas e resultados de
+ferramentas ficam de fora), com segredos ocultados, marcadas para o modelo como um registro para
+ler, não instruções. As referências não mudam a pasta de
 trabalho da conversa nem respondem aos cards, e as mensagens anteriores continuam na
 conversa. Sem referências, o contexto habitual do bando continua igual.
 
@@ -150,7 +184,10 @@ enviar, começar ou abrir outra conversa, ou sair do Vults.
 
 A seta no topo do chat da ilha abre o [Nest](nest.md), a janela do próprio Vults. A aba **Chat**
 dele é a mesma conversa, larga, com respostas em Markdown completo; os cards dela são respondidos
-ali também. **Memory**, ao lado, mostra o que o Zeca lembra.
+ali também. O **Painel lateral** ao lado tem três abas: **Memory** mostra o que o Zeca lembra;
+**Changes** lista cada arquivo que o agente mudou nesta conversa, com as linhas adicionadas e
+removidas e os seus diffs; **Files** acha arquivos e pastas na pasta da conversa. Em Changes e
+Files um clique põe o caminho no rascunho, como o **@** faz.
 
 O Chat vazio no Nest centraliza o retrato original do Zeca em 3x acima de **Perguntar ao Zeca**
 e de uma lista vertical de sugestões. Quando chegam mensagens, a mesma cena usa um poleiro
@@ -191,7 +228,9 @@ Toda conversa é salva neste computador enquanto acontece, e o botão de lista n
 todas, a usada por último primeiro, com o motor e a pasta de cada uma. Clique numa para continuar de
 onde parou, mesmo depois de reiniciar: ela mantém o motor, a pasta, o modelo e o esforço, e a CLI dela
 retoma a própria sessão (a sessão do Claude Code, a thread do Codex; o chat por API reenvia o que foi
-dito, com cada arquivo mandado guardado só como um rótulo: um arquivo de texto pelo nome, um documento pelo título, uma imagem como "uma imagem", nunca pelo conteúdo). O lápis renomeia; o xis apaga depois de um segundo clique, com tudo o que foi dito nela.
+dito, com cada arquivo mandado guardado só como um rótulo: um arquivo de texto pelo nome, um documento pelo título, uma imagem como "uma imagem", nunca pelo conteúdo). O lápis renomeia; o xis apaga depois de um segundo clique, com tudo o que foi dito nela. **Copy as Markdown**, no topo, copia a conversa aberta: o título, depois cada mensagem sob quem a disse, as respostas como foram escritas.
+Se a CLI não tem mais essa sessão (o histórico dela foi limpo, ou a conversa veio de outro
+computador), o turno começa uma sessão nova que continua a partir do que foi dito, em vez de falhar.
 
 O que é salvo é o que o chat mostra: suas mensagens e os nomes dos arquivos que você mandou, as
 respostas do Zeca, erros e paradas; nunca a resposta a um card (o log de auditoria guarda essas) e
@@ -199,6 +238,9 @@ nunca uma regra *Always in this chat*, então uma conversa aberta de novo pergun
 perguntaria. As 200 mais recentes ficam guardadas, no mesmo `vults.sqlite` local do histórico de
 atividade; **Settings → History and budget → Clear history** apaga todas. Uma conversa cuja pasta sumiu não pode
 ser aberta de novo.
+
+Sair do Vults pela bandeja enquanto um turno roda, no chat do Zeca ou de um especialista, pergunta antes:
+sair interrompe o turno e a resposta pela metade se perde.
 
 <a id="what-zeca-knows"></a>
 <a id="memory"></a>
@@ -218,22 +260,46 @@ Com a memória ligada, o que o Zeca lembra e o que ele recupera também entram: 
 
 ## Escrevendo e lendo
 
-- **Enter** envia, **Shift+Enter** começa uma nova linha. Você pode digitar a próxima mensagem
-  enquanto uma resposta chega, e enviá-la quando a resposta terminar. **↑** com o campo vazio traz
-  de volta a sua última mensagem, para mudá-la ou enviá-la de novo.
+- **Enter** envia, **Shift+Enter** começa uma nova linha. Enquanto uma resposta chega, **Enter** põe
+  a mensagem numa fila acima do rascunho (**×** tira da fila); quando o turno termina bem, a fila
+  sai, em ordem, um turno para cada uma. Depois de **Stop** ou de um erro nada sai sozinho: as
+  palavras da fila voltam para o rascunho. **↑** com o campo vazio traz
+  de volta a sua última mensagem, e cada **↑** seguinte uma anterior; **↓** volta para frente, até
+  um rascunho vazio depois da mais nova. A sua última mensagem também oferece **Edit and send
+  again** enquanto nenhum turno roda, e toda mensagem sua pode ser copiada. **/** no começo do rascunho
+  lista os comandos do chat: `/remember`, `/forget`, `/continue` e `/new`, que começa uma conversa
+  nova na hora.
+- Quando o agente te pergunta algo (`AskUserQuestion` do Claude Code), o card mostra cada pergunta
+  com as opções: um clique em cada volta como a sua resposta, ou escreva a sua e aperte **Enter**.
+  O acesso total nunca responde uma pergunta por você. Enquanto um card de permissão espera,
+  escrever e apertar **Enter** também responde: um não com as suas palavras, que o Claude Code lê (o
+  Codex e os agentes ACP recebem um não simples).
 - Enquanto o Zeca responde, o botão de enviar vira **Stop**: ele encerra o turno ali, e tudo o que o
   turno estava esperando vira um não.
 - A resposta chega à medida que é escrita. Role para cima para ler e ela fica onde você está, com um
   botão *↓ new text* para voltar ao fim.
+- Cada mensagem mostra quando foi dita ao lado das suas ações: a hora se foi hoje, o dia antes
+  disso, e a data inteira ao passar o ponteiro.
 - **Copy** embaixo da última resposta copia ela inteira, no Markdown em que foi escrita; uma resposta
   mais antiga mostra o botão quando o ponteiro passa sobre ela. Um bloco de código tem o seu próprio
   **Copy**. Se a cópia falhar, o botão avisa e permite tentar de novo.
 - Tanto Quick quanto Room mostram títulos, listas, citações, código e tabelas. Código e tabelas
   largas têm uma área de rolagem própria que aceita foco pelo teclado. Links continuam como
-  texto, com o endereço ao lado do rótulo.
+  texto, com o endereço ao lado do rótulo; um endereço solto aparece como um. `~~texto~~` risca o
+  texto, e listas `- [ ]` / `- [x]` ganham as suas caixas. O código é colorido pela linguagem do
+  bloco (comentários, strings, números, palavras-chave; um bloco `diff` pelas suas linhas), e um bloco
+  com mais de 20.000 caracteres fica sem cor.
 - Um turno que falha diz por quê, com **Try again**: ele envia as mesmas palavras e arquivos mais uma
-  vez.
-- Enquanto um turno roda, *Thinking…* avisa, com os segundos depois que ele passa de três.
+  vez. Uma tarefa longa roda enquanto continuar dando sinal; só um turno calado por 15 minutos (sem
+  palavras, ferramenta ou card) termina como *stopped responding*.
+- Enquanto um turno roda, a linha embaixo da conversa diz o que o agente está fazendo agora
+  (*Executando cargo test…*, *Editando lib.rs…*), com quanto tempo o turno já rodou depois que ele
+  passa de três segundos. Quando ele termina, a sua **Atividade** diz quanto tempo levou.
+- Ao lado de **Send**, um pequeno anel diz o quanto o contexto do modelo está cheio assim que o
+  motor informa (Claude Code e Codex): a fração da janela, ou só os tokens até a janela ser
+  conhecida. Ele fica âmbar depois de 80%: hora de uma conversa nova, ou de deixar o motor compactá-la.
+- **Ctrl+F** (**⌘F**) busca na conversa: conta as mensagens que batem, **Enter** e
+  **Shift+Enter** passam por elas, **Escape** fecha.
 - No Nest a conversa é lida em uma coluna da largura do campo de texto, por mais larga que seja a
   janela. Cada resposta vem assinada pelo Zeca e pelo motor que a escreveu, e um bloco de código diz
   a sua linguagem.
@@ -280,9 +346,18 @@ deles antes de serem usados.
 
 ![Uma aprovação pendente com seu comando e ações no Ninho mínimo](../../assets/nest-chat-approval.png)
 
-A resposta fica separada de uma seção **Atividade** recolhida. Abra para ver o pensamento
+Um turno é lido na ordem em que rodou: cada trecho de ferramentas é uma seção **Atividade**
+recolhida, no lugar em que aconteceu, entre as palavras de antes e as de depois, ao vivo e ao
+reabrir a conversa. Abra para ver o pensamento
 legível fornecido pelo motor e as ferramentas que ele informou. Cada ferramenta mostra seus
-argumentos ou comando e a conclusão ou falha informada. Resultados ausentes ficam como **Nenhum
+argumentos ou comando, a conclusão ou falha informada e, quando o motor informa (os resultados de
+ferramenta do Claude Code, a saída de comando do Codex), os últimos 4.000 caracteres do que ela
+imprimiu, com segredos ocultados. Quando o agente mantém um plano (a lista de tarefas do Claude Code, o plano do Codex, o plano de um
+agente ACP), ele aparece como checklist no topo da **Atividade** do turno, com *Plano 2 de 5* na linha
+fechada, e a linha embaixo da conversa diz o passo em que ele está. O pensamento de um agente ACP
+aparece ali também. Uma edição mostra a sua mudança em linhas coloridas, com as
+linhas que adicionou e removeu na sua linha (Edit, MultiEdit e Write do Claude Code; as mudanças de
+arquivo do Codex). Resultados ausentes ficam como **Nenhum
 resultado informado**; o Vults não inventa pensamento nem trata a duração do turno como tempo
 medido de pensamento. O Codex mostra seus resumos públicos de raciocínio; motores que não fornecem
 detalhes informam isso.
@@ -344,11 +419,13 @@ orientação não muda as verificações de permissão. Recolher um cartão nunc
 - **Your policies**: as [políticas](approvals.md#policies) que você aceitou respondem as chamadas do
   chat como respondem as do Claude Code na ilha. Um deny nega, um allow permite (chamadas do Claude
   Code, dentro da pasta da conversa), o resto pergunta.
-- **Full access**: ao escolher, nas Configurações ou no menu do chat, você confirma antes; depois tudo roda sem card, mas um comando destrutivo (`rm`, um push forçado) ainda
-  pergunta, o que uma política nega é negado e o que uma política manda perguntar ainda pergunta. Depois que a conversa lê conteúdo de
-  fora (uma página web, um fetch, uma ferramenta MCP), os cards dela voltam a perguntar até ela
-  acabar: as palavras de uma página podem estar conduzindo a conversa. Adicione linhas `deny` a uma
-  política para o que nunca deve rodar.
+- **Full access**: ao escolher, nas Configurações ou no menu do chat, você confirma antes; depois
+  nada pergunta: todo comando e edição roda sem card, os destrutivos inclusive, e também depois de a
+  conversa ler uma página web, a saída de rede de um comando ou uma ferramenta MCP. Só o que uma
+  política sua nega é recusado: adicione linhas `deny` a uma política para o que nunca deve rodar. O
+  próprio agente roda no modo dele que não pergunta nada (`bypassPermissions` do Claude Code, `never`
+  sem sandbox do Codex), a partir do próximo turno, sem reiniciar a conversa; enquanto uma política
+  sua negar algo, o Vults responde os pedidos no lugar dele, para que essa negação continue valendo.
 
 O chat diz cada resposta dada assim (*Allowed by your policy*, *Denied by your policy*, *Ran with
 full access*), e o log de auditoria guarda. O chip dele, ao lado do modelo (âmbar com um sinal de aviso
@@ -364,8 +441,10 @@ enquanto uma barra enche, e ele entra na sua próxima mensagem: um cartão dentr
 e a extensão do arquivo (**×** o retira). Nomes longos quebram linha, e uma lista longa de arquivos rola
 dentro do compositor. Clique no campo para escrever sobre ele. Você pode enviá-lo sem texto para perguntar o
 que ele é. Imagens, PDFs, código e texto funcionam melhor. Os arquivos são copiados para
-a caixa de entrada do app (até 20 MB cada) e apagados depois de uma semana; uma pasta, ou um arquivo
-com mais de 20 MB, é recusado com uma linha dizendo por quê.
+a caixa de entrada do app (até 20 MB cada) e apagados depois de uma semana; um arquivo com mais de
+20 MB é recusado com uma linha dizendo por quê, e uma pasta entra no rascunho pelo caminho
+([Mencionando o bando](#referencing-the-flock)). Uma imagem colada no rascunho é anexada do mesmo
+jeito, e também um texto colado de 32 KB ou mais, como um arquivo próprio.
 
 No Windows, arquivos arrastados do Explorer usam os objetos nativos de arquivo do WebView2 e
 aceitam até 256 arquivos por vez. Se o WebView2 instalado não conseguir recebê-los, o cursor
@@ -392,8 +471,11 @@ valem em qualquer pasta. Os cards continuam perguntando o que suas regras não l
 o `defaultMode` das suas configurações, e os seus hooks nunca fazem o chat aparecer como uma sessão
 de agente.
 
-Desligue em **Settings → Chat & voice → Your Claude Code and Codex setup**, e o Claude não lê nada disso; o
-Codex então só deixa de fora os seus hooks. O interruptor vale para a próxima conversa. Bom saber:
+Escolha por conversa no ícone de pessoa junto aos controles do chat: **Your setup** ou **Clean**,
+antes da primeira mensagem (a escolha também vira o padrão das próximas, como o interruptor em
+**Settings → Chat & voice → Your Claude Code and Codex setup**). No limpo, o Claude não lê nada
+disso, e o Codex começa numa pasta própria: nada do seu `config.toml`, servidores MCP, skills, hooks
+ou `AGENTS.md`, com o seu login guardado só na memória. Bom saber:
 
 - `claude -p` pula a pergunta de confiança, então um repositório que você acabou de clonar não
   consegue trazer regras ou hooks próprios.
@@ -401,7 +483,6 @@ Codex então só deixa de fora os seus hooks. O interruptor vale para a próxima
   card.
 - Com o interruptor desligado, o Claude não recebe servidores MCP além do próprio Vults, e nenhuma
   regra salva pula um card.
-- O `config.toml` do Codex ainda traz os servidores MCP dele, e o `AGENTS.md` dele ainda é lido.
 - Uma conversa já em andamento mantém o que leu.
 
 Veja [Segurança](../safety.md) para o resto.
@@ -411,8 +492,12 @@ Veja [Segurança](../safety.md) para o resto.
 ## Sem uma CLI: uma chave de API, ou um modelo local
 
 O chat também pode usar a API de um provedor com a sua própria chave, ou um modelo rodando na sua
-máquina. Em **Settings → Chat & voice**, escolha o **Provider**, cole a chave dele e escolha um **Model**; o
-nome do provedor então aparece no seletor de motor do chat, ao lado de Claude e Codex.
+máquina. Em **Settings → Agents → API providers**, escolha o provedor, cole a chave dele e escolha um
+**Model**; o nome do provedor então aparece no seletor de motor do chat, ao lado de Claude e Codex. Cada
+provedor mostra a sua marca, um ponto e como está (*Chave salva no chaveiro do sistema.*, *Ainda sem
+chave.*). Acima, a lista **Agents** traz cada agente com a sua marca e estado; escolher um mostra os
+hooks dele e, em **In Zeca's chat**, como está o motor (*Conectado e pronto.*, *Instalado, sem
+login.*), com **Sign in** onde houver e **Check again**.
 
 | Provedor | Chave | Observações |
 |---|---|---|
@@ -504,7 +589,7 @@ os arquivos originais existentes nunca são substituídos.
 Valem os formatos de arquivo já suportados pela API: imagens/texto compatíveis e PDFs no protocolo
 Anthropic. Arquivos incompatíveis ou textos maiores que 512 KB são apenas nomeados, sem conteúdo
 embutido. O histórico salvo da API mantém nomes dos anexos, nunca seus bytes. Anexos são conteúdo
-externo; em conversas por CLI, cards voltam a perguntar antes de ações sob acesso total. Arquivos
+externo: com **Asks first** ou **Your policies** os cards avisam; o acesso total continua sem perguntar nada. Arquivos
 não habilitam ferramentas da API, GitHub ou acesso ao projeto. Arrastar arquivos para especialistas
 não é adicionado nesta etapa; use seu clipe.
 

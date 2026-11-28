@@ -2044,7 +2044,7 @@ for (const surface of ["island","nest"]) {
  setup.fire("keydown",{key:"ArrowDown",preventDefault(){}});await tick();
  assert.equal(setup.getAttribute("aria-expanded"),"true");
  assert.ok(help.textContent.includes("CLAUDE.md"));assert.ok(help.textContent.includes("already trust"));
- assert.equal(document.activeElement,help.querySelector("button"));
+ assert.equal(document.activeElement,help.querySelector(".setup-settings"),"Without an environment choice to make, focus goes to Chat settings");
  setupPanel.element.fire("keydown",{key:"Escape",preventDefault(){},stopPropagation(){}});
  assert.equal(setup.getAttribute("aria-expanded"),"false");assert.equal(document.activeElement,setup);
  assert.deepEqual(effects,[],"Opening and dismissing setup help has no side effects");

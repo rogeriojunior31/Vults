@@ -56,7 +56,7 @@ const repo = (access, over = {}) => repositorySentence({ name: "o/r", access, pu
 assert.equal(repo("ready", { push: true }), "You can read and push to o/r.");
 assert.equal(repo("ready", { push: false }), "You can read o/r, but not push to it.");
 assert.match(repo("ready", { push: true, archived: true }), /archived/);
-assert.match(repo("notFound"), /private and this login cannot see it/);
+assert.match(repo("notFound"), /this login can't see it/);
 assert.match(repo("sso"), /single sign-on for o\/r/);
 
 const flush = () => new Promise(resolve => setTimeout(resolve, 0));

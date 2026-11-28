@@ -2,7 +2,7 @@
 import { el } from "./dom";
 import { t } from "./i18n";
 
-export function copyTextButton(text: string, className: string, name: string, action = t("Copy")): HTMLButtonElement {
+export function copyTextButton(text: string | (() => string), className: string, name: string, action = t("Copy")): HTMLButtonElement {
   const label = el("span", { text: action });
   label.setAttribute("role", "status");
   const button = el("button", { class: className }, label);
@@ -17,7 +17,7 @@ export function copyTextButton(text: string, className: string, name: string, ac
     button.setAttribute("aria-busy", "true");
     void Promise.resolve().then(() => {
       if (!navigator.clipboard) throw new Error("Clipboard unavailable");
-      return navigator.clipboard.writeText(text);
+      return navigator.clipboard.writeText(typeof text === "function" ? text() : text);
     }).then(() => {
       label.textContent = t("Copied");
       button.title = t("Copied");

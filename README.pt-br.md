@@ -1,4 +1,4 @@
-<!-- source: 23618fc4873a -->
+<!-- source: 4b2b641924f0 -->
 <div align="center">
 
 <img src="docs/assets/zeca.png" width="128" height="128" alt="Zeca, um urubu-preto em 8 bits" />
@@ -52,7 +52,7 @@ fica no topo da tela e faz quatro coisas:
 
 > [!NOTE]
 > O Vults fala **inglês**, **português do Brasil**, **espanhol** e **chinês simplificado**. Ele segue
-> o idioma do seu desktop; escolha outro em **Settings → General → Language**.
+> o idioma do seu desktop; escolha outro em **Settings → Appearance → Language**.
 
 <a id="features"></a>
 
@@ -200,7 +200,7 @@ que nenhuma regra dele cobre também vêm para a ilha. Veja a
 <details>
 <summary><b>Eu preciso do Zeca?</b></summary>
 
-Não. Desligue ele em **Settings → Flock & Zeca**: o bando, os cards, as notificações, as conexões e o
+Não. Desligue ele em **Settings → Zeca**: o bando, os cards, as notificações, as conexões e o
 ditado continuam funcionando, e só o chat some.
 </details>
 

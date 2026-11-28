@@ -1,64 +1,60 @@
-// Line icons for the island, drawn for this project on a 24-unit grid (stroke, round caps).
+// Line icons for every surface: Lucide's drawings (ISC; see NOTICE), as t3code uses them, on their
+// 24-unit grid with round caps. The flock keeps the product's own drawing. One icon set, by name.
 
-const PATHS = {
-  chevron: "M9 6l6 6-6 6",
-  check: "M5 12.5l4.5 4.5L19 7.5",
-  openOut: "M14 5h5v5M19 5l-8 8M17 14v4a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1h4",
-  // A cog of six teeth around its hub (the old one, rays round a dot, read as the sun).
-  gear: "M10.21 2.77L13.79 2.77L14.21 5.57L16.46 6.87L19.09 5.83L20.89 8.94L18.68 10.70L18.68 13.30L20.89 15.06L19.09 18.17L16.46 17.13L14.21 18.43L13.79 21.23L10.21 21.23L9.79 18.43L7.54 17.13L4.91 18.17L3.11 15.06L5.32 13.30L5.32 10.70L3.11 8.94L4.91 5.83L7.54 6.87L9.79 5.57ZM15.00 12a3.0 3.0 0 1 0-6.0 0a3.0 3.0 0 1 0 6.0 0z",
-  sound: "M5 9.5h3l4-3.5v12l-4-3.5H5zM15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11",
-  mute: "M5 9.5h3l4-3.5v12l-4-3.5H5zM16 9.5l5 5M21 9.5l-5 5",
-  // A vulture soaring, seen from below: broad wings, splayed fingers, a short tail (the old two
-  // dots read as eyes, and a perched bird drawn in lines read as a penguin).
-  flock: "M12 9.2c-1 0-1.2.7-1.4 1.4L4 8.6 2 8M4 8.6l-1.6 1.8M4.4 10.4l-1.4 2c2.4 1 5 1.8 7.5 2.2l-.6 2.8h4.2l-.6-2.8c2.5-.4 5.1-1.2 7.5-2.2l-1.4-2M20 8.6l1.6 1.8M20 8.6L22 8l-8.6 2.6c-.2-.7-.4-1.4-1.4-1.4M13.3 7.2a1.3 1.3 0 1 1-2.6 0 1.3 1.3 0 0 1 2.6 0z",
-  chat: "M5 6.5h14a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1h-7l-4 3v-3H5a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1z",
-  close: "M7 7l10 10M17 7L7 17",
-  fold: "M6 15l6-6 6 6",
-  plus: "M12 5v14M5 12h14",
-  // A paperclip: a file handed to the chat.
-  clip: "M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l7.9-7.9",
-  chevronDown: "M6 9l6 6 6-6",
-  stop: "M7 7h10v10H7z",
-  file: "M7 3h7l5 5v13H7zM14 3v5h5",
-  folder: "M4 6.5a1 1 0 0 1 1-1h4.5l2 2H19a1 1 0 0 1 1 1V17a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z",
-  list: "M9 7h10M9 12h10M9 17h10M5 7h.01M5 12h.01M5 17h.01",
-  // A week as bars, for Activity.
-  bars: "M5 19v-6M10 19V7M15 19v-9M20 19v-4",
-  pencil: "M4 20h4L19 9l-4-4L4 16zM14 6l4 4",
-  person: "M12 12a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM5 19.5a7 7 0 0 1 14 0",
-  pin: "M9 4h6l-1 6 3 3H7l3-3zM12 13v7",
-  moon: "M19 14.5A7.5 7.5 0 0 1 9.5 5a7.5 7.5 0 1 0 9.5 9.5z",
-  hide: "M4 12s3-6 8-6 8 6 8 6-3 6-8 6-8-6-8-6zM12 14.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM5 19L19 5",
-  play: "M8 5.5v13l10-6.5z",
-  pause: "M8.5 6v12M15.5 6v12",
-  previous: "M7 6v12M18 6.5v11L10 12z",
-  next: "M17 6v12M6 6.5v11L14 12z",
-  note: "M9 17.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0zM9 17.5V5l10-2v12M19 15a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z",
-  pull: "M6 3.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM6 7.5v9M6 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM18 16.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM18 16.5V9a3 3 0 0 0-3-3h-4.5M13 3.5L10.5 6 13 8.5",
-  // From the Living Flock prototype's frame: the Connections plug, full screen, the terminal, search.
-  plug: "M7 8h10v3a5 5 0 0 1-10 0V8M9 3v5m6-5v5M12 16v4H8",
-  fullscreen: "M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5",
-  terminal: "m4 6 5 6-5 6m8 0h8",
-  search: "M17.25 10.5a6.75 6.75 0 1 1-13.5 0 6.75 6.75 0 0 1 13.5 0zM15.75 15.75 21 21",
-  // The Nest's Chat: the conversations' column at the left, the Memory panel at the right.
-  sideLeft: "M4 5h16v14H4zM9.5 5v14",
-  sideRight: "M4 5h16v14H4zM14.5 5v14",
-  // A release: a tag with its hole.
-  tag: "M3 12V4h8l9 9-8 8-9-9zM7.5 7.5h.01",
-  // A default branch: its line, a commit on it, and the line it came from.
-  branch: "M6 4v12M6 16a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM18 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM18 8c0 5-12 3-12 8",
-  // Settings → Phone.
-  phone: "M9 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM11 18h2",
-  mic: "M12 3.5a2.8 2.8 0 0 0-2.8 2.8v5.4a2.8 2.8 0 0 0 5.6 0V6.3A2.8 2.8 0 0 0 12 3.5zM6.5 11.5a5.5 5.5 0 0 0 11 0M12 17v3.5",
-  copy: "M9 9h10v11H9zM15 9V5a1 1 0 0 0-1-1H6a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3",
-  retry: "M4.5 12a7.5 7.5 0 1 0 2.2-5.3M4.5 4.5v4h4",
-  // A new version: an arrow rising out of a tray.
-  update: "M12 15V4M7.5 8.5 12 4l4.5 4.5M5 14v4a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4",
-  // A warning that must not rely on color alone (a destructive request, full access).
-  warning: "M12 4.5 3.5 19h17zM12 10v4.5M12 16.8v.2",
-} as const;
+type Node = [tag: string, attributes: Record<string, string>];
 
-export type IconName = keyof typeof PATHS;
+const ICONS = {
+  chevron: [["path",{"d":"m9 18 6-6-6-6"}]],
+  check: [["path",{"d":"M20 6 9 17l-5-5"}]],
+  bird: [["path",{"d":"M16 7h.01"}],["path",{"d":"M3.4 18H12a8 8 0 0 0 8-8V7a4 4 0 0 0-7.28-2.3L2 20"}],["path",{"d":"m20 7 2 .5-2 .5"}],["path",{"d":"M10 18v3"}],["path",{"d":"M14 17.75V21"}],["path",{"d":"M7 18a6 6 0 0 0 3.84-10.61"}]],
+  palette: [["path",{"d":"M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z"}],["circle",{"cx":"13.5","cy":"6.5","r":".5","fill":"currentColor"}],["circle",{"cx":"17.5","cy":"10.5","r":".5","fill":"currentColor"}],["circle",{"cx":"6.5","cy":"12.5","r":".5","fill":"currentColor"}],["circle",{"cx":"8.5","cy":"7.5","r":".5","fill":"currentColor"}]],
+  island: [["rect",{"width":"18","height":"18","x":"3","y":"3","rx":"2"}],["path",{"d":"M3 9h18"}]],
+  keyboard: [["path",{"d":"M10 8h.01"}],["path",{"d":"M12 12h.01"}],["path",{"d":"M14 8h.01"}],["path",{"d":"M16 12h.01"}],["path",{"d":"M18 8h.01"}],["path",{"d":"M6 8h.01"}],["path",{"d":"M7 16h10"}],["path",{"d":"M8 12h.01"}],["rect",{"width":"20","height":"16","x":"2","y":"4","rx":"2"}]],
+  flask: [["path",{"d":"M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2"}],["path",{"d":"M6.453 15h11.094"}],["path",{"d":"M8.5 2h7"}]],
+  openOut: [["path",{"d":"M15 3h6v6"}],["path",{"d":"M10 14 21 3"}],["path",{"d":"M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"}]],
+  gear: [["path",{"d":"M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"}],["circle",{"cx":"12","cy":"12","r":"3"}]],
+  sound: [["path",{"d":"M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"}],["path",{"d":"M16 9a5 5 0 0 1 0 6"}],["path",{"d":"M19.364 18.364a9 9 0 0 0 0-12.728"}]],
+  mute: [["path",{"d":"M11 4.702a.7.7 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.7.7 0 0 0 11 19.298z"}],["path",{"d":"m16.5 14.5 5-5"}],["path",{"d":"m16.5 9.5 5 5"}]],
+  flock: [["path",{"d":"M12 9.2c-1 0-1.2.7-1.4 1.4L4 8.6 2 8M4 8.6l-1.6 1.8M4.4 10.4l-1.4 2c2.4 1 5 1.8 7.5 2.2l-.6 2.8h4.2l-.6-2.8c2.5-.4 5.1-1.2 7.5-2.2l-1.4-2M20 8.6l1.6 1.8M20 8.6L22 8l-8.6 2.6c-.2-.7-.4-1.4-1.4-1.4M13.3 7.2a1.3 1.3 0 1 1-2.6 0 1.3 1.3 0 0 1 2.6 0z"}]],
+  chat: [["path",{"d":"M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"}]],
+  close: [["path",{"d":"M18 6 6 18"}],["path",{"d":"m6 6 12 12"}]],
+  fold: [["path",{"d":"m18 15-6-6-6 6"}]],
+  plus: [["path",{"d":"M5 12h14"}],["path",{"d":"M12 5v14"}]],
+  clip: [["path",{"d":"m16 6-8.414 8.586a2 2 0 0 0 2.829 2.829l8.414-8.586a4 4 0 1 0-5.657-5.657l-8.379 8.551a6 6 0 1 0 8.485 8.485l8.379-8.551"}]],
+  chevronDown: [["path",{"d":"m6 9 6 6 6-6"}]],
+  stop: [["rect",{"width":"18","height":"18","x":"3","y":"3","rx":"2"}]],
+  file: [["path",{"d":"M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"}],["path",{"d":"M14 2v5a1 1 0 0 0 1 1h5"}]],
+  folder: [["path",{"d":"M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"}]],
+  list: [["path",{"d":"M3 5h.01"}],["path",{"d":"M3 12h.01"}],["path",{"d":"M3 19h.01"}],["path",{"d":"M8 5h13"}],["path",{"d":"M8 12h13"}],["path",{"d":"M8 19h13"}]],
+  bars: [["path",{"d":"M3 3v16a2 2 0 0 0 2 2h16"}],["path",{"d":"M18 17V9"}],["path",{"d":"M13 17V5"}],["path",{"d":"M8 17v-3"}]],
+  pencil: [["path",{"d":"M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"}],["path",{"d":"m15 5 4 4"}]],
+  person: [["path",{"d":"M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"}],["circle",{"cx":"12","cy":"7","r":"4"}]],
+  pin: [["path",{"d":"M12 17v5"}],["path",{"d":"M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"}]],
+  moon: [["path",{"d":"M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"}]],
+  hide: [["path",{"d":"M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"}],["path",{"d":"M14.084 14.158a3 3 0 0 1-4.242-4.242"}],["path",{"d":"M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"}],["path",{"d":"m2 2 20 20"}]],
+  play: [["path",{"d":"M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"}]],
+  pause: [["rect",{"x":"14","y":"3","width":"5","height":"18","rx":"1"}],["rect",{"x":"5","y":"3","width":"5","height":"18","rx":"1"}]],
+  previous: [["path",{"d":"M17.971 4.285A2 2 0 0 1 21 6v12a2 2 0 0 1-3.029 1.715l-9.997-5.998a2 2 0 0 1-.003-3.432z"}],["path",{"d":"M3 20V4"}]],
+  next: [["path",{"d":"M21 4v16"}],["path",{"d":"M6.029 4.285A2 2 0 0 0 3 6v12a2 2 0 0 0 3.029 1.715l9.997-5.998a2 2 0 0 0 .003-3.432z"}]],
+  note: [["path",{"d":"M21 16V3a1 1 0 0 0-1.28-.96l-10 2.917a1 1 0 0 0-.72.96V19"}],["circle",{"cx":"18","cy":"16","r":"3"}],["circle",{"cx":"6","cy":"19","r":"3"}]],
+  pull: [["circle",{"cx":"18","cy":"18","r":"3"}],["circle",{"cx":"6","cy":"6","r":"3"}],["path",{"d":"M13 6h3a2 2 0 0 1 2 2v7"}],["line",{"x1":"6","x2":"6","y1":"9","y2":"21"}]],
+  plug: [["path",{"d":"M12 22v-5"}],["path",{"d":"M15 8V2"}],["path",{"d":"M17 8a1 1 0 0 1 1 1v4a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1z"}],["path",{"d":"M9 8V2"}]],
+  fullscreen: [["path",{"d":"M15 3h6v6"}],["path",{"d":"m21 3-7 7"}],["path",{"d":"m3 21 7-7"}],["path",{"d":"M9 21H3v-6"}]],
+  terminal: [["path",{"d":"M12 19h8"}],["path",{"d":"m4 17 6-6-6-6"}]],
+  search: [["path",{"d":"m21 21-4.34-4.34"}],["circle",{"cx":"11","cy":"11","r":"8"}]],
+  sideLeft: [["rect",{"width":"18","height":"18","x":"3","y":"3","rx":"2"}],["path",{"d":"M9 3v18"}]],
+  sideRight: [["rect",{"width":"18","height":"18","x":"3","y":"3","rx":"2"}],["path",{"d":"M15 3v18"}]],
+  tag: [["path",{"d":"M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"}],["circle",{"cx":"7.5","cy":"7.5","r":".5","fill":"currentColor"}]],
+  branch: [["path",{"d":"M15 6a9 9 0 0 0-9 9V3"}],["circle",{"cx":"18","cy":"6","r":"3"}],["circle",{"cx":"6","cy":"18","r":"3"}]],
+  phone: [["rect",{"x":"6","y":"2","width":"12","height":"20","rx":"2","ry":"2"}],["path",{"d":"M12 18h.01"}]],
+  mic: [["path",{"d":"M12 19v3"}],["path",{"d":"M19 10v2a7 7 0 0 1-14 0v-2"}],["rect",{"x":"9","y":"2","width":"6","height":"13","rx":"3"}]],
+  copy: [["rect",{"width":"14","height":"14","x":"8","y":"8","rx":"2","ry":"2"}],["path",{"d":"M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"}]],
+  retry: [["path",{"d":"M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"}],["path",{"d":"M3 3v5h5"}]],
+  update: [["circle",{"cx":"12","cy":"12","r":"10"}],["path",{"d":"m16 12-4-4-4 4"}],["path",{"d":"M12 16V8"}]],
+  warning: [["path",{"d":"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"}],["path",{"d":"M12 9v4"}],["path",{"d":"M12 17h.01"}]],
+} satisfies Record<string, Node[]>;
+
+export type IconName = keyof typeof ICONS;
 
 export function icon(name: IconName, size = 14, stroke = 1.9): SVGSVGElement {
   const ns = "http://www.w3.org/2000/svg";
@@ -72,8 +68,10 @@ export function icon(name: IconName, size = 14, stroke = 1.9): SVGSVGElement {
   svg.setAttribute("stroke-linecap", "round");
   svg.setAttribute("stroke-linejoin", "round");
   svg.setAttribute("aria-hidden", "true");
-  const path = document.createElementNS(ns, "path");
-  path.setAttribute("d", PATHS[name]);
-  svg.append(path);
+  for (const [tag, attributes] of ICONS[name] as Node[]) {
+    const part = document.createElementNS(ns, tag);
+    for (const [key, value] of Object.entries(attributes)) part.setAttribute(key, value);
+    svg.append(part);
+  }
   return svg;
 }

@@ -808,3 +808,141 @@ code {
 .setting-feedback:empty { display: none; }
 .setting-feedback.error { color: var(--error-text); }
 [aria-busy="true"].toggle, [aria-busy="true"] .toggle { cursor: progress; }
+
+/* Engines and API providers: a dot and one line each (t3code's provider list). */
+.status-dot { display: inline-block; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--fg-dim); }
+.status-dot.ok { background: var(--ok); }
+.status-dot.warn { background: var(--warn); }
+.status-dot.off { background: color-mix(in srgb, var(--fg-dim) 50%, transparent); }
+.engine-row { display: grid; grid-template-columns: minmax(140px, 220px) minmax(0, 1fr) auto; align-items: center; gap: 12px; }
+.engine-name { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.engine-actions { display: flex; gap: 6px; }
+.engine-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.provider-card { padding: 0; overflow: hidden; }
+.provider-pane { display: grid; grid-template-columns: minmax(190px, 230px) minmax(0, 1fr); min-height: 260px; }
+.provider-list { display: flex; flex-direction: column; gap: 2px; padding: 10px 8px; border-right: 1px solid var(--border); background: color-mix(in srgb, var(--chrome) 60%, transparent); }
+.provider-detail { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 14px 16px; }
+.provider-detail-head { display: flex; flex-direction: column; gap: 2px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.provider-detail-name { display: flex; align-items: center; gap: 8px; color: var(--fg); font: 600 var(--text-l)/1.3 var(--font); }
+.provider-detail .rows > .row { padding-left: 0; padding-right: 0; }
+@media (max-width: 700px) { .provider-pane { grid-template-columns: 1fr; } .provider-list { border-right: 0; border-bottom: 1px solid var(--border); } }
+.provider-group { margin: 8px 8px 4px; color: var(--fg-muted); font: 600 11px/1.4 var(--font); text-transform: none; }
+.provider-group:first-child { margin-top: 0; }
+.provider-item { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; column-gap: 10px; align-items: center; width: 100%; margin: 0; padding: 7px 8px; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--fg); font: inherit; text-align: left; cursor: pointer; transition: background-color 120ms ease-out; }
+.provider-text { display: flex; flex-direction: column; min-width: 0; }
+.provider-item:hover { background: color-mix(in srgb, var(--raised) 60%, transparent); }
+.provider-item.on { background: var(--raised); box-shadow: inset 0 0 0 1px var(--control-border); }
+.provider-item.on .provider-name { color: var(--fg-bright); }
+.provider-item:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.provider-name { font: 600 var(--text-m)/1.3 var(--font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.provider-state { color: var(--fg-dim); font: 11px/1.35 var(--font); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 700px) { .engine-row { grid-template-columns: 1fr; } }
+
+/* General > Appearance: each theme as a tile holding a small picture of Vults in its own colors
+   (the tokens are scoped to the picture by its data-theme). The chosen tile carries the mark. */
+.theme-row { display: grid; gap: 4px 0; }
+.theme-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 8px; }
+.theme-family { grid-column: 1 / -1; margin: 6px 2px -2px; color: var(--fg-dim); font: 600 var(--text-s)/1.3 var(--font); }
+.theme-tile { display: flex; flex-direction: column; gap: 8px; padding: 6px; border: 1px solid var(--border); border-radius: 10px; background: transparent; color: var(--fg-dim); text-align: left; cursor: pointer; transition: border-color 140ms ease-out, background-color 140ms ease-out; }
+.theme-tile:hover { border-color: var(--border-hover); background: color-mix(in srgb, var(--raised) 40%, transparent); }
+.theme-tile.on { border-color: var(--mark); background: color-mix(in srgb, var(--raised) 55%, transparent); color: var(--fg); box-shadow: 0 0 0 1px var(--mark) inset; }
+.theme-tile:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.theme-name { display: flex; flex-direction: column; gap: 1px; padding: 0 2px 2px; font: 600 var(--text-s)/1.3 var(--font); }
+.theme-name > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.theme-tag { color: var(--fg-muted); font-weight: 400; font-size: 11px; }
+.tp { position: relative; display: flex; flex-direction: column; gap: 6px; height: 72px; padding: 6px; border-radius: 7px; background: var(--bg); box-shadow: inset 0 0 0 1px var(--border); overflow: hidden; }
+.tp-island { position: relative; align-self: center; display: flex; align-items: flex-end; gap: 6px; width: 62%; height: 14px; padding: 0 9px 2px; border-radius: 7px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--border); }
+.tp-wire { position: absolute; left: 6px; right: 6px; bottom: 3px; height: 1px; background: var(--wire); }
+.tp-bird { position: relative; width: 5px; height: 6px; border-radius: 3px 3px 1px 1px; margin-bottom: 1px; }
+.tp-claude { background: var(--agent-claude); }
+.tp-codex { background: var(--agent-codex); }
+.tp-zeca { background: var(--zeca, var(--ok)); margin-left: auto; }
+.tp-nest { display: grid; grid-template-columns: 30% 1fr; gap: 5px; flex: 1; min-height: 0; }
+.tp-side { display: flex; flex-direction: column; gap: 4px; padding: 5px 4px; border-radius: 4px; background: var(--chrome); }
+.tp-item { height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--fg-dim) 55%, transparent); }
+.tp-item.on { background: var(--fg); box-shadow: -2px 0 0 var(--mark); }
+.tp-card { display: flex; flex-direction: column; gap: 4px; padding: 6px; border-radius: 4px; background: var(--panel); }
+.tp-title { width: 55%; height: 5px; border-radius: 2px; background: var(--fg); }
+.tp-line { width: 85%; height: 3px; border-radius: 2px; background: var(--fg-dim); opacity: .75; }
+.tp-line.short { width: 60%; }
+.tp-chip { align-self: flex-end; width: 34%; height: 7px; margin-top: auto; border-radius: 3px; background: var(--raised); box-shadow: inset 0 -1px 0 var(--mark); }
+@media (prefers-reduced-motion: reduce) { .theme-tile { transition: none; } }
+
+/* Settings → Zeca: his portrait leads, larger, with his name, species and switch beside it. */
+.zeca-hero { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 20px; padding: 16px 20px; }
+.zeca-hero .zeca-preview { image-rendering: pixelated; width: auto; height: auto; }
+.zeca-hero-body { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.zeca-hero-name { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; font: 600 var(--text-xl)/1.2 var(--font); color: var(--fg); }
+.zeca-hero-species { color: var(--fg-dim); font: 400 var(--text-m)/1.3 var(--font); }
+.zeca-hero .rows > .row { padding-left: 0; padding-right: 0; }
+.species-family { margin: 14px 0 8px; color: var(--fg-dim); font: 600 var(--text-m)/1.3 var(--font); }
+@media (max-width: 560px) { .zeca-hero { grid-template-columns: 1fr; justify-items: start; } }
+@media (prefers-reduced-motion: reduce) { .provider-item { transition: none; } }
+
+/* Keyboard shortcuts: Dictation's keys in their own named parts. */
+.shortcut-subtitle { margin: 12px 0 8px; color: var(--fg-dim); font: 600 var(--text-m)/1.3 var(--font); }
+
+/* Every disclosure in Settings opens with a drawn chevron, never the browser's triangle. */
+.page details > summary { list-style: none; cursor: pointer; }
+.page details > summary::-webkit-details-marker { display: none; }
+.page details > summary::before { content: ""; display: inline-block; width: 5px; height: 5px; margin: 0 9px 2px 1px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(-45deg); transition: transform 120ms ease-out; vertical-align: middle; }
+.page details[open] > summary::before { transform: rotate(45deg); }
+@media (prefers-reduced-motion: reduce) { .page details > summary::before { transition: none; } }
+
+/* Keys as keycaps (t3code's shortcut rows): one cap per key, a slash between alternatives. */
+.keycaps { display: inline-flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px; }
+.keycaps kbd { display: inline-flex; align-items: center; min-width: 20px; height: 22px; padding: 0 6px; border: 1px solid var(--control-border); border-bottom-width: 2px; border-radius: 5px; background: var(--raised); color: var(--fg-bright); font: 500 11px/1 var(--mono); box-sizing: border-box; justify-content: center; }
+.keycaps-or { margin: 0 2px; color: var(--fg-muted); font-size: var(--text-s); }
+.keycaps-none { color: var(--fg-muted); font-size: var(--text-s); }
+
+/* Narrow: a switch stays beside its words; only fields and lists go under them. */
+@media (max-width: 650px) {
+  .row:has(> input.toggle), .row:has(> .keycaps) { flex-direction: row; align-items: flex-start; }
+  .row:has(> input.toggle) > .row-text, .row:has(> .keycaps) > .row-text { flex: 1 1 auto; min-width: 0; }
+  .page { padding: 16px 16px 24px; }
+  .card { padding: 16px; }
+  .card.rows { padding: 2px 16px; }
+}
+
+.status-dot.unknown { background: transparent; box-shadow: inset 0 0 0 1.5px var(--fg-dim); }
+/* Zeca's species: the chosen one carries the mark; family names read as labels, not links. */
+.page .species-family { color: var(--fg-dim); text-decoration: none; }
+.species.on { border-color: var(--mark); box-shadow: inset 0 0 0 1px var(--mark); }
+.note.ok.with-icon { color: var(--ok); }
+
+/* A step that undoes: plain text weight, no fill, last in its row. */
+.btn.quiet { background: transparent; color: var(--fg-dim); }
+.btn.quiet:hover { background: var(--raised); color: var(--fg); }
+/* Inside a card a disclosure is a line like More, not a second card. */
+#settings .card .settings-disclosure { margin-top: 6px; border: 0; border-radius: 0; background: transparent; overflow: visible; }
+#settings .card .settings-disclosure > summary { padding: 4px 0; color: var(--fg); font-size: var(--text-s); font-weight: 500; }
+#settings .card .settings-disclosure > summary:hover { background: transparent; color: var(--fg-bright); }
+#settings .card .settings-disclosure .disclosure-body { padding: 4px 0 0 15px; }
+
+/* Projects: the project's name and folder, then its choices on one line, Forget at its end. */
+.row:has(> .project-choices) { flex-direction: column; align-items: stretch; gap: 10px; }
+.row:has(> .project-choices) .row-about { font-family: var(--mono); font-size: 11px; }
+.row > .row-text + .project-choices, .project-choices { max-width: none; justify-content: flex-start; gap: 8px 16px; }
+.project-choices > :last-child { margin-left: auto; }
+/* About's paths: whole, selectable, left under their title when narrow. */
+.row > code { user-select: text; }
+@media (max-width: 650px) { .row:has(> code) { flex-direction: column; align-items: flex-start; } .row > code { max-width: 100%; } }
+
+/* Voice models: what sets each apart, as tags under its name. */
+.model-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.model-tags .badge { font-size: 11px; }
+
+/* Brand marks: each provider's and agent's own logo beside its name (t3code's provider rows). */
+.brand-mark { flex: none; display: block; }
+.brand-initials { flex: none; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; background: var(--raised); color: var(--fg-dim); font: 700 9px/1 var(--font); letter-spacing: .02em; }
+.brand-title { display: flex; align-items: center; gap: 10px; }
+.engine-name { gap: 10px; }
+.engine-state { display: flex; align-items: center; gap: 8px; }
+.provider-detail-name { gap: 10px; }
+.provider-detail-name .status-dot { margin-left: 2px; }
+
+/* Agents: the chosen agent's card fills the detail pane without a second card around it. */
+.agent-detail > .card { margin: 0; padding: 0; border: 0; background: transparent; box-shadow: none; }
+.agent-engine { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+.agent-engine .engine-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 4px 0; }
+.agent-list { max-height: 560px; overflow-y: auto; }

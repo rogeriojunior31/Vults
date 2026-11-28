@@ -178,6 +178,9 @@ pub struct Spec {
     pub system_append: Option<String>,
     pub sandbox: Sandbox,
     pub role: Role,
+    /// The user chose full access: the agent runs in its own mode that asks nothing (Claude Code's
+    /// `bypassPermissions`, Codex's `never` with no sandbox), so no request reaches a card.
+    pub full_access: bool,
 }
 
 impl Spec {
@@ -221,6 +224,30 @@ pub enum Event {
         id: String,
         ok: bool,
     },
+    /// What a tool printed or returned, before its [`Event::ToolEnd`]: for the user to read only.
+    ToolOutput {
+        id: String,
+        output: String,
+    },
+    /// The agent's plan as it stands: each step's words and its status (`pending`, `in_progress`
+    /// or `completed`), the whole list each time.
+    Plan(Vec<(String, String)>),
+    /// A tool the agent ran without asking, as its own settings allow: told, never a stop.
+    Unasked {
+        tool: String,
+        target: String,
+    },
+    /// How full the model's context is: the tokens its last request read, and its window, each
+    /// when the agent says.
+    Context {
+        used: Option<u64>,
+        window: Option<u64>,
+    },
+    /// The change an editing tool makes, as diff lines (`-`, `+`, ` `, `@@ path`): to read only.
+    ToolDiff {
+        id: String,
+        diff: String,
+    },
     /// The turn is over: the last event of every turn that started.
     TurnEnd(EndReason),
 }
@@ -240,18 +267,29 @@ pub struct Ask {
 }
 
 /// A human's answer to an [`Ask`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Answer {
     Deny,
     Allow,
     /// Allow, and the same whole command again in this conversation (Z2): bound to `full` (or
     /// `target` when nothing was cut), gone when the conversation ends.
     AllowInConversation,
+    /// No, with the user's own words for the agent: why not, or what they chose for a question
+    /// it asked. An agent that takes no words reads it as a plain no.
+    Reply(String),
 }
 
 impl Answer {
-    pub fn allows(self) -> bool {
-        !matches!(self, Self::Deny)
+    pub fn allows(&self) -> bool {
+        matches!(self, Self::Allow | Self::AllowInConversation)
+    }
+
+    /// The user's words that go with a no, if any.
+    pub fn words(&self) -> Option<&str> {
+        match self {
+            Self::Reply(words) => Some(words),
+            _ => None,
+        }
     }
 }
 
@@ -277,6 +315,10 @@ pub trait AgentDriver: Send + std::fmt::Debug {
         Err("This agent cannot use a host tool service.".into())
     }
     fn spec(&self) -> &Spec;
+    /// Full access turned on or off: it takes effect from the next turn, the conversation going on.
+    fn set_full_access(&mut self, _on: bool) {}
+    /// Another model or effort: from the next turn, the conversation going on.
+    fn set_pick(&mut self, _model: Option<String>, _effort: Option<Effort>) {}
     /// A handle that can stop this driver's turns while `send` holds the driver.
     fn interrupter(&self) -> Arc<dyn Interrupter>;
     /// Gets ready for turns (a long-lived process starts here); a no-op for an agent that runs one
@@ -286,6 +328,8 @@ pub trait AgentDriver: Send + std::fmt::Debug {
     fn send<'a>(&'a mut self, input: &'a Input, sink: &'a dyn Sink) -> BoxFuture<'a, Result<(), String>>;
     /// The agent's id for the conversation, once it has one.
     fn session(&self) -> Option<&str>;
+    /// Forgets the session its agent lost: the next turn starts a fresh one, with the same Stop.
+    fn forget_session(&mut self) {}
 }
 
 #[cfg(test)]

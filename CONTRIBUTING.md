@@ -39,7 +39,7 @@ depends on its own layer or a lower one (Core, Connect, Experience). A new agent
 - **User-facing sentences are whole strings** in the i18n catalog, never built from fragments.
 - **The rules that never bend** (the hook never blocks an agent, only a human's click answers a
   permission, no config write without a backup, a diff and a click, secrets only in the keyring)
-  change only through a new decision record in [docs/adr/](docs/adr/README.md).
+  change only by the owner's decision.
 
 ## Documentation is part of the change
 

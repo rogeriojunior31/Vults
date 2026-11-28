@@ -119,6 +119,8 @@ export interface CardActions {
   decideAlways(request: string): void;
   /** A Claude Code plan allowed, and its session accepts edits without asking (ADR 0002). */
   decidePlan(request: string): void;
+  /** A Claude Code plan sent back with what to change: a no with the user's words (ADR 0002). */
+  revisePlan(request: string, feedback: string): void;
   /** The replies to a question card, one per question. */
   answer(request: string, answers: Answer[]): void;
   /** "Reply in the terminal": the card goes, the agent's terminal asks. */
@@ -384,6 +386,44 @@ function sessionBody(
         else actions.decide(approval.request, d);
       };
       const always = el("button", { class: "btn ghost-btn", onclick: answer("always") }, el("span", { text: t("Always allow") }));
+      const plan = isPlan(s, approval);
+      const repaint = () => {
+        const body = parts[0]?.parentElement;
+        if (body) body.replaceChildren(...sessionBody(s, approval, ticker, actions));
+        actions.relayout();
+      };
+      // "Change plan…": Claude reads the words and plans again, as its own terminal offers.
+      let revise: HTMLElement | null = null;
+      if (plan && revising.has(approval.request)) {
+        const input = el("textarea", { class: "other-input plan-revise" }) as HTMLTextAreaElement;
+        input.placeholder = t("What should Claude change?");
+        input.value = revising.get(approval.request) ?? "";
+        input.maxLength = 2000;
+        const back = () => {
+          revising.delete(approval.request);
+          actions.keyboard(false);
+          repaint();
+        };
+        const send = () => {
+          const text = input.value.trim();
+          if (!text || sent || performance.now() - shown < ARM_MS) return;
+          sent = true;
+          revising.delete(approval.request);
+          actions.keyboard(false);
+          actions.revisePlan(approval.request, text);
+        };
+        input.oninput = () => revising.set(approval.request, input.value);
+        input.onkeydown = (e) => {
+          if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) send();
+          if (e.key === "Escape") {
+            e.stopPropagation();
+            back();
+          }
+        };
+        queueMicrotask(() => input.focus());
+        revise = el("div", { class: "other-reply" }, input,
+          el("div", { class: "actions" }, button(t("Back"), "secondary", back), button(t("Send to Claude"), "primary", send)));
+      }
 
       const diff =
         approval.added || approval.removed
@@ -407,7 +447,7 @@ function sessionBody(
               approval.why === "destructive" ? icon("warning", 13, 2) : null,
               el("span", { text: approval.why === "destructive" ? t("Destructive: no policy ever allows it") : t("Your policy asks first for this") }))
           : null,
-        el(
+        revise ?? el(
           "div",
           { class: "actions" },
           // Destructive: Deny is the bright one, so a reflex click is the safe one; the buttons
@@ -421,6 +461,16 @@ function sessionBody(
           isPlan(s, approval)
             ? Object.assign(el("button", { class: "btn ghost-btn", onclick: answer("plan") }, el("span", { text: t("Allow and accept edits") })), {
                 title: t("Allow the plan, and this session edits files without asking until it ends, as Claude Code's own terminal offers. Its commands still come as cards."),
+              })
+            : null,
+          plan
+            ? Object.assign(el("button", { class: "btn ghost-btn", onclick: () => {
+                if (sent) return;
+                revising.set(approval.request, "");
+                actions.keyboard(true);
+                repaint();
+              } }, el("span", { text: t("Change plan…") })), {
+                title: t("Tell Claude what to change: the plan is not allowed, and Claude plans again from your words."),
               })
             : null,
         ),
@@ -560,6 +610,9 @@ function costOf(s: SessionView): HTMLElement | null {
   span.title = t("What this session's tokens would cost at API prices. A subscription is not charged this.");
   return span;
 }
+
+/** A plan's "what to change", as typed so far: kept outside the card, so a repaint keeps it. */
+const revising = new Map<string, string>();
 
 /** Where the user is in a question card: the question on screen and what they picked so far. Kept
  *  outside the card, so a repaint in the middle (a step from a subagent) loses nothing. */

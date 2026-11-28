@@ -79,6 +79,7 @@ pub(crate) enum Msg {
     ToolEnd {
         id: String,
         ok: bool,
+        output: Option<String>,
     },
     TurnDone {
         error: Option<String>,
@@ -87,11 +88,14 @@ pub(crate) enum Msg {
     },
     Error(String),
     Other,
+    /// The turn's plan as it stands (`turn/plan/updated`).
+    Plan(Vec<(String, String)>),
     /// The thread's tokens so far, and those of its last model request (`thread/tokenUsage/updated`:
     /// one per request, so several in a turn that runs tools).
     Usage {
         total: Usage,
         last: Usage,
+        window: Option<u64>,
     },
 }
 
@@ -172,6 +176,9 @@ pub(crate) fn classify(raw: &str) -> Msg {
             Some((id, ..)) => Msg::ToolEnd {
                 id,
                 ok: v["params"]["item"]["status"] == "completed",
+                output: v["params"]["item"]["aggregatedOutput"]
+                    .as_str()
+                    .and_then(crate::output_tail),
             },
             None => Msg::Other,
         },
@@ -188,6 +195,19 @@ pub(crate) fn classify(raw: &str) -> Msg {
                 }),
             }
         }
+        (None, Some("turn/plan/updated")) => Msg::Plan(
+            v["params"]["plan"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(|s| {
+                    Some((
+                        s["step"].as_str()?.to_string(),
+                        s["status"].as_str().unwrap_or("pending").to_string(),
+                    ))
+                })
+                .collect(),
+        ),
         (None, Some("thread/tokenUsage/updated")) => {
             let usage = |v: &Value| {
                 let n = |k: &str| v[k].as_u64().unwrap_or(0);
@@ -202,6 +222,7 @@ pub(crate) fn classify(raw: &str) -> Msg {
             Msg::Usage {
                 total: usage(&t["total"]),
                 last: usage(&t["last"]),
+                window: t["modelContextWindow"].as_u64(),
             }
         }
         (None, Some("error")) if v["params"]["willRetry"] != true => Msg::Error(
@@ -212,6 +233,32 @@ pub(crate) fn classify(raw: &str) -> Msg {
         ),
         _ => Msg::Other,
     }
+}
+
+/// A file change item's diffs, each under its path: Codex sends them unified, headers aside.
+/// A new file's diff may be its bare content: every line is then added.
+fn change_diff(changes: &Value) -> Option<String> {
+    let parts: Vec<String> = changes
+        .as_array()?
+        .iter()
+        .filter_map(|c| {
+            let diff = c["diff"].as_str()?;
+            // A new file is every line added, whatever its lines start with.
+            let added = c["kind"]["type"] == "add" || c["kind"] == "add";
+            let marked = !added && diff.lines().any(|l| l.starts_with("@@"));
+            let body: Vec<String> = diff
+                .lines()
+                .filter(|l| !l.starts_with("+++ ") && !l.starts_with("--- "))
+                .map(|l| if marked { l.to_string() } else { format!("+{l}") })
+                .collect();
+            Some(format!(
+                "@@ {}\n{}",
+                c["path"].as_str().unwrap_or_default(),
+                body.join("\n")
+            ))
+        })
+        .collect();
+    crate::diff_bounded(&parts.join("\n"))
 }
 
 /// A tool item's id, tool and target, as the island names them; none for other items (the
@@ -282,10 +329,40 @@ impl TurnTokens {
     }
 }
 
+/// `turn/start`'s parameters. The approval policy and sandbox go with every turn (they hold for
+/// later turns too), so full access switched on or off applies at once, without a new server:
+/// full access is Codex's own `never` with no sandbox; otherwise everything but known-safe reads
+/// asks, and writes stay in the folder.
+fn turn_params(thread: &str, input: Vec<Value>, spec: &Spec) -> Value {
+    let (approval, sandbox) = if spec.full_access {
+        (json!("never"), json!({ "type": "dangerFullAccess" }))
+    } else {
+        (json!("untrusted"), json!({ "type": "workspaceWrite" }))
+    };
+    let mut params =
+        json!({ "threadId": thread, "input": input, "approvalPolicy": approval, "sandboxPolicy": sandbox });
+    // The model and effort go with each turn too: changed mid-conversation, the next turn uses them.
+    if let Some(model) = &spec.model {
+        params["model"] = json!(model);
+    }
+    if let Some(effort) = spec.effort {
+        params["effort"] = json!(effort.name());
+    }
+    params
+}
+
+/// A Codex in its own home, apart from the user's: a specialist always, and Zeca's chat when the user
+/// chose a clean environment (none of their config, MCP servers, skills or AGENTS.md; their login
+/// only in memory).
+fn managed(spec: &Spec) -> bool {
+    spec.role == vults_agents::driver::Role::Specialist
+        || (spec.settings == Settings::Isolated && spec.state_dir.as_ref().is_some_and(|p| p.is_absolute()))
+}
+
 impl AppServer {
     /// Starts the server and opens (or reopens) the conversation.
     pub(crate) async fn start(spec: &Spec, resume: Option<&str>) -> Result<Self, String> {
-        let auth = if spec.role == vults_agents::driver::Role::Specialist {
+        let auth = if managed(spec) {
             Some(crate::codex_isolation::credentials(
                 &crate::codex_isolation::auth_path()?,
             )?)
@@ -374,7 +451,7 @@ impl AppServer {
         auth: Option<Value>,
     ) -> Result<Self, String> {
         let mut cmd = command(spec);
-        let specialist = spec.filter(|s| s.role == vults_agents::driver::Role::Specialist);
+        let specialist = spec.filter(|s| managed(s));
         if let Some(spec) = specialist {
             crate::codex_isolation::prepare(spec, &mut cmd)?;
             if auth.is_none() {
@@ -430,8 +507,14 @@ impl AppServer {
 
     /// One turn, streaming the reply and asking the user for each command and change. Stop sends
     /// `turn/interrupt`; the server stays up for the next turn.
-    pub(crate) async fn turn(&mut self, turn: &Turn, sink: &dyn Sink, stop: &Stop) -> Result<(), String> {
-        let result = self.run(turn, sink, stop).await;
+    pub(crate) async fn turn(
+        &mut self,
+        turn: &Turn,
+        sink: &dyn Sink,
+        stop: &Stop,
+        spec: &Spec,
+    ) -> Result<(), String> {
+        let result = self.run(turn, sink, stop, spec).await;
         let end = match &result {
             Ok(end) => end.clone(),
             Err(e) => EndReason::Failed(e.clone()),
@@ -440,13 +523,19 @@ impl AppServer {
         result.map(|_| ())
     }
 
-    async fn run(&mut self, turn: &Turn, sink: &dyn Sink, stop: &Stop) -> Result<EndReason, String> {
+    async fn run(
+        &mut self,
+        turn: &Turn,
+        sink: &dyn Sink,
+        stop: &Stop,
+        spec: &Spec,
+    ) -> Result<EndReason, String> {
         let mut input = vec![json!({ "type": "text", "text": prompt(turn, None), "text_elements": [] })];
         for image in turn.files.iter().filter(|f| is_image(f)) {
             input.push(json!({ "type": "localImage", "path": image }));
         }
         let id = self
-            .send("turn/start", json!({ "threadId": self.thread, "input": input }))
+            .send("turn/start", turn_params(&self.thread, input, spec))
             .await?;
         let mut tokens = TurnTokens::from(self.seen.clone());
         // The turn's id, from `turn/start`'s answer: what `turn/interrupt` names.
@@ -506,8 +595,26 @@ impl AppServer {
                     })
                     .await;
                 }
-                Msg::ToolEnd { id, ok } => sink.event(Event::ToolEnd { id, ok }).await,
-                Msg::Usage { total, last } => {
+                Msg::ToolEnd { id, ok, output } => {
+                    if let Some(output) = output {
+                        sink.event(Event::ToolOutput {
+                            id: id.clone(),
+                            output,
+                        })
+                        .await;
+                    }
+                    sink.event(Event::ToolEnd { id, ok }).await
+                }
+                Msg::Plan(steps) => sink.event(Event::Plan(steps)).await,
+                Msg::Usage { total, last, window } => {
+                    // The last request's input is what the context holds now.
+                    if last.input > 0 || window.is_some() {
+                        sink.event(Event::Context {
+                            used: (last.input > 0).then_some(last.input),
+                            window,
+                        })
+                        .await;
+                    }
                     self.seen = Some(total.clone());
                     tokens.note(total, &last);
                 }
@@ -537,6 +644,13 @@ impl AppServer {
                         detail,
                     })
                     .await;
+                    if let Some(diff) = change_diff(&changes) {
+                        sink.event(Event::ToolDiff {
+                            id: item.clone(),
+                            diff,
+                        })
+                        .await;
+                    }
                     self.changes.insert(item, (paths, changes));
                 }
                 Msg::ApproveCommand {
@@ -738,6 +852,91 @@ mod tests {
     use super::*;
 
     #[test]
+    fn a_plan_update_is_the_plan() {
+        assert_eq!(
+            classify(
+                r#"{"method":"turn/plan/updated","params":{"plan":[{"step":"Write tests","status":"inProgress"}]}}"#
+            ),
+            Msg::Plan(vec![("Write tests".into(), "inProgress".into())])
+        );
+    }
+
+    #[test]
+    fn a_file_change_diff_drops_its_headers_and_marks_a_new_file() {
+        let changes = serde_json::json!([
+            {"path": "a.rs", "diff": "--- a/a.rs\n+++ b/a.rs\n@@ -1 +1 @@\n-x\n+y"},
+            {"path": "new.txt", "diff": "hello"}
+        ]);
+        assert_eq!(
+            change_diff(&changes).unwrap(),
+            "@@ a.rs\n@@ -1 +1 @@\n-x\n+y\n@@ new.txt\n+hello"
+        );
+    }
+
+    #[test]
+    fn a_command_brings_the_tail_of_its_output() {
+        assert_eq!(
+            classify(
+                r#"{"method":"item/completed","params":{"item":{"type":"commandExecution","id":"c2","command":"ls","status":"completed","aggregatedOutput":"a.txt\nb.txt\n"}}}"#
+            ),
+            Msg::ToolEnd {
+                id: "c2".into(),
+                ok: true,
+                output: Some(
+                    "a.txt
+b.txt"
+                        .into()
+                )
+            }
+        );
+    }
+
+    #[test]
+    fn a_clean_environment_is_a_codex_home_of_its_own() {
+        let clean = Spec {
+            settings: Settings::Isolated,
+            state_dir: Some(std::env::temp_dir().join("clean")),
+            ..Spec::default()
+        };
+        assert!(managed(&clean));
+        assert!(!managed(&Spec {
+            settings: Settings::User,
+            ..clean.clone()
+        }));
+        assert!(!managed(&Spec {
+            state_dir: None,
+            ..clean
+        }));
+        let specialist = Spec {
+            role: vults_agents::driver::Role::Specialist,
+            ..Spec::default()
+        };
+        assert!(managed(&specialist));
+    }
+
+    #[test]
+    fn every_turn_carries_codexs_own_mode_for_the_users_access() {
+        let full_spec = Spec {
+            full_access: true,
+            model: Some("gpt-5.5".into()),
+            effort: Some(vults_agents::driver::Effort::High),
+            ..Spec::default()
+        };
+        let full = turn_params("t1", vec![], &full_spec);
+        assert_eq!(
+            (full["model"].as_str(), full["effort"].as_str()),
+            (Some("gpt-5.5"), Some("high"))
+        );
+        assert_eq!(full["approvalPolicy"], "never");
+        assert_eq!(full["sandboxPolicy"], json!({ "type": "dangerFullAccess" }));
+        let asks = turn_params("t1", vec![], &Spec::default());
+        assert!(asks.get("model").is_none() && asks.get("effort").is_none());
+        assert_eq!(asks["approvalPolicy"], "untrusted");
+        assert_eq!(asks["sandboxPolicy"], json!({ "type": "workspaceWrite" }));
+        assert_eq!(asks["threadId"], "t1");
+    }
+
+    #[test]
     fn public_reasoning_summary_is_separate_and_raw_reasoning_is_ignored() {
         assert_eq!(
             classify(
@@ -785,7 +984,8 @@ mod tests {
             ),
             Msg::ToolEnd {
                 id: "c1".into(),
-                ok: false
+                ok: false,
+                output: None
             }
         );
         assert_eq!(
@@ -946,6 +1146,7 @@ mod tests {
                     cache_read: 800,
                     ..Usage::default()
                 },
+                window: None,
             }
         );
     }

@@ -102,9 +102,13 @@ fn command_with(
         cmd.arg("--settings")
             .arg(serde_json::Value::Object(flags).to_string());
     }
-    if spec.settings != Settings::Isolated {
+    if spec.full_access {
+        // The user chose to be asked nothing: Claude Code's own mode, so no request is made. The
+        // prompt tool stays: a question (AskUserQuestion) still reaches the user.
+        cmd.args(["--permission-mode", "bypassPermissions"]);
+    } else if spec.settings != Settings::Isolated {
         // The user's rules and MCPs, as in their terminal; but a `defaultMode` that skips the
-        // cards (`acceptEdits`, `bypassPermissions`) never applies to the chat.
+        // cards (`acceptEdits`, `bypassPermissions`) never applies unless they chose full access.
         cmd.args(["--permission-mode", "default"]);
     }
     if let Some(mcp) = &spec.mcp_config {
@@ -208,24 +212,61 @@ pub(crate) fn parse(raw: &str) -> Line {
                 .unwrap_or_default();
             let events: Vec<Event> = blocks
                 .iter()
-                .filter_map(|b| match b["type"].as_str() {
+                .flat_map(|b| {
+                    // A tool's result: its text first (for the user to read), then its end.
+                    let output = (b["type"] == "tool_result")
+                        .then(|| result_text(&b["content"]))
+                        .flatten()
+                        .map(|output| Event::ToolOutput {
+                            id: b["tool_use_id"].as_str().unwrap_or_default().to_string(),
+                            output,
+                        });
+                    output.into_iter().chain(event_of(b))
+                })
+                .collect();
+            fn event_of(b: &Value) -> Vec<Event> {
+                match b["type"].as_str() {
                     Some("tool_use") => {
                         let tool = b["name"].as_str().unwrap_or("tool");
                         let detail = detail(tool, &b["input"]).unwrap_or_default();
-                        Some(Event::ToolStart {
-                            id: b["id"].as_str().unwrap_or_default().to_string(),
+                        let id = b["id"].as_str().unwrap_or_default().to_string();
+                        // An edit's change, right after it starts: what it does to the file.
+                        let diff =
+                            change(tool, &b["input"]).map(|diff| Event::ToolDiff { id: id.clone(), diff });
+                        // Its todo list is the plan, shown as one.
+                        let plan = (tool == "TodoWrite")
+                            .then(|| b["input"]["todos"].as_array())
+                            .flatten()
+                            .map(|todos| {
+                                Event::Plan(
+                                    todos
+                                        .iter()
+                                        .filter_map(|t| {
+                                            Some((
+                                                t["content"].as_str()?.to_string(),
+                                                t["status"].as_str().unwrap_or("pending").to_string(),
+                                            ))
+                                        })
+                                        .collect(),
+                                )
+                            });
+                        std::iter::once(Event::ToolStart {
+                            id,
                             tool: tool.to_string(),
                             target: target(tool, &detail),
                             detail,
                         })
+                        .chain(diff)
+                        .chain(plan)
+                        .collect()
                     }
-                    Some("tool_result") => Some(Event::ToolEnd {
+                    Some("tool_result") => vec![Event::ToolEnd {
                         id: b["tool_use_id"].as_str().unwrap_or_default().to_string(),
                         ok: b["is_error"] != true,
-                    }),
-                    _ => None,
-                })
-                .collect();
+                    }],
+                    _ => vec![],
+                }
+            }
             if events.is_empty() {
                 Line::Other
             } else {
@@ -275,6 +316,36 @@ pub(crate) fn share(r: &Reported, seen: Option<&Usage>, fresh: bool) -> Usage {
     u
 }
 
+/// How full the context is: each request's start says what it read (the main thread's, not a
+/// subagent's), the turn's result the model's window.
+fn context(raw: &str) -> Option<Event> {
+    if !raw.contains("message_start") && !raw.contains("contextWindow") {
+        return None;
+    }
+    let v: Value = serde_json::from_str(raw).ok()?;
+    match v["type"].as_str()? {
+        "stream_event" if v["event"]["type"] == "message_start" && v["parent_tool_use_id"].is_null() => {
+            let u = &v["event"]["message"]["usage"];
+            let n = |k: &str| u[k].as_u64().unwrap_or(0);
+            let used = n("input_tokens") + n("cache_read_input_tokens") + n("cache_creation_input_tokens");
+            (used > 0).then_some(Event::Context {
+                used: Some(used),
+                window: None,
+            })
+        }
+        "result" => v["modelUsage"]
+            .as_object()?
+            .values()
+            .filter_map(|m| m["contextWindow"].as_u64())
+            .max()
+            .map(|window| Event::Context {
+                used: None,
+                window: Some(window),
+            }),
+        _ => None,
+    }
+}
+
 /// A `result` line's usage, if it reports any.
 fn usage_of(v: &Value) -> Option<Reported> {
     let turn = Usage::anthropic(&v["usage"]);
@@ -305,12 +376,48 @@ fn usage_of(v: &Value) -> Option<Reported> {
     })
 }
 
+/// The change Claude Code's editing tools make: Edit's and MultiEdit's replacements, Write's
+/// whole content.
+fn change(tool: &str, input: &Value) -> Option<String> {
+    let path = input["file_path"].as_str().unwrap_or_default();
+    let s = |v: &Value, k: &str| v[k].as_str().unwrap_or_default().to_string();
+    match tool {
+        "Edit" => crate::edit_diff(path, &s(input, "old_string"), &s(input, "new_string")),
+        "Write" => crate::edit_diff(path, "", &s(input, "content")),
+        "MultiEdit" => {
+            let parts: Vec<String> = input["edits"]
+                .as_array()?
+                .iter()
+                .filter_map(|e| crate::edit_diff(path, &s(e, "old_string"), &s(e, "new_string")))
+                .collect();
+            crate::diff_bounded(&parts.join("\n"))
+        }
+        _ => None,
+    }
+}
+
+/// A tool result's text (a string, or the text blocks of a list), its last [`OUTPUT_TAIL`]
+/// characters, secrets redacted; none when empty.
+fn result_text(content: &Value) -> Option<String> {
+    let text = match content {
+        Value::String(s) => s.clone(),
+        Value::Array(parts) => parts
+            .iter()
+            .filter_map(|p| p["text"].as_str())
+            .collect::<Vec<_>>()
+            .join("\n"),
+        _ => return None,
+    };
+    crate::output_tail(&text)
+}
+
 /// The answer to a `can_use_tool` request.
-pub(crate) fn decision(id: &str, allow: bool, input: &Value) -> Value {
+/// A no may carry the user's words (why not, or what they chose for a question): Claude reads them.
+pub(crate) fn decision(id: &str, allow: bool, input: &Value, words: Option<&str>) -> Value {
     let response = if allow {
         json!({ "behavior": "allow", "updatedInput": input })
     } else {
-        json!({ "behavior": "deny", "message": "The user said no in Vults." })
+        json!({ "behavior": "deny", "message": words.unwrap_or("The user said no in Vults.") })
     };
     json!({ "type": "control_response", "response": { "subtype": "success", "request_id": id, "response": response } })
 }
@@ -409,6 +516,9 @@ async fn run(
                 EndReason::Done
             };
         };
+        if let Some(context) = context(&raw) {
+            sink.event(context).await;
+        }
         match parse(&raw) {
             Line::Session(s) => {
                 *id = Some(s.clone());
@@ -445,8 +555,9 @@ async fn run(
                         answer = sink.ask(ask) => Some(answer),
                     }
                 };
-                let allow = answer.is_some_and(Answer::allows);
-                let written = write(&mut stdin, &decision(&req, allow, &input)).await;
+                let allow = answer.as_ref().is_some_and(Answer::allows);
+                let words = answer.as_ref().and_then(Answer::words);
+                let written = write(&mut stdin, &decision(&req, allow, &input, words)).await;
                 if answer.is_none() {
                     if deadline.is_none() {
                         let _ = write(&mut stdin, &interrupt_request()).await;
@@ -521,6 +632,84 @@ async fn write(stdin: &mut tokio::process::ChildStdin, msg: &Value) -> Result<()
 mod tests {
     use super::*;
 
+    #[test]
+    fn a_request_start_says_how_full_the_context_is_and_the_result_its_window() {
+        let start = r#"{"type":"stream_event","parent_tool_use_id":null,"event":{"type":"message_start","message":{"usage":{"input_tokens":5,"cache_read_input_tokens":40000,"cache_creation_input_tokens":2000}}}}"#;
+        assert_eq!(
+            context(start),
+            Some(Event::Context {
+                used: Some(42005),
+                window: None
+            })
+        );
+        let sub = start.replace("null", "\"t1\"");
+        assert_eq!(context(&sub), None, "a subagent's request is its own context");
+        let result =
+            r#"{"type":"result","modelUsage":{"claude-x":{"inputTokens":1,"contextWindow":200000}}}"#;
+        assert_eq!(
+            context(result),
+            Some(Event::Context {
+                used: None,
+                window: Some(200000)
+            })
+        );
+    }
+
+    #[test]
+    fn a_todo_list_is_the_plan() {
+        let line = r#"{"type":"assistant","message":{"content":[{"type":"tool_use","id":"t3","name":"TodoWrite","input":{"todos":[{"content":"Read the code","status":"completed"},{"content":"Fix it","status":"in_progress"}]}}]}}"#;
+        let Line::Tools(events) = parse(line) else {
+            panic!("tools")
+        };
+        assert!(events.contains(&Event::Plan(vec![
+            ("Read the code".into(), "completed".into()),
+            ("Fix it".into(), "in_progress".into())
+        ])));
+    }
+
+    #[test]
+    fn an_edit_brings_its_change_after_its_start() {
+        let line = r#"{"type":"assistant","message":{"content":[{"type":"tool_use","id":"t2","name":"Edit","input":{"file_path":"/w/a.txt","old_string":"old","new_string":"new"}}]}}"#;
+        let Line::Tools(events) = parse(line) else {
+            panic!("tools")
+        };
+        assert!(matches!(&events[0], Event::ToolStart { id, .. } if id == "t2"));
+        assert_eq!(
+            events[1],
+            Event::ToolDiff {
+                id: "t2".into(),
+                diff: "@@ /w/a.txt\n-old\n+new".into()
+            }
+        );
+    }
+
+    #[test]
+    fn a_tool_result_brings_its_output_before_its_end() {
+        let line = r#"{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"t1","is_error":false,"content":[{"type":"text","text":"test result: ok. 3 passed"}]}]}}"#;
+        let Line::Tools(events) = parse(line) else {
+            panic!("tools")
+        };
+        assert_eq!(
+            events,
+            vec![
+                Event::ToolOutput {
+                    id: "t1".into(),
+                    output: "test result: ok. 3 passed".into()
+                },
+                Event::ToolEnd {
+                    id: "t1".into(),
+                    ok: true
+                },
+            ]
+        );
+        assert_eq!(result_text(&serde_json::json!("  ")), None);
+        let long = "x".repeat(crate::OUTPUT_TAIL + 10);
+        assert_eq!(
+            result_text(&serde_json::json!(long)).unwrap().chars().count(),
+            crate::OUTPUT_TAIL + 1
+        );
+    }
+
     // Lines recorded from claude 2.1.285.
     #[test]
     fn thinking_stream_is_separate_from_reply_text() {
@@ -582,10 +771,16 @@ mod tests {
             parse(
                 r#"{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"t1","is_error":false,"content":"ok"}]}}"#
             ),
-            Line::Tools(vec![Event::ToolEnd {
-                id: "t1".into(),
-                ok: true
-            }])
+            Line::Tools(vec![
+                Event::ToolOutput {
+                    id: "t1".into(),
+                    output: "ok".into()
+                },
+                Event::ToolEnd {
+                    id: "t1".into(),
+                    ok: true
+                }
+            ])
         );
         assert_eq!(
             parse(
@@ -763,12 +958,12 @@ mod tests {
     #[test]
     fn answers() {
         let input = json!({ "command": "ls" });
-        let yes = decision("r1", true, &input);
+        let yes = decision("r1", true, &input, None);
         assert_eq!(yes["response"]["request_id"], "r1");
         assert_eq!(yes["response"]["response"]["behavior"], "allow");
         assert_eq!(yes["response"]["response"]["updatedInput"], input);
         assert_eq!(
-            decision("r1", false, &input)["response"]["response"]["behavior"],
+            decision("r1", false, &input, None)["response"]["response"]["behavior"],
             "deny"
         );
     }
@@ -793,6 +988,34 @@ mod tests {
         };
         assert_eq!(system(None), system(Some("abc")));
         assert!(system(None).ends_with("\n\n# Your memory"));
+    }
+
+    #[test]
+    fn full_access_is_claude_codes_own_mode_and_questions_still_come() {
+        let mode = |full_access, settings| {
+            let spec = Spec {
+                full_access,
+                settings,
+                ..Spec::in_dir("/w".into())
+            };
+            let args: Vec<String> = command(&spec, &Turn::default(), None)
+                .as_std()
+                .get_args()
+                .map(|a| a.to_string_lossy().into_owned())
+                .collect();
+            assert!(
+                args.windows(2)
+                    .any(|w| w == ["--permission-prompt-tool", "stdio"])
+            );
+            args.windows(2)
+                .find(|w| w[0] == "--permission-mode")
+                .map(|w| w[1].clone())
+        };
+        for settings in [Settings::Isolated, Settings::User, Settings::Project] {
+            assert_eq!(mode(true, settings).as_deref(), Some("bypassPermissions"));
+        }
+        assert_eq!(mode(false, Settings::User).as_deref(), Some("default"));
+        assert_eq!(mode(false, Settings::Isolated), None);
     }
 
     #[test]

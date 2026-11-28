@@ -10,7 +10,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 /// Bump when a key is added or changes meaning: from 0.1.1 on, an older release then keeps a
 /// copy of the file before it writes back only the keys it knows. 0.1.0 does not read it.
-const VERSION: u32 = 50;
+const VERSION: u32 = 51;
 
 /// The `data-theme` of every window. The three SP Night themes come from the sp-night palette.
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, Default, PartialEq)]
@@ -87,6 +87,10 @@ pub struct Settings {
     /// Antigravity's shell commands that none of its own rules covers wait on a card. Off by default.
     #[serde(default)]
     pub antigravity_approvals: bool,
+    /// Settings → Labs: each beta feature the user turned on or off, by its key
+    /// (`vults_core::labs`). A missing key is off; one no longer in the table is kept, unread.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub labs: BTreeMap<String, bool>,
     /// Explicit permission to paste into validated native X11 editors. Off by default.
     #[serde(default)]
     pub dictation_insert: bool,
@@ -178,6 +182,10 @@ pub struct Settings {
     /// always sound; where the active window cannot be read, nothing changes.
     #[serde(default = "yes")]
     pub quiet_when_watching: bool,
+    /// The computer does not suspend while agents work (a logind `sleep` inhibitor; the screen
+    /// still locks).
+    #[serde(default = "yes")]
+    pub keep_awake: bool,
     /// Zeca, the companion who chats and listens. Off, the flock still works (ADR 0005).
     #[serde(default = "yes")]
     pub zeca: bool,
@@ -416,6 +424,7 @@ impl Default for Settings {
             voice_language: None,
             question_agents: false,
             antigravity_approvals: false,
+            labs: BTreeMap::new(),
             dictation_insert: false,
             dictation_caption: true,
             dictation_sound: true,
@@ -455,6 +464,7 @@ impl Default for Settings {
             presence: Default::default(),
             notifications: true,
             quiet_when_watching: true,
+            keep_awake: true,
             zeca: true,
             widget: None,
             projects: BTreeMap::new(),
@@ -501,6 +511,8 @@ pub struct Public {
     pub question_agents: bool,
     #[serde(rename = "antigravityApprovals")]
     pub antigravity_approvals: bool,
+    /// The Labs turned on, by key.
+    pub labs: BTreeMap<String, bool>,
     #[serde(rename = "dictationKeep")]
     pub dictation_keep: String,
     #[serde(rename = "dictationSound")]
@@ -594,6 +606,8 @@ pub struct Public {
     pub notifications: bool,
     #[serde(rename = "quietWhenWatching")]
     pub quiet_when_watching: bool,
+    #[serde(rename = "keepAwake")]
+    pub keep_awake: bool,
     pub zeca: bool,
     /// Activity's local history (the island's gear reads it here, without the history itself).
     pub history: bool,
@@ -620,6 +634,7 @@ pub fn app_settings(app: AppHandle, state: tauri::State<'_, SettingsState>) -> P
     Public {
         question_agents: s.question_agents,
         antigravity_approvals: s.antigravity_approvals,
+        labs: s.labs.clone(),
         dictation_caption: s.dictation_caption,
         dictation_sound: s.dictation_sound,
         dictation_commands: s.dictation_commands,
@@ -670,6 +685,7 @@ pub fn app_settings(app: AppHandle, state: tauri::State<'_, SettingsState>) -> P
         presence: s.presence,
         notifications: s.notifications,
         quiet_when_watching: s.quiet_when_watching,
+        keep_awake: s.keep_awake,
         zeca: s.zeca,
         history: s.history,
         widget: s.widget,
@@ -963,6 +979,19 @@ pub fn update_consent(app: &AppHandle) -> crate::update::rules::Consent {
         .lock()
         .map(|s| s.update_consent)
         .unwrap_or_default()
+}
+
+/// Off, the computer may suspend while agents work, as before.
+#[tauri::command]
+pub fn set_keep_awake(app: AppHandle, window: tauri::Webview, on: bool) -> Result<(), String> {
+    crate::settings_page(&window)?;
+    edit(&app, |s| s.keep_awake = on)
+}
+
+#[cfg(target_os = "linux")]
+pub fn keep_awake(app: &AppHandle) -> bool {
+    app.try_state::<SettingsState>()
+        .is_some_and(|st| st.0.lock().is_ok_and(|s| s.keep_awake))
 }
 
 pub fn quiet_when_watching(app: &AppHandle) -> bool {
@@ -1721,6 +1750,33 @@ pub fn set_antigravity_approvals(window: tauri::Webview, app: AppHandle, on: boo
     crate::settings_page(&window)?;
     edit(&app, |s| s.antigravity_approvals = on)?;
     let _ = app.emit("settings", serde_json::json!({ "antigravityApprovals": on }));
+    Ok(())
+}
+
+/// Whether a Labs feature is on.
+pub fn lab(app: &AppHandle, lab: vults_core::labs::Lab) -> bool {
+    let state = app.state::<SettingsState>();
+    state.0.lock().is_ok_and(|s| vults_core::labs::on(&s.labs, lab))
+}
+
+/// A Labs feature on or off, from Settings → Labs only. Off, what it offered goes from the next
+/// time it is asked for (a turn already running ends as it would).
+#[tauri::command]
+pub fn set_lab(window: tauri::Webview, app: AppHandle, id: String, on: bool) -> Result<(), String> {
+    crate::settings_page(&window)?;
+    if vults_core::labs::Lab::of(&id).is_none() {
+        return Err("Not a Labs feature.".into());
+    }
+    let mut labs = BTreeMap::new();
+    edit(&app, |s| {
+        if on {
+            s.labs.insert(id.clone(), true);
+        } else {
+            s.labs.remove(&id);
+        }
+        labs = s.labs.clone();
+    })?;
+    let _ = app.emit("settings", serde_json::json!({ "labs": labs }));
     Ok(())
 }
 
@@ -2600,6 +2656,7 @@ mod tests {
             voice_language: Some("pt".into()),
             question_agents: false,
             antigravity_approvals: false,
+            labs: BTreeMap::new(),
             dictation_insert: false,
             dictation_caption: true,
             dictation_sound: true,
@@ -2639,6 +2696,7 @@ mod tests {
             presence: crate::panel::Presence::Island,
             notifications: true,
             quiet_when_watching: true,
+            keep_awake: true,
             zeca: true,
             widget: None,
             projects: BTreeMap::new(),

@@ -16,6 +16,14 @@ export function applyActivity(activity: ChatActivity, event: ChatActivityEvent):
   } else if (event.type === "end") {
     const tool = activity.tools.find(t => t.id === event.id);
     if (tool) tool.ok = event.ok;
+  } else if (event.type === "output") {
+    const tool = activity.tools.find(t => t.id === event.id);
+    if (tool) tool.output = event.text.slice(-4096);
+  } else if (event.type === "plan") {
+    activity.plan = event.steps.slice(0, 64).map(s => ({ text: s.text.slice(0, 500), status: ["completed", "in_progress"].includes(s.status) ? s.status : "pending" }));
+  } else if (event.type === "diff") {
+    const tool = activity.tools.find(t => t.id === event.id);
+    if (tool) tool.diff = event.diff.slice(0, 16384);
   } else {
     if (activity.decisions.length >= 128) { activity.truncated = true; return; }
     activity.decisions.push({ tool: event.tool, target: event.target.slice(0, 16384), answer: event.answer, by: event.by });
@@ -30,10 +38,13 @@ export function readActivity(text: string): ChatActivity {
     if (Array.isArray(data.tools)) for (const tool of data.tools.slice(0, 128)) {
       if (typeof tool.id !== "string" || typeof tool.tool !== "string" || typeof tool.detail !== "string") continue;
       applyActivity(result, { type: "start", id: tool.id, tool: tool.tool, detail: tool.detail });
+      if (typeof tool.diff === "string") applyActivity(result, { type: "diff", id: tool.id, diff: tool.diff });
+      if (typeof tool.output === "string") applyActivity(result, { type: "output", id: tool.id, text: tool.output });
       if (typeof tool.ok === "boolean") applyActivity(result, { type: "end", id: tool.id, ok: tool.ok });
     }
+    if (Array.isArray(data.plan)) applyActivity(result, { type: "plan", steps: data.plan.filter((s: { text?: unknown; status?: unknown }) => typeof s?.text === "string" && typeof s?.status === "string") });
     if (Array.isArray(data.decisions)) for (const d of data.decisions.slice(0, 128)) {
-      if ([d.tool, d.target, d.answer, d.by].every(value => typeof value === "string") && ["allow", "deny", "always"].includes(d.answer) && ["human", "policy", "full-access", "conversation"].includes(d.by)) applyActivity(result, { type: "decision", tool: d.tool, target: d.target, answer: d.answer, by: d.by });
+      if ([d.tool, d.target, d.answer, d.by].every(value => typeof value === "string") && ["allow", "deny", "always"].includes(d.answer) && ["human", "policy", "full-access", "conversation", "agent"].includes(d.by)) applyActivity(result, { type: "decision", tool: d.tool, target: d.target, answer: d.answer, by: d.by });
     }
     result.truncated ||= data.truncated === true;
   } catch { result.truncated = true; }

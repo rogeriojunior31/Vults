@@ -11,12 +11,13 @@ API provider you set up, see below); on the island one compact control shows the
 its model, with a background on hover or while open. Its menu holds the engine, model and effort.
 In Quick, conversation actions stay beside Zeca, and the engine sits below the draft.
 Its menu opens upward across the footer width, with one scroll area for long lists
-and wrapping engine, model and effort options. A started conversation explains its pinned
-model inside the menu rather than covering the choices with a tooltip.
+and wrapping engine, model and effort options, in a started conversation too.
 Quick Chat is slightly wider than the other tabs (about 561 logical pixels after zoom).
-An empty Quick Chat stays short: Zeca uses his original 3x portrait beside a greeting,
-with the draft and controls directly below. The title disappears and his portrait uses 2x
-when messages arrive. The surface grows with the actual transcript until it reaches the
+An empty Quick Chat stays short and quiet: Zeca's original 3x portrait, no name, greeting or
+explanation, and *Ask anything…* in the draft, with the controls directly below. Once messages
+arrive the portrait gives its room to them and the header shrinks to its buttons. Long replies
+keep their code, diffs and tool output in their own shorter scrolling blocks, and nothing in the
+transcript scrolls sideways. The surface grows with the actual transcript until it reaches the
 available overlay height, then only the transcript scrolls. Starting an empty conversation
 releases the previous transcript height. Opening, loading and closing the engine menu does
 not change that height: the menu overlays the conversation and scrolls within the space
@@ -31,9 +32,23 @@ resumes the same scene.
 
 Its engines come in two groups, **Your
 setup** (the Claude Code and Codex CLIs, each *Signed in*, *Installed* or *Not installed*: Vults only
-looks whether the CLI and its login file are there, never reads them) and **Vults harness** (the
-API, *Ready* with a key or a local model), with **Engines in Settings ›** under them. **New** (**+** on the island) starts a fresh conversation, and so does switching to
-another provider; the one before stays in the list (see [Conversations](#conversations)). **Esc**
+asks the CLI itself, `claude auth status` or `codex login status`, and reads only whether it is
+signed in, falling back to whether its login file is there; **Sign in** beside one that is not opens
+a terminal with that CLI's own sign-in, which Vults never sees; then every agent that speaks
+ACP and is installed here (Qwen Code, Copilot CLI and Kimi Code only once turned on in
+**Settings → Labs**, until each is checked with a live turn), such as Antigravity (`agy acp`, its telemetry off), OpenCode, Qwen Code,
+Copilot CLI or Kimi Code, which uses its own model and its own permission settings, as in its
+terminal: what it asks for is a card, and what its settings allow it runs, with the turn's
+**Activity** saying *Ran by the agent's own settings, without asking*; the model menu lists the agent's own models (asked once from a session it opens in a folder of
+Vults' own, then kept), and one picked mid-conversation applies from the next turn; Antigravity and
+OpenCode also have **Sign in**, which opens `agy acp --login` or
+`opencode auth login` in a terminal. Their edits show their diffs, and Antigravity's context fills
+the meter beside **Send**) and **Vults harness** (the
+API, *Ready* with a key or a local model), with **Engines in Settings ›** under them. **New** (**+** on the island) starts a fresh conversation; the one before stays in the list (see
+[Conversations](#conversations)). Picking another engine in an empty chat starts with it; in a
+conversation already going, the other engine takes it over: the lines stay, a note says who goes
+on, and its first turn starts with what was said so far (your first message and the latest lines,
+about 12,000 tokens at most). **Esc**
 first dismisses an open selector, then closes the chat; the conversation is still there when you come back.
 Only one selector opens at a time. **↑/↓** on its trigger opens it and focuses a choice;
 **↑/↓**, **Home** and **End** move between choices without applying them. **Enter** or a click
@@ -68,7 +83,7 @@ and optional microphone and Send on the right; the paperclip keeps its
 **Attach a file** accessible name and tooltip. File cards stay in a separate strip above it. Your messages sit in bubbles on the right; replies
 read in the conversation column.
 
-The chat is Zeca's: with him turned off (**Settings → Flock & Zeca → Zeca**) there is no Chat
+The chat is Zeca's: with him turned off (**Settings → Zeca → Zeca**) there is no Chat
 or Chat microphone, and files dropped on the island are not taken. Independent
 [local dictation](dictation.md#dictate-into-any-app) still works, including its talk key.
 See [Without Zeca](island.md#without-zeca). Change the global keys in System Settings → Shortcuts;
@@ -79,6 +94,15 @@ Settings > General shows the bindings the desktop reports.
 Before the first message, the folder (*in vults ▾*, at the top in the Nest, under the composer on the island) says where the conversation
 will work: the folder of the session in front, unless you pick another one of the sessions on the
 wire, or an empty folder of its own. Once the conversation starts it stays there until **New**.
+
+Its menu lists the folders your agents work in now, then **Recent** (the folders earlier
+conversations worked in that are still there), a field to type or paste a folder's path (`~/`
+is your home; one that doesn't exist says so), **Choose a folder…** (the system's chooser) and
+*An empty folder*. A single folder dropped on a chat that hasn't started becomes where it works;
+once it has, a dropped folder goes into the draft by its path. In the Nest's **By project**, *Chat
+here* beside a repository or worktree opens the chat there (a new conversation, if the current one
+already started). A folder that no longer exists when you send stops the message with a note
+instead of working somewhere else.
 
 ![Chat on the island in Quick: Zeca's greeting, the composer, and the model, folder and access pickers](../assets/island-chat.png)
 
@@ -105,10 +129,16 @@ draft and model choice. Close and reopen the picker to try again; typing or
 updating the chat does not keep repeating the failed request.
 
 The choice is remembered per folder and per engine: a new conversation in that folder starts with
-it. Like the folder, it is fixed once the conversation starts, so a reply never changes model
-midway; **New** starts another. The API chat's model is chosen in **Settings → Chat & voice**.
+it. It can change during a conversation too: the next turn runs with the new model and effort,
+and the conversation goes on; a reply already streaming keeps the one it started with. The API chat's model is chosen in **Settings → Agents → API providers**.
 
 ## Referencing the flock
+
+In a conversation with a folder, **@** and a few letters also list that folder's files and folders
+(`File: src/main.rs`, `Folder: src/auth`), first. Picking one puts its path in the draft as plain
+text, such as `@src/main.rs`, for the agent to open where it runs; version control, dependencies
+and build folders are left out. A folder dropped on the chat goes in the same way, by its full
+path, and is never copied.
 
 Type **@** in the draft to find an open session or project. Search by its project, agent,
 folder or session ID. **↑/↓** move through suggestions; **Enter**, **Tab** or a click inserts
@@ -120,7 +150,10 @@ eight references, including several sessions in one message.
 A session reference selects that exact agent and session ID. A project reference selects
 the flock sessions in that exact folder, including its different agents. When you send,
 the turn's flock context and flock tools read only those selections. This works with the
-CLI and API engines. References do not switch the conversation's working folder or answer
+CLI and API engines. A Claude Code or Codex session reference also brings what was said in that
+session, read from the agent's own transcript: the first message and the latest that fit about 6k
+tokens, the words only (tool calls and results left out), secrets hidden, marked for the model as
+a record to read and not instructions. References do not switch the conversation's working folder or answer
 cards, and earlier messages remain in the conversation. With no references, the usual
 flock context is unchanged.
 
@@ -135,8 +168,10 @@ reference's readable text; reselect it if you bring that text back into a new dr
 
 The arrow at the top of the island's chat opens the [Nest](nest.md), Vults' own window. Its
 **Chat** tab is the same conversation, wide, with replies in full Markdown; its cards are answered
-there too. **Memory**, beside it, shows what Zeca
-remembers.
+there too. The **Side panel** beside it has three tabs: **Memory** shows what Zeca remembers;
+**Changes** lists each file the agent changed in this conversation, with its lines added and
+removed and its diffs; **Files** finds files and folders in the conversation's folder. In
+Changes and Files a click puts the path in the draft, as **@** does.
 
 An empty Nest Chat centres Zeca's original 3x portrait above **Ask Zeca** and a vertical list
 of suggestions. Once messages arrive, the same scene uses a smaller 2x perch above the
@@ -176,13 +211,19 @@ Every conversation is saved on this computer as it goes, and the list button at 
 shows them, the latest used first, with the engine and folder of each. Click one to go on with it
 where it stopped, even after a restart: it keeps its engine, folder, model and effort, and its CLI
 resumes its own session (Claude Code's session, Codex's thread; the API chat replays what was
-said, with each file sent kept only as a label: a text file by its name, a document by its title, an image as "an image", never the contents). The pencil renames one; the cross deletes it after a second click, with what was said in it.
+said, with each file sent kept only as a label: a text file by its name, a document by its title, an image as "an image", never the contents). The pencil renames one; the cross deletes it after a second click, with what was said in it. **Copy as Markdown**, at the top, copies the open conversation: its title, then each message under who said it, replies as written.
+If the CLI no longer has that session (its history was cleared, or the conversation came from
+another computer), the turn starts a fresh session that goes on from what was said, instead of
+failing.
 
 What is saved is what the chat shows: your messages and the names of the files you sent, Zeca's
 replies, errors and stops; never a card's answer (the audit log keeps those) and never an
 *Always in this chat* rule, so a conversation opened again asks as a new one would. The newest 200
 are kept, in the same local `vults.sqlite` as the activity history; **Settings → History and budget →
 Clear history** removes them all. A conversation whose folder is gone can't be opened again.
+
+Quitting Vults from the tray while a turn runs, in Zeca's chat or a specialist's, asks first: quitting
+stops the turn and its unfinished reply is lost.
 
 <a id="memory"></a>
 
@@ -198,20 +239,42 @@ With the memory on, what Zeca remembers and recalls joins as well: see [Zeca's m
 
 ## Writing and reading
 
-- **Enter** sends, **Shift+Enter** starts a new line. You can type the next message while a reply
-  comes, and send it when the reply ends. **↑** in an empty composer brings back your last message,
-  to change it or send it again.
+- **Enter** sends, **Shift+Enter** starts a new line. While a reply comes, **Enter** queues the
+  message above the draft (**×** takes it out); when the turn ends well the queue goes, in order,
+  one turn each. After **Stop** or an error nothing goes on its own: the queued words come back into
+  the draft. **↑** in an empty composer brings back your last message, and each **↑** after it an
+  earlier one; **↓** comes forward again, past the newest to an empty draft. Your last message also
+  offers **Edit and send again** while no turn runs, and every message of yours can be copied. **/** at the start of the draft lists the chat's commands:
+  `/remember`, `/forget`, `/continue` and `/new`, which starts a new conversation at once.
+- When the agent asks you something (Claude Code's `AskUserQuestion`), its card shows each question
+  with its options: a click on each goes back as your answer, or type your own and press **Enter**.
+  Full access never answers a question for you. While a permission card waits, typing and **Enter**
+  answers it too: a no with your words, which Claude Code reads (Codex and ACP agents get a plain no).
 - While Zeca answers, the send button becomes **Stop**: it ends the turn there, and anything the turn
   was waiting on is a no.
 - The reply streams in as it is written. Scroll up to read and it stays where you are, with a
   *↓ new text* button to jump back to the end.
+- Each message shows when it was said beside its actions: the time today, the day before that,
+  the whole date on hover.
 - **Copy** under the latest reply copies all of it, as the Markdown it was written in; an older
   reply shows it when the pointer is over it. A code block has its own **Copy**. A failed copy
   says so and can be retried.
 - Both Quick and Room show headings, lists, quotes, code and tables. Code and wide tables have
-  their own keyboard-focusable scrolling area. Links stay text, with their address beside the label.
+  their own keyboard-focusable scrolling area. Links stay text, with their address beside the label;
+  a bare address shows as one. `~~text~~` strikes through, and `- [ ]` / `- [x]` lists get their boxes.
+  Code is colored by its fence's language (comments, strings, numbers, keywords; a `diff` block by
+  its lines), and a block past 20,000 characters stays plain.
 - A turn that fails says why, with **Try again**: it sends the same words and files once more.
-- While a turn runs, *Thinking…* says so, with its seconds once it takes longer than three.
+  A long task runs as long as it keeps reporting; only a turn silent for 15 minutes (no words, no
+  tool, no card) ends as *stopped responding*.
+- While a turn runs, the line under the conversation says what the agent is doing now (*Running
+  cargo test…*, *Editing lib.rs…*), with how long the turn has run once it takes longer than three
+  seconds. Once it ends, its **Activity** says how long it took.
+- Beside **Send**, a small ring says how full the model's context is once its engine reports it
+  (Claude Code and Codex): the share of its window, or the tokens alone until the window is known.
+  It turns amber past 80%: time for a new conversation, or to let the engine compact it.
+- **Ctrl+F** (**⌘F**) finds in the conversation: it counts the messages that match, **Enter** and
+  **Shift+Enter** step through them, **Escape** closes it.
 - In the Nest the conversation reads in one column as wide as the composer, however wide the window.
   Each reply is signed with Zeca and the engine that wrote it, and a code block names its language.
 
@@ -251,9 +314,17 @@ before they are used.
 
 ![One pending approval with its command and actions in the minimum Nest](../assets/nest-chat-approval.png)
 
-The reply stays separate from a collapsed **Activity** disclosure. Open it for the readable
+A turn reads in the order it ran: each stretch of tools is a collapsed **Activity** disclosure
+placed where it happened, between the words before and after it, live and when the conversation
+is reopened. Open it for the readable
 thinking supplied by the engine and the tools it reported. Each tool exposes its arguments or
-command and its reported completion or failure. Missing results remain **No result reported**;
+command, its reported completion or failure, and, when the engine reports it (Claude Code's tool
+results, Codex's command output), the last 4,000 characters of what it printed, secrets hidden.
+When the agent keeps a plan (Claude Code's todo list, Codex's plan, an ACP agent's plan), it shows
+as a checklist at the top of the turn's **Activity**, with *Plan 2 of 5* on its closed line, and the
+line under the conversation says the step it is on. An ACP agent's thinking shows there too.
+An edit shows its change as colored lines, with the lines it added and removed on its row
+(Claude Code's Edit, MultiEdit and Write; Codex's file changes). Missing results remain **No result reported**;
 Vults does not invent thought text or treat elapsed turn time as measured thinking time. Codex
 shows its public reasoning summaries; engines that do not supply details say so.
 
@@ -308,10 +379,13 @@ does not change the permission checks. Collapsing a card never grants access.
 - **Your policies**: the [policies](approvals.md#policies) you accepted answer the chat's calls as
   they answer Claude Code's on the island. A deny denies, an allow allows (Claude Code's calls,
   inside the conversation's folder), the rest asks.
-- **Full access**: choosing it, in Settings or in the chat's menu, asks you to confirm first; then everything runs with no card, but a destructive command (`rm`, a forced push)
-  still asks, what a policy denies is denied and what a policy asks first still asks. Once the conversation has read content
-  from outside (a web page, a fetch, an MCP tool), its cards ask again until it ends: a page's words
-  could be steering it. Add `deny` lines to a policy for what must never run.
+- **Full access**: choosing it, in Settings or in the chat's menu, asks you to confirm first; then
+  nothing asks: every command and edit runs with no card, destructive ones included, and after the
+  conversation read a web page, a command's network output or an MCP tool. Only what a policy of
+  yours denies is refused: add `deny` lines to a policy for what must never run. The agent itself
+  runs in its own mode that asks nothing (Claude Code's `bypassPermissions`, Codex's `never` with no
+  sandbox), from the next turn, the conversation going on; while a policy of yours denies something,
+  Vults answers its requests instead, so that deny still holds.
 
 The chat says each answer given this way (*Allowed by your policy*, *Denied by your policy*, *Ran
 with full access*), and the audit log keeps it. Its chip, beside the model (amber with a warning sign under full access),
@@ -325,7 +399,9 @@ fills, and it joins your next message: a card inside the composer with its name 
 (**×** takes it off). Long names wrap, and a long list of files scrolls inside the composer.
 Click the input to write about it. You can send it with no text to ask what it is.
 Images, PDFs, code and text work best. Files are copied into the app's inbox (up to 20 MB each) and
-deleted after a week; a folder, or a file over 20 MB, is refused with a line saying why.
+deleted after a week; a file over 20 MB is refused with a line saying why, and a folder goes into the
+draft by its path ([Referencing the flock](#referencing-the-flock)). An image pasted into the draft
+is attached the same way, and so is pasted text of 32 KB or more, as a file of its own.
 
 On Windows, Explorer drops use WebView2's native file objects and accept up to 256 files at once.
 If the installed WebView2 runtime cannot receive them, the drop cursor stays unavailable; use the
@@ -346,14 +422,16 @@ read either way. Your allow rules apply in every folder. Cards still ask whateve
 allow, whatever `defaultMode` your settings set, and your hooks never make the chat show up as an
 agent session.
 
-Turn it off in **Settings → Chat & voice → Your Claude Code and Codex setup**, and Claude reads none of it;
-Codex then only leaves out your hooks. The switch applies to the next conversation. Worth knowing:
+Choose it per conversation with the person icon beside the chat controls: **Your setup** or
+**Clean**, before the first message (the choice is also the default for the next ones, as the
+switch in **Settings → Chat & voice → Your Claude Code and Codex setup**). Clean, Claude reads none
+of it, and Codex starts in a home of its own: none of your `config.toml`, MCP servers, skills,
+hooks or `AGENTS.md`, with your login kept only in memory. Worth knowing:
 
 - `claude -p` skips the trust prompt, so a repository you just cloned can't bring rules or hooks of
   its own.
 - An allow rule such as `Bash(npm test:*)` runs a cloned project's test script with no card.
 - With the switch off, Claude gets no MCP servers but Vults' own, and no saved rule skips a card.
-- Codex's `config.toml` still brings its MCP servers, and its `AGENTS.md` is still read.
 - A conversation already running keeps what it read.
 
 See [Safety](../safety.md) for the rest.
@@ -361,8 +439,12 @@ See [Safety](../safety.md) for the rest.
 ## Without a CLI: an API key, or a local model
 
 The chat can also use a provider's API with your own key, or a model running on your machine. In
-**Settings → Chat & voice**, pick the **Provider**, paste its key, and choose a **Model**; the provider's
-name then appears at the top of the chat, next to Claude and Codex.
+**Settings → Agents → API providers**, pick the provider, paste its key, and choose a **Model**; the
+provider's name then appears at the top of the chat, next to Claude and Codex. Each provider shows its
+mark, a dot and how it stands (*Key saved in the system keyring.*, *No key yet.*). Above it, the
+**Agents** list holds every agent with its mark and state; choosing one shows its hooks and, under
+**In Zeca's chat**, how its engine stands (*Signed in and ready.*, *Installed, not signed in.*), with
+**Sign in** where it has one and **Check again**.
 
 | Provider | Key | Notes |
 |---|---|---|
@@ -447,8 +529,8 @@ while keeping the editable draft. Inbox copies are private and existing original
 
 The existing API file formats still apply: supported images/text, and PDFs on the Anthropic wire.
 Unsupported files or text larger than 512 KB are named rather than inlined. Saved API history keeps
-attachment names, never their bytes. Attached content is outside input; in CLI conversations,
-permission cards ask again before actions under full access. Files do not enable API tools, GitHub
+attachment names, never their bytes. Attached content is outside input: with **Asks first** or
+**Your policies** the cards say so; full access still asks nothing. Files do not enable API tools, GitHub
 or project access. Specialist drag-and-drop is not added in this slice; use its paperclip.
 
 The unsent choice stays with that profile while the app runs and survives closing the Nest or

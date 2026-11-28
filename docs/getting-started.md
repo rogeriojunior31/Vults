@@ -56,7 +56,7 @@ the last dictation again; **Ctrl+Alt+F8/F9** allows/denies the visible card;
 **Ctrl+Alt+F10** cancels dictation and Chat voice. A key already
 owned by another application is left unbound. Settings shows only successful registrations.
 
-Change Windows keys in **Settings → General → Keyboard shortcuts** (also available in Dictation's
+Change Windows keys in **Settings → Keyboard shortcuts** (also available in Dictation's
 keys section). Choose the modifiers and key for each action, or **Disabled**, then **Apply shortcuts**.
 Changes take effect immediately and persist across restarts. **Restore defaults** stages the original
 combinations; apply them explicitly. A conflict or save failure keeps the previous active bindings.
@@ -112,7 +112,7 @@ put the next or previous session in front, and holding **Ctrl+Alt+V** talks to Z
 ## Language
 
 Vults speaks English, Brazilian Portuguese, Spanish and Simplified Chinese. It follows your
-desktop's language; **Settings → General → Language** picks another for the island, Settings, the
+desktop's language; **Settings → Appearance → Language** picks another for the island, Settings, the
 tray and the notifications. What your agents say stays in their own words.
 
 ## Next

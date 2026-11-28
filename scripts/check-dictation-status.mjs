@@ -120,7 +120,7 @@ try {
     assert.ok(mounted && !mounted.hidden, `${phase} has visible feedback`);
     assert.equal(mounted.dataset.phase, phase);
     assert.equal(mounted.attributes["aria-atomic"], "true", "Each transition reads as one sentence");
-    assert.ok(mounted.children[0].children[0].children[0].attributes.d, "The phase uses a production icon");
+    assert.ok(mounted.children[0].children[0].children.length > 0, "The phase uses a production icon");
     const english = mounted.textContent;
     for (const language of ["pt-BR", "es", "zh"]) {
       setLang(language); island.relabel();

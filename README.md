@@ -48,7 +48,7 @@ of your screen and does four jobs:
 
 > [!NOTE]
 > Vults speaks **English**, **Brazilian Portuguese**, **Spanish** and **Simplified Chinese**. It
-> follows your desktop's language; pick one in **Settings → General → Language**.
+> follows your desktop's language; pick one in **Settings → Appearance → Language**.
 
 ## Features
 
@@ -174,7 +174,7 @@ commands that none of its own rules covers come to the island too. See the
 <details>
 <summary><b>Do I need Zeca?</b></summary>
 
-No. Turn him off in **Settings → Flock & Zeca**: the flock, cards, notifications, connectors and
+No. Turn him off in **Settings → Zeca**: the flock, cards, notifications, connectors and
 dictation keep working, and only the chat goes away.
 </details>
 

@@ -6,8 +6,113 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Fixed
 
+- **Settings**: Dictation's sound and feedback rows sit under Recording as meant; its Windows notes show once instead of in every group; Gitea's empty address no longer reads *undefined*; About's logo hides when its image is missing; Chat & voice no longer names the old Flock & Zeca page.
+
+- **Settings → Chat & voice**: *Who answers Zeca's cards* no longer says destructive commands ask under full access.
+
+- **Zeca's chat**: a folder that no longer exists stops the message with a note, instead of the chat quietly working elsewhere.
+
+- **Zeca's chat, ACP agents**: OpenCode's edit asked with a relative name is no longer refused; Antigravity's commands and file paths show; a crash says why (its last line); a session resumes without replaying (`session/resume`), and an agent that wants its login is told to use it.
+- **Linux**: CLIs that only a shell profile puts on the PATH (mise's shims, `~/.local/bin`, `~/.bun/bin`, `~/.cargo/bin`) are found when Vults starts from the desktop.
+
+- **Windows**: OpenCode, Antigravity and the other ACP agents installed as `.exe` or npm `.cmd` are found, so the chat's engine menu offers them.
+
+- **Zeca's chat**: a long task no longer ends after ten minutes with *took too long to answer*; a turn runs as long as it keeps reporting, and only one silent for 15 minutes stops.
+
+- **Zeca's chat**: a saved conversation whose Claude Code session or Codex thread is gone (history cleared, another computer) goes on in a fresh one from what was said, instead of failing with *No conversation found*.
+
+- **Zeca's chat, full access**: it asks nothing any more. Before, a destructive command still asked, and after the first `gh`, `curl` or web read every later command asked for the rest of the conversation. Only a policy of yours that denies still denies.
+- **A plan's card**: **Allow and accept edits** now reaches Claude Code; since 0.1.9 the click was dropped on the way and Claude Code asked in its terminal instead.
 - **Activity**: a day's bar, the busiest day and the grid count turns side by side once, as the week's total does (they added them up, so parallel agents showed more time per day than in the week).
 - **Activity**: a turn still running when Vults quits or updates is kept, ending at its last event, instead of being lost.
+- **Microphones**: a 24-bit microphone (and 8, 32 and 64-bit ones) opens for dictation, voice and meetings instead of failing.
+- **Windows**: the chat's engine menu finds `claude.exe` and npm's `claude.cmd`, so it no longer says Claude Code or Codex is missing.
+- **Windows**: the island hangs below a taskbar or app bar at the top of the screen.
+- **Windows**: a VS Code installed under a folder named after Cursor is no longer shown as Cursor.
+- **Phone**: the pairing code's text shows only on request, and **Copy** leaves it out of clipboard history and cloud sync.
+- **Phone relay**: plain `http://` only for a relay on this computer, a LAN or a tailnet; one address holds at most 64 connections (`VULTS_RELAY_PER_ADDRESS`, 0 behind a proxy).
+
+### Added
+
+- **Every plan window**: a model's own weekly allowance, Claude's monthly spend cap, a Free or Go plan's monthly Codex window and Codex's monthly credit limit, from the answers Vults already asks for.
+- **Tokens and pace like t3code's**: tokens read 1.25K, 12.5K or 1.2M everywhere; each plan window says whether it is ahead of, on or under pace (Records, the chat's usage tooltip).
+- **Quitting mid-turn asks first**: from the tray, while a turn runs in any chat.
+- **Copy as Markdown** in the chat's Conversations menu: the open conversation, its title and each message under who said it.
+- **Keep the computer awake while agents work** (Settings → General, on): a logind sleep inhibitor while a session or a chat turn works; the screen still locks.
+
+### Changed
+
+- **Settings → Agents**: every agent and API provider in one page, as t3code's Providers: a list with each mark and state beside the chosen agent's hooks and its engine in Zeca's chat (Sign in, Check again); the API providers below. Chat & voice keeps permissions, web and voice.
+
+- **Settings and Chat**: each provider, agent and connection shows its official mark beside its name (Claude, OpenAI/Codex, Antigravity, OpenCode, Gemini, Copilot, Ollama, GitHub, GitLab, Gitea and more), as t3code does; the chat's engine menu too.
+
+- **Settings**: 191 of its longer sentences rewritten shorter, in all four languages, keeping what leaves the computer, what costs and what can't be undone.
+
+- **Settings**: voice models carry tags (*Recommended* for the language spoken, *Fastest*, *Balanced*, *Most accurate*, *Best with a GPU*) and say *Verifying…* when a download is checked; Projects show each project's choices on one line; Phone says first that its app is not out yet; Gitea's *Save connection* is the one primary step; About names its version in its title and lists its files under a title.
+
+- **Settings**: a long description shows its first sentence, with the rest under **More**; each agent's card shows its state and the step that is due first, with how it works folded and **Remove** last and quiet; History and budget, Approvals and Labs read in titled sections.
+
+- **Settings**, after a design critique of every page: each page reads as title, one sentence, then titled sections (General: Startup, Usage and prices; Island: Behavior, Placement; Sound and notifications: Sounds, Notifications; Flock: Birds); keys drawn as keycaps; disclosures open with a drawn chevron; a switch stays beside its words on narrow windows; Zeca's memory comes before the species gallery, with the second family folded; Agents says when every connected agent is up to date and puts retired agents apart; an ACP engine's unknown sign-in has a neutral dot.
+
+- **Settings → Keyboard shortcuts**: Dictation's keys (its global shortcuts, recording mode and X11 keys) moved there from Dictation, shown once dictation has a voice model; Dictation keeps what is voice.
+
+- **Icons**: every surface draws Lucide's line icons, as t3code does (ISC; see NOTICE); the flock keeps its own drawing.
+
+- **Settings**: **Zeca, chat and agents** groups Zeca, Chat & voice and Agents. Chat & voice reads in sections (agent engines, permissions and setup, API, web, voice); the API providers are a list beside the chosen one's key and model; Agents lists what is connected, then what is here to set up.
+
+- **Settings**: one topic per page, each with titled sections, as t3code arranges them. **Zeca** leads its own group with **Chat & voice**: his portrait, switch, look, species and memory (moved from Chat & voice). **General** keeps startup, usage and updates; **Appearance** (colors and themes, interface), **Island**, **Sound and notifications** and **Keyboard shortcuts** are pages of their own; **Flock** keeps the flock's species pool and rare visitors.
+
+- **Settings → General → Theme**: each theme is a tile with a small picture of Vults in its colors (the island's flock on the wire, the Nest's list, a card), Dark and Light first, then SP Night's three views; arrows move the choice.
+
+- **Zeca's chat**: Qwen Code, Copilot CLI and Kimi Code are offered as engines only once turned on in **Settings → Labs**.
+
+- **Zeca's chat, ACP agents**: an agent follows its own permission settings, as in its terminal: what it asks is a card, and what its settings allow it runs, said in the turn's **Activity**, instead of the turn being stopped.
+
+- **Quick chat**: no name, greeting or explanation; *Ask anything…* in the draft. Once a conversation runs, the portrait gives its room to the messages, and long code, diffs and tool output scroll in their own shorter blocks.
+
+### Added
+
+- **Settings → Chat & voice**: **Agent engines** shows Claude Code, Codex and each installed ACP agent with how it stands, **Sign in** and **Check again**; the API providers are a list with a dot and a line each, instead of a menu.
+
+- **Zeca's chat, where it works**: the folder menu lists recent folders, takes a typed or pasted path, and opens the system's chooser; a folder dropped on a chat that hasn't started becomes where it works; **Chat here** on each project in the Nest's **By project**.
+
+- **Settings → Labs**: beta features, each off until you turn it on there. The first are Qwen Code, Copilot CLI and Kimi Code as chat engines, until each is checked with a live turn.
+
+- **Zeca's chat**: an ACP agent's own models are in the model menu (Antigravity's Gemini, Claude and GPT-OSS; OpenCode's providers), and a model picked mid-conversation applies from the next turn.
+- **Zeca's chat**: each message shows when it was said.
+
+- **Zeca's chat**: the agent's plan (Claude Code's todo list, Codex's plan, an ACP agent's plan) shows as a checklist in the turn's **Activity**, its step on the status line; ACP agents' thinking shows too.
+- **Zeca's chat**: code blocks are colored by their language.
+
+- **Zeca's chat**: Antigravity runs the chat (`agy acp`, its telemetry off, asking before edits and commands), with **Sign in** for it and for OpenCode; ACP agents' edits show their diffs, and their context fills the meter.
+
+- **Zeca's chat**: an edit in a turn's **Activity** shows its change as colored lines, with the lines added and removed on its row (Claude Code and Codex).
+- **Zeca's chat**: the line under the conversation says what the agent is doing now (*Running cargo test…*, *Editing lib.rs…*) and for how long; a finished turn's **Activity** says how long it took.
+- **Zeca's chat**: **↑** and **↓** walk through your earlier messages, your last one offers **Edit and send again**, and each of your messages can be copied.
+- **Zeca's chat**: a ring beside **Send** shows how full the model's context is (Claude Code and Codex), amber past 80%.
+- **Zeca's chat**: a Claude Code or Codex session referenced with **@** brings what was said in it (its words, not its tools; secrets hidden), not only its summary.
+- **Zeca's chat**: a turn reads in the order it ran: each stretch of tools sits between the words before and after it, live and when reopened.
+- **Nest**: the Chat's side panel has **Memory**, **Changes** (each file the agent changed, with its diffs) and **Files** (find in the conversation's folder); a click puts the path in the draft.
+- **Zeca's chat**: **Ctrl+F** finds in the conversation and steps through the matches.
+- **Zeca's chat**: replies show `~~strikethrough~~`, task lists and bare addresses; a long conversation no longer redraws every message on each update.
+
+- **Zeca's chat**: each tool in a turn's **Activity** shows the end of what it printed (Claude Code's tool results, Codex's command output), secrets hidden.
+- **Zeca's chat**: an agent's question shows its options to click, and typing while a card waits answers it with your words (a no Claude Code reads); full access never answers a question for you.
+- **Zeca's chat**: paste an image, or text of 32 KB or more, and it is attached as a file.
+- **Zeca's chat**: **/** at the start of the draft lists its commands (`/remember`, `/forget`, `/continue`, `/new`).
+- **Zeca's chat**: **@** lists the conversation folder's files and folders, and a folder dropped on the chat goes into the draft by its path instead of being refused.
+- **Zeca's chat**: messages written while a reply comes wait in a queue above the draft and go, in order, when the turn ends well.
+- **Zeca's chat, easy setup**: the engine menu asks Claude Code and Codex whether they are signed in (a keychain login or an API key counts), **Sign in** opens a terminal with the CLI's own sign-in, and an empty chat says when its engine is not installed or not signed in, with **Sign in** and **Check again**.
+- **Zeca's chat**: OpenCode, Qwen Code, Copilot CLI, Kimi Code and every other installed agent that speaks ACP can run the chat, beside Claude Code and Codex.
+- **Zeca's chat**: switch between Claude Code, Codex and the API in the middle of a conversation; the other engine takes it over with what was said so far.
+- **Zeca's chat**: choose **Your setup** or **Clean** per conversation, from the chat itself; a clean Codex now runs in a home of its own, without your config, MCP servers, skills or `AGENTS.md`.
+- **Zeca's chat**: change the model and effort in the middle of a conversation; the next turn uses them and the conversation goes on.
+- **Zeca's chat, full access**: the agent runs in its own mode that asks nothing (Claude Code's `bypassPermissions`, Codex's `never`), switched on or off from the next turn without restarting the conversation.
+- **A plan's card**: **Change plan…** sends the plan back with your words, and Claude plans again ([Approvals](docs/guide/approvals.md#a-plan)).
+- **Antigravity**: when it asks you something (`ask_question`), its bird waits for you with the question's sound and text.
+- **Claude Code in VS Code**: a session from the extension, locally or over Remote-SSH, shows as VS Code.
+- **Windows**: hook, question and tool pipes open only to you, administrators and SYSTEM; if another program holds the hook's pipe, a notification says agent events can't arrive.
+- **Windows**: the Nest's hidden page asks WebView2 to keep its memory low.
 
 ## 0.1.9 (2026-11-27)
 
@@ -28,7 +133,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### New
 
-- **Allow and accept edits** on a Claude Code plan's card: the plan starts and that session edits files without asking until it ends, as Claude Code's own terminal offers. Its commands still come as cards, and the audit log keeps the choice ([ADR 0002](docs/adr/0002-permissions.md)).
+- **Allow and accept edits** on a Claude Code plan's card: the plan starts and that session edits files without asking until it ends, as Claude Code's own terminal offers. Its commands still come as cards, and the audit log keeps the choice.
 - **Approve Antigravity's shell commands from the island**, in **Settings → Agents → Antigravity** (off by default). A `run_command` that none of Antigravity's own rules covers waits on a card; Allow runs it, Deny stops it, and no answer leaves Antigravity's prompt. Antigravity's hooks now give a card 120 seconds: **Update hooks…** once.
 - A Claude Code session's card shows its title beside the project: your `/rename`, else the title Claude Code gave it. Two sessions in one folder are told apart in the card, the Flock search and the chat's session mentions.
 - **GitLab and Gitea connectors**, read-only, next to GitHub: GitLab.com merge requests and self-hosted Gitea pull requests with reviewers and changes asked, diff sizes, checks and pipelines of the default branch, and releases. Each has its own switch, budget and trace; the token lives in the keyring.

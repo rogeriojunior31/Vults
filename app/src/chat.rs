@@ -227,6 +227,62 @@ struct Live {
     text: String,
     /// What the turn's cards say the conversation read from outside (Z8), for cards rebuilt there.
     outside: Option<String>,
+    /// The turn in the order it happened: each stretch of activity and the words after it, saved
+    /// as such so a conversation reopens as it ran.
+    segments: Vec<(vults_chat::activity::Activity, String)>,
+}
+
+impl Live {
+    /// Activity, after words: a new stretch starts.
+    fn note(&mut self, event: &vults_chat::activity::Event) {
+        use vults_chat::activity::Event;
+        self.activity.apply(event);
+        // A tool's end, output or change belongs to the stretch it started in.
+        if let Event::End { id, .. } | Event::Output { id, .. } | Event::Diff { id, .. } = event {
+            if let Some((activity, _)) = self
+                .segments
+                .iter_mut()
+                .rev()
+                .find(|(a, _)| a.tools.iter().any(|t| t.id == *id))
+            {
+                activity.apply(event);
+            }
+            return;
+        }
+        if self
+            .segments
+            .last()
+            .is_none_or(|(_, text)| !text.trim().is_empty())
+        {
+            self.segments.push(Default::default());
+        }
+        if let Some((activity, _)) = self.segments.last_mut() {
+            activity.apply(event);
+        }
+    }
+
+    fn say(&mut self, text: &str) {
+        self.text.push_str(text);
+        match self.segments.last_mut() {
+            Some((_, said)) => said.push_str(text),
+            None => self.segments.push((Default::default(), text.to_string())),
+        }
+    }
+
+    /// What the turn saves, in order: `activity` lines (as history JSON) and `zeca` lines.
+    fn lines(&self) -> Vec<(&'static str, String)> {
+        self.segments
+            .iter()
+            .flat_map(|(activity, text)| {
+                let activity = (!activity.is_empty())
+                    .then(|| serde_json::to_string(&activity.for_history()).ok())
+                    .flatten()
+                    .map(|a| ("activity", a));
+                let text = (!text.trim().is_empty()).then(|| ("zeca", text.clone()));
+                activity.into_iter().chain(text)
+            })
+            .collect()
+    }
 }
 
 /// A card the chat waits on: its answer's channel, and what it asks (for the audit log).
@@ -389,6 +445,10 @@ fn settle_in_route(
     ask: &vults_agents::driver::Ask,
     outside: bool,
 ) -> Option<vults_chat::Settled> {
+    // The agent asking the user something is for the user, whatever the access: never answered here.
+    if ask.tool == vults_protocol::QUESTION_TOOL {
+        return None;
+    }
     let access = profile_access.unwrap_or(access);
     if access == settings::ChatAccess::Ask {
         return None;
@@ -396,17 +456,17 @@ fn settle_in_route(
     settle(policies, access, folder, agent, ask, outside)
 }
 
-/// What the user's choice answers before a card (ADR 0002). Their policies speak first, as on the
-/// island: a deny denies, an allow allows, an ask asks. Full access then allows the rest, but never
-/// a destructive call (ADR 0002), nor what a policy asks first, nor anything once the conversation
-/// read content from outside: a page's words could be steering the call.
+/// What the user's choice answers before a card. Their policies speak first, as on the island: a
+/// deny denies, an allow allows. Full access is the user's choice to be asked nothing: it allows
+/// every other call, whatever it is and whatever the conversation read; only a policy of theirs
+/// that denies still denies.
 fn settle(
     policies: &[vults_core::policies::Active],
     access: settings::ChatAccess,
     folder: &str,
     agent: vults_core::AgentKind,
     ask: &vults_agents::driver::Ask,
-    outside: bool,
+    _outside: bool,
 ) -> Option<vults_chat::Settled> {
     use vults_chat::{Answer, Settled, SettledBy};
     use vults_core::policies::{self, Verdict};
@@ -429,17 +489,11 @@ fn settle(
     match policies::decide(policies, &call) {
         Verdict::Deny { consent } => Some(by_policy(Answer::Deny, consent)),
         Verdict::Allow { consent } => Some(by_policy(Answer::Allow, consent)),
-        Verdict::Ask
-            if access == settings::ChatAccess::Full
-                && !outside
-                && policies::why_ask(policies, &call).is_none() =>
-        {
-            Some(Settled {
-                answer: Answer::Allow,
-                by: SettledBy::FullAccess,
-                consent: None,
-            })
-        }
+        Verdict::Ask if access == settings::ChatAccess::Full => Some(Settled {
+            answer: Answer::Allow,
+            by: SettledBy::FullAccess,
+            consent: None,
+        }),
         Verdict::Ask => None,
     }
 }
@@ -599,7 +653,8 @@ enum Sync {
     },
     Opened {
         from: String,
-        conversation: Opened,
+        // Boxed: a conversation with its activity outweighs every other sync.
+        conversation: Box<Opened>,
     },
     Answered {
         from: String,
@@ -854,7 +909,7 @@ async fn send(
                     match &delta {
                         Delta::Text { text } => {
                             s.0.push_str(text);
-                            state.live(|l| l.text.push_str(text));
+                            state.live(|l| l.say(text));
                         }
                         Delta::ToolState { active } => state.live(|l| l.tools = *active),
                         Delta::Error { message } => s.1 = Some(message.clone()),
@@ -873,21 +928,19 @@ async fn send(
                     }
                 }
                 state.live(|l| match &delta {
-                    Delta::Activity { event } => l.activity.apply(event),
-                    Delta::Allowed { tool, target } => {
-                        l.activity.apply(&vults_chat::activity::Event::Decision {
-                            tool: tool.clone(),
-                            target: target.clone(),
-                            answer: "allow".into(),
-                            by: "conversation".into(),
-                        })
-                    }
+                    Delta::Activity { event } => l.note(event),
+                    Delta::Allowed { tool, target } => l.note(&vults_chat::activity::Event::Decision {
+                        tool: tool.clone(),
+                        target: target.clone(),
+                        answer: "allow".into(),
+                        by: "conversation".into(),
+                    }),
                     Delta::Settled {
                         tool,
                         target,
                         allow,
                         by,
-                    } => l.activity.apply(&vults_chat::activity::Event::Decision {
+                    } => l.note(&vults_chat::activity::Event::Decision {
                         tool: tool.clone(),
                         target: target.clone(),
                         answer: if *allow { "allow" } else { "deny" }.into(),
@@ -994,6 +1047,14 @@ async fn send(
     // Ignored once the conversation has started: it stays where it began. None is the chat's own
     // folder, so a pick made for it (and shown) is the one that runs.
     if companion {
+        // A folder chosen but gone since (moved, deleted): said, never swapped for another.
+        if !chat.started()
+            && let Some(f) = folder.as_deref()
+            && Path::new(f).is_absolute()
+            && !Path::new(f).is_dir()
+        {
+            return Err("That folder no longer exists. Choose another one.".into());
+        }
         let dir = folder
             .map(PathBuf::from)
             .filter(|d| d.is_absolute())
@@ -1037,16 +1098,36 @@ async fn send(
     if companion && chat.provider() == Provider::Claude {
         crate::mcp::keep_scope(targets.as_deref())?;
     }
-    if !chat.started() && companion {
+    // Full access runs the agent in its own mode that asks nothing. A policy line that denies keeps
+    // the app answering instead, so that deny still holds (the agent's own mode would skip it).
+    let access = match profile.as_ref() {
+        Some(p) => settings::specialist_chat_access(&app, &profile_access_key(p)),
+        None => settings::chat_access(&app),
+    };
+    let denies = crate::policies::active().iter().any(|a| {
+        a.policy
+            .lines
+            .iter()
+            .any(|l| l.verb == vults_core::policies::Verb::Deny)
+    });
+    chat.set_full_access(access == settings::ChatAccess::Full && !denies);
+    // The model and effort picked for this folder, every turn: changed midway, the next turn uses them.
+    if companion {
         let pick = pick_for(&app, chat.folder(), chat.provider());
         let effort = pick.effort.as_deref().and_then(vults_chat::Effort::parse);
         let effort = effort.filter(|e| effort_fits(chat.provider(), pick.model.as_deref(), *e));
         chat.set_pick(pick.model, effort);
+    }
+    if !chat.started() && companion {
         let native = settings::native_chat(&app);
         let dir = chat.folder().to_path_buf();
         let state = vults_agents::claude_state_file(&paths::agent_dirs());
         let read = tauri::async_runtime::spawn_blocking(move || cli_settings(native, &dir, &state));
-        chat.set_settings(read.await.unwrap_or_default());
+        let settings = read.await.unwrap_or_default();
+        chat.set_settings(settings);
+        // A clean Codex gets a home of its own; with the user's environment, theirs.
+        let clean_codex = chat.provider() == Provider::Codex && settings == vults_chat::Settings::Isolated;
+        chat.set_state_dir(clean_codex.then(|| paths::data_dir().join("chat").join("codex")));
         // Zeca's own tools for Claude Code (M7), the same file for every conversation.
         if chat.provider() == Provider::Claude {
             chat.set_mcp_config(crate::mcp::config_file());
@@ -1141,6 +1222,9 @@ async fn send(
     if let Ok(mut scope) = state.waiting.2.lock() {
         let agent = match chat.provider() {
             Provider::Codex => vults_core::AgentKind::Codex,
+            // An ACP agent is the one the policies know by its key (OpenCode, Qwen…), else Other.
+            Provider::Acp(key) => serde_json::from_value(serde_json::Value::String(key.into()))
+                .unwrap_or(vults_core::AgentKind::Other),
             // The API chat asks nothing; Claude Code is the agent the policies know whole.
             Provider::Claude | Provider::ClaudeApi => vults_core::AgentKind::Claude,
         };
@@ -1164,6 +1248,46 @@ async fn send(
     // Older conversations omit general context; an explicit reference still carries its scope.
     let context = (companion && (chat.frozen().is_some() || targets.is_some()))
         .then(|| crate::context::volatile(source.as_ref(), &memories));
+    // A session referenced with @ brings what was said in it, from its agent's own transcript.
+    let sessions: Vec<(String, String)> = targets
+        .iter()
+        .flatten()
+        .filter_map(|t| match t {
+            crate::mentions::Target::Session { agent, id } => Some((agent.clone(), id.clone())),
+            crate::mentions::Target::Project { .. } => None,
+        })
+        .collect();
+    let said_there = if sessions.is_empty() {
+        Vec::new()
+    } else {
+        tauri::async_runtime::spawn_blocking(move || {
+            let home = paths::home();
+            sessions
+                .iter()
+                .filter_map(|(agent, id)| crate::session_transcript::excerpt(&home, agent, id))
+                .collect::<Vec<_>>()
+        })
+        .await
+        .unwrap_or_default()
+    };
+    let context = match (context, said_there.is_empty()) {
+        (context, true) => context,
+        (Some(context), false) => Some(format!(
+            "{context}
+
+{}",
+            said_there.join(
+                "
+
+"
+            )
+        )),
+        (None, false) => Some(said_there.join(
+            "
+
+",
+        )),
+    };
     // The journal keeps the words (M4), redacted and cut by the store, when they are said.
     if companion {
         crate::journal::chat(&app, "you", chat.folder(), &text, false);
@@ -1171,6 +1295,26 @@ async fn send(
     #[cfg(any(target_os = "linux", windows))]
     if let Origin::Voice(ticket, _) = &origin {
         voice_result(&app, ticket, &text, vults_core::i18n::VoiceFeedback::SentToChat);
+    }
+    engine_allowed(&app, chat.provider())?;
+    // A resumed session its CLI may have lost: what was said so far, kept for a fresh one.
+    if chat.session().is_some()
+        && !chat.is_specialist()
+        && let Some(id) = conversation
+    {
+        let from = engine_label(&engine_name(&chat));
+        let lines = store(move |s| s.conversation_messages(id))
+            .await
+            .unwrap_or_default();
+        let mut said: Vec<(String, String)> = lines.iter().map(|l| (l.who.clone(), l.text.clone())).collect();
+        // This turn's own message may be saved already: it goes as the turn, not twice.
+        if said
+            .last()
+            .is_some_and(|(who, said)| who == "you" && *said == text)
+        {
+            said.pop();
+        }
+        chat.set_fallback(vults_chat::handoff(&from, &said, vults_chat::HANDOFF_BUDGET));
     }
     chat.send(Turn { text, files, context }, tx, approver, stop).await;
     drop(stop_guard);
@@ -1191,20 +1335,17 @@ async fn send(
             crate::journal::chat(&app, "zeca", &folder, &reply, outside.is_some());
         }
         let stopped = ended.lock().is_ok_and(|e| e.1 == "stopped");
-        let activity = state.live.lock().ok().and_then(|l| {
-            (!l.activity.is_empty())
-                .then(|| serde_json::to_string(&l.activity.for_history()).ok())
-                .flatten()
-        });
-        for (who, text) in [
-            ("activity", activity),
-            ("zeca", Some(reply).filter(|r| !r.is_empty())),
-            ("error", error),
-            ("stopped", stopped.then(String::new)),
-        ] {
-            if let Some(text) = text {
-                crate::writer::send(crate::writer::Job::Say(id, who, text, Vec::new(), now));
-            }
+        // The turn as it ran: its stretches of activity and words in order, then how it ended.
+        let mut lines = state.live.lock().map(|l| l.lines()).unwrap_or_default();
+        if lines.is_empty() && !reply.is_empty() {
+            lines.push(("zeca", reply));
+        }
+        lines.extend(error.map(|e| ("error", e)));
+        if stopped {
+            lines.push(("stopped", String::new()));
+        }
+        for (who, text) in lines {
+            crate::writer::send(crate::writer::Job::Say(id, who, text, Vec::new(), now));
         }
         crate::writer::send(crate::writer::Job::Save(id, session, history, outside, now));
     }
@@ -1263,7 +1404,7 @@ fn engine_key(provider: Provider) -> Option<&'static str> {
     match provider {
         Provider::Claude => Some("claude"),
         Provider::Codex => Some("codex"),
-        Provider::ClaudeApi => None,
+        Provider::ClaudeApi | Provider::Acp(_) => None,
     }
 }
 
@@ -1288,7 +1429,7 @@ fn effort_fits(provider: Provider, model: Option<&str>, effort: vults_chat::Effo
     let known = match provider {
         Provider::Claude => Some(vults_chat::claude_models()),
         Provider::Codex => CODEX_MODELS.lock().ok().and_then(|m| m.clone()),
-        Provider::ClaudeApi => None,
+        Provider::ClaudeApi | Provider::Acp(_) => None,
     };
     known
         .and_then(|list| list.into_iter().find(|m| m.id == model))
@@ -1326,6 +1467,23 @@ pub async fn chat_models(provider: Provider) -> Result<Vec<vults_chat::ModelChoi
             let models = vults_chat::codex_models(&paths::chat_dir()).await?;
             if let Ok(mut m) = CODEX_MODELS.lock() {
                 *m = Some(models.clone());
+            }
+            Ok(models)
+        }
+        // An ACP agent lists its own, from a session it opens in a folder of Vults' own; kept
+        // until the app quits.
+        Provider::Acp(key) => {
+            static KNOWN: std::sync::LazyLock<
+                std::sync::Mutex<HashMap<String, Vec<vults_chat::ModelChoice>>>,
+            > = std::sync::LazyLock::new(Default::default);
+            if let Some(known) = KNOWN.lock().ok().and_then(|m| m.get(key).cloned()) {
+                return Ok(known);
+            }
+            let dir = paths::chat_dir().join("acp-models");
+            std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+            let models = vults_chat::acp_models(key, &dir).await?;
+            if let Ok(mut m) = KNOWN.lock() {
+                m.insert(key.to_string(), models.clone());
             }
             Ok(models)
         }
@@ -1396,7 +1554,28 @@ pub fn chat_decide(
     if !crate::runtime::card_host(&window) {
         return;
     }
-    decide_for(window.app_handle(), &window, &state, &id, answer, "zeca");
+    decide_for(window.app_handle(), &window, &state, &id, answer, "zeca", None);
+}
+
+/// A no with the user's own words, typed while a card waits or picked for the agent's question:
+/// the agent reads them (Claude Code); one that takes no words gets a plain no. The words are never
+/// kept in the audit log, only that the user said no.
+#[tauri::command]
+pub fn chat_reply(window: tauri::Webview, state: tauri::State<'_, ChatState>, id: String, text: String) {
+    if !crate::runtime::card_host(&window) {
+        return;
+    }
+    let text: String = text.trim().chars().take(4000).collect();
+    let words = (!text.is_empty()).then_some(text);
+    decide_for(
+        window.app_handle(),
+        &window,
+        &state,
+        &id,
+        ChatAnswer::Deny,
+        "zeca",
+        words,
+    );
 }
 
 fn decide_for(
@@ -1406,11 +1585,15 @@ fn decide_for(
     id: &str,
     answer: ChatAnswer,
     subject: &str,
+    words: Option<String>,
 ) {
     tracing::info!(?answer, "chat permission answered");
     let asked = state.waiting.0.lock().ok().and_then(|mut m| m.remove(id));
     if let Some(asked) = asked {
         let (reply, act) = match answer {
+            ChatAnswer::Deny if words.is_some() => {
+                (vults_chat::Answer::Reply(words.unwrap_or_default()), Act::Deny)
+            }
             ChatAnswer::Deny => (vults_chat::Answer::Deny, Act::Deny),
             ChatAnswer::Allow => (vults_chat::Answer::Allow, Act::Allow),
             ChatAnswer::Always => (vults_chat::Answer::AllowInConversation, Act::AllowInConversation),
@@ -1424,7 +1607,7 @@ fn decide_for(
             .and_then(|d| d.full)
             .unwrap_or_else(|| asked.target.clone());
         state.live(|l| {
-            l.activity.apply(&vults_chat::activity::Event::Decision {
+            l.note(&vults_chat::activity::Event::Decision {
                 tool: asked.tool.clone(),
                 target: full_target,
                 answer: match answer {
@@ -1523,6 +1706,15 @@ pub fn busy(app: &AppHandle) -> bool {
     app.state::<ChatState>().live.lock().is_ok_and(|l| l.busy)
 }
 
+/// A turn runs in Zeca's chat or in any specialist's: quitting now would cut it.
+pub fn any_busy(app: &AppHandle) -> bool {
+    busy(app)
+        || app.try_state::<SpecialistChatState>().is_some_and(|s| {
+            s.0.lock()
+                .is_ok_and(|r| r.values().any(|c| c.live.lock().is_ok_and(|l| l.busy)))
+        })
+}
+
 /// The saved record of the chat's conversation was removed (Clear history): the next message
 /// saves it anew rather than into a record that is gone.
 pub async fn forget_current(app: &AppHandle) {
@@ -1615,6 +1807,64 @@ pub async fn chat_reset(
     })
 }
 
+/// Another engine takes the conversation over midway: its lines stay, and the new engine's first
+/// turn starts with what was said so far ([`vults_chat::handoff`]). Zeca stays the one talking.
+#[tauri::command]
+pub async fn chat_switch_engine(
+    app: AppHandle,
+    window: tauri::Webview,
+    provider: Provider,
+    generation: u32,
+) -> Result<Opened, String> {
+    if !crate::runtime::card_host(&window) {
+        return Err("Chat history belongs to the island or Nest.".into());
+    }
+    engine_allowed(&app, provider)?;
+    let state = app.state::<ChatState>();
+    let mut chat = state.navigation(generation)?;
+    if chat.is_specialist() {
+        return Err("A specialist keeps its executor.".into());
+    }
+    let id = state.current().ok_or("Start the conversation first.")?;
+    let from = engine_label(&engine_name(&chat));
+    let folder = chat.folder().to_path_buf();
+    let outside = chat.outside();
+    let lines = store(move |s| s.conversation_messages(id)).await?;
+    let said: Vec<(String, String)> = lines.iter().map(|l| (l.who.clone(), l.text.clone())).collect();
+    let mut next = Chat::new(provider, paths::chat_dir());
+    if folder != paths::chat_dir() {
+        next.set_folder(folder);
+    }
+    next.set_handoff(vults_chat::handoff(&from, &said, vults_chat::HANDOFF_BUDGET));
+    next.set_outside(outside);
+    state.waiting.close_all();
+    crate::voice::cancel(&app);
+    *chat = next;
+    let engine = engine_name(&chat);
+    let (c, lines) = store(move |s| {
+        s.conversation_switch_engine(id, &engine, None, None)?;
+        Ok((s.conversation(id)?, s.conversation_messages(id)?))
+    })
+    .await?;
+    let c = c.ok_or("That conversation is gone.")?;
+    state.live(|l| {
+        *l = Live {
+            started: true,
+            ..Live::default()
+        }
+    });
+    let mut conversation = opened(c, lines, true).ok_or("That conversation's engine is unknown.")?;
+    conversation.generation = state.generation();
+    sync(
+        &app,
+        Sync::Opened {
+            from: window.label().to_string(),
+            conversation: Box::new(conversation.clone()),
+        },
+    );
+    Ok(conversation)
+}
+
 /// The conversation the chat is in now, as saved, for a window that opens on it (the Nest).
 #[tauri::command]
 pub async fn chat_current(state: tauri::State<'_, ChatState>) -> Result<Option<Opened>, String> {
@@ -1655,6 +1905,7 @@ pub async fn chat_current(state: tauri::State<'_, ChatState>) -> Result<Option<O
                 who: "you".into(),
                 text,
                 files,
+                ms: None,
             });
         }
         opened.busy = true;
@@ -1744,6 +1995,9 @@ pub struct LineView {
     who: String,
     text: String,
     files: Vec<String>,
+    /// When it was said (Unix ms), for the time the chat shows beside it; none for a live line.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    ms: Option<i64>,
 }
 
 /// A saved conversation, opened: what the chat needs to go on with it.
@@ -1779,6 +2033,7 @@ fn engine_name(chat: &Chat) -> String {
         Provider::Claude => "claude".into(),
         Provider::Codex => "codex".into(),
         Provider::ClaudeApi => format!("api:{}", chat.api().0.id),
+        acp @ Provider::Acp(_) => acp.name(),
     }
 }
 
@@ -1787,6 +2042,12 @@ fn engine_label(engine: &str) -> String {
     match engine {
         "claude" => "Claude".into(),
         "codex" => "Codex".into(),
+        e if e.starts_with("acp:") => Provider::parse(e)
+            .and_then(|p| match p {
+                Provider::Acp(key) => vults_chat::acp_title(key),
+                _ => None,
+            })
+            .map_or_else(|| e.to_string(), str::to_string),
         e => e
             .strip_prefix("api:")
             .and_then(providers::find)
@@ -1799,7 +2060,7 @@ fn engine_provider(engine: &str) -> Option<Provider> {
         "claude" => Some(Provider::Claude),
         "codex" => Some(Provider::Codex),
         e if e.starts_with("api:") => Some(Provider::ClaudeApi),
-        _ => None,
+        e => Provider::parse(e),
     }
 }
 
@@ -2291,6 +2552,7 @@ pub async fn specialist_chat_current(
                 who: "you".into(),
                 text,
                 files,
+                ms: None,
             });
         }
         opened.busy = true;
@@ -2605,7 +2867,7 @@ pub async fn specialist_chat_open(
         &profile,
         Sync::Opened {
             from: window.label().into(),
-            conversation: conversation.clone(),
+            conversation: Box::new(conversation.clone()),
         },
     );
     Ok(conversation)
@@ -2687,7 +2949,7 @@ pub fn specialist_chat_decide(
     let Some(state) = app.state::<SpecialistChatState>().existing(&profile)? else {
         return Ok(());
     };
-    decide_for(&app, &window, &state, &id, answer, &profile);
+    decide_for(&app, &window, &state, &id, answer, &profile, None);
     Ok(())
 }
 
@@ -2777,7 +3039,7 @@ pub async fn chat_open(
         &app,
         Sync::Opened {
             from,
-            conversation: conversation.clone(),
+            conversation: Box::new(conversation.clone()),
         },
     );
     Ok(conversation)
@@ -2833,6 +3095,7 @@ fn opened_record(
                 who: l.who,
                 text: l.text,
                 files: l.files,
+                ms: Some(l.ms),
             })
             .collect(),
         profile_title: None,
@@ -2965,18 +3228,60 @@ pub async fn api_key_status(app: AppHandle) -> ApiStatus {
 pub struct Engines {
     claude: &'static str,
     codex: &'static str,
+    /// The ACP agents installed here (OpenCode, Qwen Code…), by key and title.
+    acp: Vec<AcpEngine>,
+}
+
+#[derive(serde::Serialize, Debug, PartialEq, Eq)]
+pub struct AcpEngine {
+    id: String,
+    title: &'static str,
+}
+
+/// An engine still in Labs is offered and run only once the user turned it on there.
+fn engine_allowed(app: &AppHandle, provider: Provider) -> Result<(), String> {
+    match provider {
+        Provider::Acp(key) => match vults_core::labs::Lab::of_acp(key) {
+            Some(lab) if !crate::settings::lab(app, lab) => Err(format!(
+                "{} is in Labs: turn it on in Settings → Labs to use it in the chat.",
+                vults_chat::acp_title(key).unwrap_or(key)
+            )),
+            _ => Ok(()),
+        },
+        _ => Ok(()),
+    }
 }
 
 #[tauri::command]
-pub async fn chat_engines() -> Engines {
+pub async fn chat_engines(app: AppHandle) -> Engines {
+    let mut engines = files_engines().await;
+    // One still in Labs only once it is turned on there.
+    engines.acp.retain(|e| {
+        e.id.strip_prefix("acp:")
+            .and_then(vults_core::labs::Lab::of_acp)
+            .is_none_or(|lab| crate::settings::lab(&app, lab))
+    });
+    // The CLI's own word on its login beats the file check (a keychain login or a key counts).
+    let (claude, codex) = tokio::join!(
+        vults_chat::signed_in(Provider::Claude),
+        vults_chat::signed_in(Provider::Codex)
+    );
+    for (state, signed) in [(&mut engines.claude, claude), (&mut engines.codex, codex)] {
+        if *state != "missing"
+            && let Some(signed) = signed
+        {
+            *state = if signed { "signed-in" } else { "installed" };
+        }
+    }
+    engines
+}
+
+async fn files_engines() -> Engines {
     // The folders may wait on the login shell (up to 2 s at start-up): never on the main thread.
     tokio::task::spawn_blocking(|| {
         let dirs = crate::paths::agent_dirs();
-        let path = std::env::var_os("PATH");
-        let on_path = |program: &str| {
-            path.as_ref()
-                .is_some_and(|p| std::env::split_paths(p).any(|d| d.join(program).is_file()))
-        };
+        // On Windows the CLI is `claude.exe` or an npm `claude.cmd`, never a bare `claude`.
+        let on_path = vults_chat::summary::on_path;
         Engines {
             claude: engine(
                 on_path("claude"),
@@ -2988,13 +3293,57 @@ pub async fn chat_engines() -> Engines {
                 on_path("codex"),
                 &vults_agents::codex_home(&dirs).join("auth.json"),
             ),
+            acp: vults_chat::acp_installed()
+                .into_iter()
+                .map(|(key, title)| AcpEngine {
+                    id: format!("acp:{key}"),
+                    title,
+                })
+                .collect(),
         }
     })
     .await
     .unwrap_or(Engines {
         claude: "missing",
         codex: "missing",
+        acp: Vec::new(),
     })
+}
+
+/// Files and folders of the conversation's folder that match what follows `@` in the draft: relative
+/// paths only, never in the chat's own empty folder or a folder that is not there.
+#[tauri::command]
+pub async fn chat_paths(folder: Option<String>, query: String) -> Vec<crate::chat_paths::Hit> {
+    let Some(folder) = folder
+        .map(PathBuf::from)
+        .filter(|f| f.is_absolute() && *f != paths::chat_dir())
+    else {
+        return Vec::new();
+    };
+    tokio::task::spawn_blocking(move || {
+        if folder.is_dir() {
+            crate::chat_paths::find(&folder, &query)
+        } else {
+            Vec::new()
+        }
+    })
+    .await
+    .unwrap_or_default()
+}
+
+/// Opens a terminal running the engine's own sign-in (`claude auth login`, `codex login`): the
+/// login happens there, between the user and the CLI; Vults never sees it.
+#[tauri::command]
+pub fn chat_sign_in(provider: Provider) -> Result<(), String> {
+    let command: &[&str] = match provider {
+        Provider::Claude => &["claude", "auth", "login"],
+        Provider::Codex => &["codex", "login"],
+        // Each agent's own sign-in, in a terminal: Google for Antigravity, a provider for OpenCode.
+        Provider::Acp("antigravity") => &["agy", "acp", "--login"],
+        Provider::Acp("opencode") => &["opencode", "auth", "login"],
+        _ => return Err("This engine signs in elsewhere.".into()),
+    };
+    vults_platform::terminal::run(command)
 }
 
 fn engine(installed: bool, login: &Path) -> &'static str {
@@ -3144,6 +3493,8 @@ pub async fn api_key_clear(window: tauri::Webview, app: AppHandle, provider: Str
 struct Dropped {
     copied: Vec<String>,
     refused: Vec<Refused>,
+    /// Folders dropped: never copied, only named, for the agent to look in where it runs.
+    folders: Vec<String>,
     /// The page whose chat takes them: the island's drop and paperclip, or the Nest's paperclip.
     /// Every page hears the event; only that one attaches them, so nothing waits twice.
     to: &'static str,
@@ -3175,6 +3526,73 @@ pub fn on_drop(app: &AppHandle, dropped: &[PathBuf], to: &'static str) {
 
 /// A file chooser is open (the paperclip's).
 static PICKING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// A folder for the chat to work in: absolute (`~/` is the home), there, and spelled as the
+/// system resolves it.
+pub(crate) fn checked_folder(path: &str) -> Result<String, String> {
+    let path = path.trim().trim_matches('"');
+    let path = match path.strip_prefix("~/").or_else(|| path.strip_prefix("~\\")) {
+        Some(rest) => paths::home().join(rest),
+        None if path == "~" => paths::home(),
+        None => PathBuf::from(path),
+    };
+    if !path.is_absolute() || !path.is_dir() {
+        return Err("That folder doesn't exist.".into());
+    }
+    let real = std::fs::canonicalize(&path).map_err(|_| "That folder doesn't exist.")?;
+    Ok(paths::simplified(real).to_string_lossy().into_owned())
+}
+
+/// A typed or pasted folder, checked before the chat takes it.
+#[tauri::command]
+pub fn chat_check_folder(path: String) -> Result<String, String> {
+    checked_folder(&path)
+}
+
+/// The system's folder chooser, for where the chat works; none when cancelled.
+#[tauri::command]
+pub async fn chat_pick_folder(
+    app: AppHandle,
+    window: tauri::Webview,
+    title: String,
+) -> Result<Option<String>, String> {
+    use std::sync::atomic::Ordering;
+    use tauri_plugin_dialog::DialogExt;
+    if !crate::runtime::card_host(&window) {
+        return Err("The folder chooser belongs to the chat.".into());
+    }
+    // One chooser at a time, shared with the file chooser.
+    if PICKING.swap(true, Ordering::SeqCst) {
+        return Ok(None);
+    }
+    let title: String = title.chars().filter(|c| !c.is_control()).take(80).collect();
+    let picked = tauri::async_runtime::spawn_blocking(move || {
+        app.dialog().file().set_title(title).blocking_pick_folder()
+    })
+    .await
+    .ok()
+    .flatten();
+    PICKING.store(false, Ordering::SeqCst);
+    Ok(picked
+        .and_then(|p| p.into_path().ok())
+        .and_then(|p| checked_folder(&p.to_string_lossy()).ok()))
+}
+
+/// The folders the chat last worked in, newest first, those still there.
+#[tauri::command]
+pub async fn chat_recent_folders() -> Result<Vec<String>, String> {
+    let saved = store(|s| s.conversations(200)).await?;
+    let mut seen = std::collections::HashSet::new();
+    let chat_dir = paths::chat_dir();
+    Ok(saved
+        .into_iter()
+        .map(|c| c.folder)
+        .filter(|f| {
+            !f.is_empty() && Path::new(f) != chat_dir && seen.insert(f.clone()) && Path::new(f).is_dir()
+        })
+        .take(10)
+        .collect())
+}
 
 /// The chat's paperclip: the system's file chooser, and what it picks goes the way of a drop (the
 /// inbox copy, then Zeca swallows it). Only files the user picked; nothing is read before that.
@@ -3327,9 +3745,15 @@ fn copy_dropped(paths: &[PathBuf], to: &'static str) -> Dropped {
     let mut out = Dropped {
         copied: Vec::new(),
         refused: Vec::new(),
+        folders: Vec::new(),
         to,
     };
     for path in paths {
+        // A folder goes in by its path: the agent reads what it needs there, nothing is copied.
+        if path.is_absolute() && std::fs::symlink_metadata(path).is_ok_and(|m| m.is_dir()) {
+            out.folders.push(path.to_string_lossy().into_owned());
+            continue;
+        }
         match copy_to_inbox(path) {
             Ok(copy) => out.copied.push(copy),
             Err(reason) => out.refused.push(Refused {
@@ -3364,6 +3788,49 @@ fn copy_to_inbox(src: &Path) -> Result<String, &'static str> {
         return Err("too-big");
     }
     copy_file(src).ok_or("unreadable")
+}
+
+/// A name for something pasted: its own name's letters, digits, `.`, `-` and `_` only (never a path),
+/// with a plain name when nothing is left.
+fn pasted_name(name: &str) -> String {
+    let clean: String = name
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | '_'))
+        .take(80)
+        .collect();
+    let clean = clean.trim_start_matches('.').to_string();
+    if clean.is_empty() { "pasted".into() } else { clean }
+}
+
+/// Something pasted into the chat's draft (an image, or text too long for it): written to the
+/// inbox as a file of its own, under the same limit as a dropped file, and attached like one.
+#[tauri::command]
+pub async fn chat_paste(name: String, bytes: Vec<u8>) -> Result<String, String> {
+    if bytes.is_empty() || bytes.len() as u64 > MAX_FILE {
+        return Err("too-big".into());
+    }
+    tokio::task::spawn_blocking(move || {
+        use std::io::Write;
+        let dir = paths::inbox_dir();
+        std::fs::create_dir_all(&dir).map_err(|_| "unreadable".to_string())?;
+        let stamp = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .map_err(|_| "unreadable".to_string())?
+            .as_nanos();
+        let dest = dir.join(format!("{stamp}-{}", pasted_name(&name)));
+        let mut options = std::fs::OpenOptions::new();
+        options.write(true).create_new(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            options.mode(0o600);
+        }
+        let mut file = options.open(&dest).map_err(|_| "unreadable".to_string())?;
+        file.write_all(&bytes).map_err(|_| "unreadable".to_string())?;
+        Ok(dest.to_string_lossy().into_owned())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 fn copy_file(src: &Path) -> Option<String> {
@@ -3418,6 +3885,46 @@ pub fn clean_inbox() {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_chosen_folder_must_be_there() {
+        let dir = std::env::temp_dir();
+        assert!(super::checked_folder(&dir.to_string_lossy()).is_ok());
+        assert!(super::checked_folder("relative/folder").is_err());
+        assert!(super::checked_folder(&dir.join("vults-no-such-folder-9").to_string_lossy()).is_err());
+        assert!(super::checked_folder("~").is_ok(), "the home is a folder");
+    }
+
+    #[test]
+    fn a_turn_saves_its_activity_and_words_in_the_order_they_came() {
+        use super::Live;
+        use vults_chat::activity::Event;
+        let start = |id: &str| Event::Start {
+            id: id.into(),
+            tool: "Bash".into(),
+            detail: "ls".into(),
+        };
+        let mut live = Live::default();
+        live.say("Let me look. ");
+        live.note(&start("a"));
+        live.say("Found it. ");
+        // Its end after the words still goes to its own stretch.
+        live.note(&Event::End {
+            id: "a".into(),
+            ok: true,
+        });
+        live.note(&start("b"));
+        live.say("Done.");
+        let who: Vec<&str> = live.lines().iter().map(|(w, _)| *w).collect();
+        assert_eq!(who, ["zeca", "activity", "zeca", "activity", "zeca"]);
+        assert_eq!(live.lines()[2].1, "Found it. ");
+        assert_eq!(
+            live.text, "Let me look. Found it. Done.",
+            "the whole reply stays for the live view"
+        );
+        assert!(!live.activity.is_empty());
+        assert_eq!(live.segments[1].0.tools[0].ok, Some(true));
+    }
+
     #[test]
     fn specialist_archive_blocks_new_turns_with_every_executor() {
         use vults_store::profiles::{ExecutionDefaults, ProfileState};
@@ -3873,6 +4380,15 @@ mod tests {
     }
 
     use super::*;
+
+    #[test]
+    fn a_pasted_name_is_never_a_path() {
+        assert_eq!(pasted_name("Screenshot 2026.png"), "Screenshot2026.png");
+        assert_eq!(pasted_name("../../etc/passwd"), "etcpasswd");
+        assert_eq!(pasted_name("..."), "pasted");
+        assert_eq!(pasted_name(""), "pasted");
+        assert_eq!(pasted_name(&"a".repeat(200)).len(), 80);
+    }
     use vults_chat::Settings;
 
     #[cfg(target_os = "linux")]
@@ -4061,9 +4577,16 @@ mod tests {
             settled_profile(&[], Full, Claude, &list, false),
             Some((true, true))
         );
+        // Full access asks nothing: not a destructive call, not after the chat read from outside.
         let wipe = call("Bash", "command", "rm -rf /tmp/work");
-        assert!(settle_in_route(Some(Full), &[], Ask, "/home/u/site", Claude, &wipe, false).is_none());
-        assert!(settle_in_route(Some(Full), &[], Ask, "/home/u/site", Claude, &list, true).is_none());
+        assert_eq!(
+            settled_profile(&[], Full, Claude, &wipe, false),
+            Some((true, true))
+        );
+        assert_eq!(
+            settled_profile(&[], Full, Claude, &list, true),
+            Some((true, true))
+        );
     }
 
     #[test]
@@ -4083,13 +4606,16 @@ mod tests {
                 "{cmd}"
             );
         }
-        // A destructive one still asks, hidden in a block or not.
+        // Full access asks nothing, a destructive call or a network one included, and after the
+        // chat read from outside (`gh` used to switch full access off for the conversation).
         let wipe = call(
             "PowerShell",
             "command",
             "Get-ChildItem *.log | ForEach-Object { Remove-Item $_ }",
         );
-        assert_eq!(settled(&[], Full, Claude, &wipe, false), None);
+        assert_eq!(settled(&[], Full, Claude, &wipe, false), Some((true, true)));
+        let gh = call("PowerShell", "command", "gh run list -R me/repo -L 3");
+        assert_eq!(settled(&[], Full, Claude, &gh, true), Some((true, true)));
     }
 
     #[test]
@@ -4147,17 +4673,15 @@ mod tests {
             None,
             "a policy allows only Claude Code's calls"
         );
-        // Full access: the rest runs, but a destructive command still asks (ADR 0002), and what a
-        // policy denies or asks first still does.
+        // Full access: everything runs, destructive commands and what a policy asks first
+        // included, and after the conversation read from outside. Only a policy's deny denies.
         assert_eq!(settled(&p, Full, Claude, &ls, false), Some((true, true)));
         assert_eq!(settled(&p, Full, Codex, &ls, false), Some((true, true)));
-        assert_eq!(settled(&p, Full, Claude, &wipe, false), None);
-        assert_eq!(settled(&p, Full, Claude, &push, false), None);
+        assert_eq!(settled(&p, Full, Claude, &wipe, false), Some((true, true)));
+        assert_eq!(settled(&p, Full, Claude, &push, false), Some((true, true)));
         assert_eq!(settled(&p, Full, Claude, &fetch, false), Some((false, false)));
         assert_eq!(settled(&[], Full, Claude, &ls, false), Some((true, true)));
-        // Once the conversation read from outside, full access gives way to a card; a policy's
-        // own answer still holds.
-        assert_eq!(settled(&p, Full, Claude, &ls, true), None);
+        assert_eq!(settled(&p, Full, Claude, &ls, true), Some((true, true)));
         assert_eq!(settled(&p, Full, Claude, &read, true), Some((true, false)));
     }
 

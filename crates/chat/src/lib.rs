@@ -182,8 +182,9 @@ impl Drop for PromptFile {
     }
 }
 
-/// A turn thinking this long (not counting time spent waiting for the user) is stuck.
-const TURN_TIMEOUT: Duration = Duration::from_secs(600);
+/// A turn this long without a word, a tool or a card is stuck. A long task that keeps reporting
+/// runs as long as it needs; a card waits at most [`DECISION_TIMEOUT`], within this.
+const TURN_IDLE: Duration = Duration::from_secs(900);
 /// A permission nobody answers is a no.
 const DECISION_TIMEOUT: Duration = Duration::from_secs(600);
 /// A usage read that takes longer is an app-server in trouble; the next poll tries again.
@@ -267,6 +268,20 @@ pub struct ModelChoice {
     pub efforts: Vec<&'static str>,
 }
 
+/// The models an ACP agent offers, as a session it opens in `dir` lists them (no effort of ours:
+/// an agent names its own, Antigravity's `(High)` in its model).
+pub async fn acp_models(key: &str, dir: &std::path::Path) -> Result<Vec<ModelChoice>, String> {
+    Ok(acp::models(key, dir)
+        .await?
+        .into_iter()
+        .map(|(id, label)| ModelChoice {
+            id,
+            label,
+            efforts: Vec::new(),
+        })
+        .collect())
+}
+
 /// Claude Code's aliases for the latest of each model; `--model` takes them.
 pub fn claude_models() -> Vec<ModelChoice> {
     let all: Vec<&'static str> = Effort::ALL.iter().map(|e| e.name()).collect();
@@ -347,7 +362,7 @@ pub fn prompts() -> Vec<(&'static str, String)> {
         files: vec![PathBuf::from("/home/me/notes/plan.md")],
         ..Turn::default()
     };
-    let denied = claude::decision("r", false, &serde_json::json!({}));
+    let denied = claude::decision("r", false, &serde_json::json!({}), None);
     vec![
         ("cli-persona", PERSONA.to_string()),
         ("api-persona", api::PERSONA.to_string()),
@@ -403,14 +418,100 @@ fn with_name(persona: &str, name: Option<&str>) -> String {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
-#[serde(rename_all = "lowercase")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Provider {
     Claude,
     Codex,
     /// A model through a provider's API (see [`providers`]), with the user's key.
-    #[serde(rename = "api")]
     ClaudeApi,
+    /// An agent that speaks ACP (`opencode`, `qwen`…), by its registry key.
+    Acp(&'static str),
+}
+
+impl Provider {
+    /// `claude`, `codex`, `api`, or `acp:<key>`: its name on the wire and in saved conversations.
+    pub fn name(self) -> String {
+        match self {
+            Self::Claude => "claude".into(),
+            Self::Codex => "codex".into(),
+            Self::ClaudeApi => "api".into(),
+            Self::Acp(key) => format!("acp:{key}"),
+        }
+    }
+
+    /// The provider a name stands for; an ACP key this version does not know reads as none.
+    pub fn parse(name: &str) -> Option<Self> {
+        match name {
+            "claude" => Some(Self::Claude),
+            "codex" => Some(Self::Codex),
+            "api" => Some(Self::ClaudeApi),
+            other => other
+                .strip_prefix("acp:")
+                .and_then(acp::agent)
+                .map(|a| Self::Acp(a.name)),
+        }
+    }
+}
+
+/// Whether the CLI says it is signed in (`claude auth status`, `codex login status`), asked of the
+/// CLI itself so a keychain login or an API key counts too; none when it can't say in time. Only
+/// `loggedIn` is read: nothing about the account is kept.
+pub async fn signed_in(provider: Provider) -> Option<bool> {
+    let args: &[&str] = match provider {
+        Provider::Claude => &["auth", "status"],
+        Provider::Codex => &["login", "status"],
+        Provider::ClaudeApi | Provider::Acp(_) => return None,
+    };
+    let program = if provider == Provider::Claude {
+        "claude"
+    } else {
+        "codex"
+    };
+    let mut cmd = process::command(program);
+    cmd.envs(vults_agents::shell_env())
+        .args(args)
+        .stdin(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .kill_on_drop(true);
+    let out = tokio::time::timeout(std::time::Duration::from_secs(8), cmd.output())
+        .await
+        .ok()?
+        .ok()?;
+    let text = String::from_utf8_lossy(&out.stdout);
+    match provider {
+        Provider::Claude => serde_json::from_str::<serde_json::Value>(&text)
+            .ok()?
+            .get("loggedIn")?
+            .as_bool(),
+        _ => Some(out.status.success() && text.contains("Logged in")),
+    }
+}
+
+/// What the chat calls an ACP agent (`OpenCode`, `Qwen Code`…).
+pub fn acp_title(key: &str) -> Option<&'static str> {
+    acp::agent(key).map(|a| a.title)
+}
+
+/// The ACP agents installed here, by key and title, for the engine menu.
+pub fn acp_installed() -> Vec<(&'static str, &'static str)> {
+    acp::agents()
+        .iter()
+        .filter(|a| a.installed())
+        .map(|a| (a.name, a.title))
+        .collect()
+}
+
+impl Serialize for Provider {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(&self.name())
+    }
+}
+
+impl<'de> Deserialize<'de> for Provider {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let name = String::deserialize(d)?;
+        Self::parse(&name).ok_or_else(|| serde::de::Error::custom(format!("unknown engine: {name}")))
+    }
 }
 
 /// One chat turn: what the user typed and the files they dropped (already in our inbox).
@@ -463,6 +564,11 @@ pub enum Delta {
     /// (never shown in the chat: it can't even be serialized for the view by mistake).
     #[serde(skip_serializing)]
     Usage(Usage),
+    /// How full the model's context is, for the chat's meter; each part when the engine says.
+    Context {
+        used: Option<u64>,
+        window: Option<u64>,
+    },
     /// The user stopped the turn.
     Stopped,
     Error {
@@ -482,6 +588,41 @@ pub struct Detail {
     pub always: bool,
     /// The conversation read content from outside (the tool that did): the card warns (Z8).
     pub outside: Option<String>,
+    /// The agent asks the user (`AskUserQuestion`): each question with the options it offers.
+    pub questions: Vec<Question>,
+}
+
+/// One question the agent asks, as the chat's card shows it.
+#[derive(Serialize, Debug, Clone, PartialEq, Default)]
+pub struct Question {
+    pub question: String,
+    pub options: Vec<String>,
+}
+
+/// The questions of an `AskUserQuestion` call, at most 4 with 8 options each, their text capped.
+pub fn questions(tool: &str, input: &serde_json::Value) -> Vec<Question> {
+    if tool != vults_protocol::QUESTION_TOOL {
+        return Vec::new();
+    }
+    let cap = |s: &str| s.chars().take(500).collect::<String>();
+    input["questions"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .take(4)
+        .filter_map(|q| {
+            let question = cap(q["question"].as_str()?.trim());
+            let options = q["options"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(|o| o["label"].as_str().or_else(|| o.as_str()).map(|l| cap(l.trim())))
+                .filter(|l| !l.is_empty())
+                .take(8)
+                .collect();
+            (!question.is_empty()).then_some(Question { question, options })
+        })
+        .collect()
 }
 
 impl Detail {
@@ -495,6 +636,7 @@ impl Detail {
             removed: a.removed,
             always: false,
             outside: None,
+            questions: questions(tool, input),
         }
     }
 }
@@ -510,7 +652,7 @@ pub enum SettledBy {
 }
 
 /// An answer given before any card: what it was, and whose.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Settled {
     pub answer: Answer,
     pub by: SettledBy,
@@ -547,6 +689,146 @@ impl Approver for TestApprover {
 
 /// The chat's side of a driver's [`Sink`]: what the agent says goes to the chat, and its tool
 /// requests become cards the approver answers.
+/// The end of a tool's output the chat shows: the last lines are what tells how it went.
+pub const OUTPUT_TAIL: usize = 4_000;
+
+/// `text`'s last [`OUTPUT_TAIL`] characters, secrets redacted; none when only whitespace.
+pub fn output_tail(text: &str) -> Option<String> {
+    let text = text.trim();
+    if text.is_empty() {
+        return None;
+    }
+    let count = text.chars().count();
+    let tail: String = if count > OUTPUT_TAIL {
+        format!("…{}", text.chars().skip(count - OUTPUT_TAIL).collect::<String>())
+    } else {
+        text.to_string()
+    };
+    Some(vults_core::redact::secrets(&tail))
+}
+
+/// The start of a change the chat shows: a long rewrite is cut, never the session.
+pub const DIFF_MAX: usize = 12_000;
+
+/// Lines of context kept around a change.
+const DIFF_CONTEXT: usize = 2;
+
+/// `old` turned into `new`, as the lines the chat colors: `-` gone, `+` added, ` ` kept around
+/// them. The lines both share at the start and the end are left out but for a little context.
+/// Without `old` every line is new. None when nothing changes.
+pub fn edit_diff(path: &str, old: &str, new: &str) -> Option<String> {
+    if old == new {
+        return None;
+    }
+    let a: Vec<&str> = old.lines().collect();
+    let b: Vec<&str> = new.lines().collect();
+    let head = a.iter().zip(&b).take_while(|(x, y)| x == y).count();
+    let tail = a[head..]
+        .iter()
+        .rev()
+        .zip(b[head..].iter().rev())
+        .take_while(|(x, y)| x == y)
+        .count();
+    let mut out = String::new();
+    if !path.is_empty() {
+        out.push_str(&format!("@@ {path}\n"));
+    }
+    let mut line = |mark: char, text: &str| {
+        out.push(mark);
+        out.push_str(text);
+        out.push('\n');
+    };
+    a[head.saturating_sub(DIFF_CONTEXT)..head]
+        .iter()
+        .for_each(|l| line(' ', l));
+    a[head..a.len() - tail].iter().for_each(|l| line('-', l));
+    b[head..b.len() - tail].iter().for_each(|l| line('+', l));
+    let after = a.len() - tail;
+    a[after..(after + DIFF_CONTEXT).min(a.len())]
+        .iter()
+        .for_each(|l| line(' ', l));
+    diff_bounded(&out)
+}
+
+/// A diff the chat shows: its first [`DIFF_MAX`] characters, secrets redacted; none when empty.
+pub fn diff_bounded(diff: &str) -> Option<String> {
+    let diff = vults_core::redact::secrets(diff.trim_end());
+    // Only a header, or nothing: no line changed that the chat could show.
+    if !diff
+        .lines()
+        .any(|l| l.starts_with(['+', '-']) && !l.starts_with("+++") && !l.starts_with("---"))
+    {
+        return None;
+    }
+    Some(if diff.chars().count() > DIFF_MAX {
+        format!("{}\n…", diff.chars().take(DIFF_MAX).collect::<String>())
+    } else {
+        diff
+    })
+}
+
+/// Characters of conversation a handoff carries (about 12k tokens): the first message and the
+/// latest ones that fit; a single line longer than [`HANDOFF_LINE`] is cut.
+pub const HANDOFF_BUDGET: usize = 48_000;
+const HANDOFF_LINE: usize = 6_000;
+
+/// What was said with `from` before another engine took the conversation over: the user's first
+/// message (what the conversation is for), then the latest lines that fit the budget, oldest first.
+/// Each line is `who` (`you` or `zeca`) and its text; notes and empty lines are left out.
+pub fn handoff(from: &str, lines: &[(String, String)], budget: usize) -> Option<String> {
+    let said: Vec<(&str, String)> = lines
+        .iter()
+        .filter(|(who, text)| matches!(who.as_str(), "you" | "zeca") && !text.trim().is_empty())
+        .map(|(who, text)| {
+            let mut text = text.trim().to_string();
+            if text.len() > HANDOFF_LINE {
+                let mut end = HANDOFF_LINE;
+                while !text.is_char_boundary(end) {
+                    end -= 1;
+                }
+                text.truncate(end);
+                text.push('…');
+            }
+            (if who == "you" { "user" } else { "assistant" }, text)
+        })
+        .collect();
+    if said.is_empty() {
+        return None;
+    }
+    let first = said.iter().position(|(who, _)| *who == "user");
+    let mut used = first.map_or(0, |i| said[i].1.len());
+    let mut kept: Vec<usize> = Vec::new();
+    for i in (0..said.len()).rev() {
+        if Some(i) == first {
+            continue;
+        }
+        if used + said[i].1.len() > budget {
+            break;
+        }
+        used += said[i].1.len();
+        kept.push(i);
+    }
+    kept.reverse();
+    let mut out = format!(
+        "<handoff from=\"{from}\">\nThis conversation began with {from}; you take it over now. What was said so far, oldest first:\n"
+    );
+    let line = |out: &mut String, (who, text): &(&str, String)| {
+        out.push_str(&format!("[{who}] {text}\n"));
+    };
+    if let Some(i) = first {
+        line(&mut out, &said[i]);
+    }
+    let skipped = kept.first().map_or(0, |&k| k - first.map_or(0, |f| f + 1).min(k));
+    if skipped > 0 {
+        out.push_str(&format!("[… {skipped} earlier lines left out]\n"));
+    }
+    for &i in &kept {
+        line(&mut out, &said[i]);
+    }
+    out.push_str("</handoff>");
+    Some(out)
+}
+
 /// Does this call bring outside content in (Z8)? Zeca's own MCP server (M7) reads only this
 /// computer (the island's sessions, his memory, a journal that leaves outside lines out), so its
 /// calls don't, but only where the app gave it (`zeca_mcp`: a Claude conversation with our
@@ -587,6 +869,24 @@ impl Sink for TurnSink<'_> {
                     event: activity::Event::Reasoning { text },
                 },
                 Event::Usage(usage) => Delta::Usage(usage),
+                Event::Context { used, window } => Delta::Context { used, window },
+                // The agent's own settings ran it: the activity says so, on the agent's word.
+                Event::Plan(steps) => Delta::Activity {
+                    event: activity::Event::Plan {
+                        steps: steps
+                            .into_iter()
+                            .map(|(text, status)| activity::Step { text, status })
+                            .collect(),
+                    },
+                },
+                Event::Unasked { tool, target } => Delta::Activity {
+                    event: activity::Event::Decision {
+                        tool,
+                        target,
+                        answer: "allow".into(),
+                        by: "agent".into(),
+                    },
+                },
                 // A call that reads outside taints the conversation once it ran: a denied or failed
                 // fetch brought nothing in. The detail is the whole command, never the card's cut.
                 Event::ToolStart { id, tool, detail, .. } => {
@@ -614,6 +914,24 @@ impl Sink for TurnSink<'_> {
                         return;
                     }
                     Delta::ToolState { active: true }
+                }
+                Event::ToolDiff { id, diff } => {
+                    let _ = self
+                        .out
+                        .send(Delta::Activity {
+                            event: activity::Event::Diff { id, diff },
+                        })
+                        .await;
+                    return;
+                }
+                Event::ToolOutput { id, output } => {
+                    let _ = self
+                        .out
+                        .send(Delta::Activity {
+                            event: activity::Event::Output { id, text: output },
+                        })
+                        .await;
+                    return;
                 }
                 Event::ToolEnd { id, ok } => {
                     let _ = self
@@ -654,7 +972,7 @@ impl Sink for TurnSink<'_> {
             let settled = self.approver.settle(&a, outside.is_some());
             let ruled = self.rules.lock().is_ok_and(|r| r.allows(&a));
             if let Some(s) = settled.filter(|s| !ruled || !s.answer.allows()) {
-                self.approver.settled(&a.tool, &a.target, s);
+                self.approver.settled(&a.tool, &a.target, s.clone());
                 let _ = self
                     .out
                     .send(Delta::Settled {
@@ -694,7 +1012,7 @@ impl Sink for TurnSink<'_> {
             )
             .await;
             if let Ok(mut rules) = self.rules.lock() {
-                rules.note(&a, answer);
+                rules.note(&a, answer.clone());
             }
             answer
         })
@@ -818,6 +1136,23 @@ pub struct Chat {
     api: (&'static providers::Provider, String),
     /// API: what the model may call in its loop (Z7's web, Z9's flock); none yet.
     tools: tools::Tools,
+    /// What was said with the engine before, for the first turn of the one that took over.
+    handoff: Option<String>,
+    /// What was said so far, kept for a resumed session its CLI lost: a fresh one starts with it.
+    fallback: Option<String>,
+}
+
+/// A CLI that can't find the session it was asked to resume (cleared history, another machine).
+pub fn lost_session(error: &str) -> bool {
+    let e = error.to_lowercase();
+    [
+        "no conversation found",
+        "no rollout found",
+        "thread not found",
+        "session not found",
+    ]
+    .iter()
+    .any(|s| e.contains(s))
 }
 
 impl Chat {
@@ -838,6 +1173,8 @@ impl Chat {
                 providers::PROVIDERS[0].default_model.to_string(),
             ),
             tools: Vec::new(),
+            handoff: None,
+            fallback: None,
         }
     }
 
@@ -911,6 +1248,7 @@ impl Chat {
             Provider::Claude => ("claude-code", None),
             Provider::Codex => ("codex", None),
             Provider::ClaudeApi => (self.api.0.id, Some(self.api.1.clone())),
+            Provider::Acp(key) => (key, None),
         }
     }
 
@@ -1015,6 +1353,17 @@ impl Chat {
         self.driver.as_ref().is_some_and(|d| d.session().is_some()) || !self.history.is_empty()
     }
 
+    /// The conversation so far, for the first turn of an engine that takes it over midway
+    /// ([`handoff`]); it goes with that turn only.
+    pub fn set_handoff(&mut self, text: Option<String>) {
+        self.handoff = text;
+    }
+
+    /// What was said so far, for this turn only: used if the CLI lost the session it resumes.
+    pub fn set_fallback(&mut self, text: Option<String>) {
+        self.fallback = text;
+    }
+
     /// The folder can only change before the first turn: a conversation lives in one place.
     pub fn set_folder(&mut self, dir: PathBuf) -> bool {
         if self.started() || !dir.is_dir() {
@@ -1027,17 +1376,20 @@ impl Chat {
         true
     }
 
-    /// The model and effort a CLI runs with (none: its own default); only before the first turn,
-    /// so a conversation never changes models midway. A name the CLI could misread is dropped.
+    /// The model and effort a CLI runs with (none: its own default), any time: changed midway, the
+    /// next turn runs with them and the conversation goes on. A name the CLI could misread is dropped.
     pub fn set_pick(&mut self, model: Option<String>, effort: Option<Effort>) -> bool {
-        if self.started() {
-            return false;
-        }
         let model = model.filter(|m| valid_model(m));
         if self.spec.model != model || self.spec.effort != effort {
-            self.spec.model = model;
+            self.spec.model = model.clone();
             self.spec.effort = effort;
-            self.forget();
+            // Started, the driver takes it for its next turn; before, a driver made with the old
+            // pick goes.
+            let started = self.started();
+            match self.driver.as_mut().filter(|_| started) {
+                Some(driver) => driver.set_pick(model, effort),
+                None => self.forget(),
+            }
         }
         true
     }
@@ -1054,6 +1406,28 @@ impl Chat {
         }
         if self.spec.mcp_config != config {
             self.spec.mcp_config = config;
+            self.forget();
+        }
+        true
+    }
+
+    /// Full access from the agent's own mode, any time: the next turn runs in it, the conversation
+    /// going on (Claude Code's next process, Codex's next `turn/start`).
+    pub fn set_full_access(&mut self, on: bool) {
+        self.spec.full_access = on;
+        if let Some(driver) = self.driver.as_mut() {
+            driver.set_full_access(on);
+        }
+    }
+
+    /// Where a clean Codex keeps its own home (with [`Settings::Isolated`]); like the folder, only
+    /// before the first turn.
+    pub fn set_state_dir(&mut self, dir: Option<PathBuf>) -> bool {
+        if self.started() || self.is_specialist() {
+            return false;
+        }
+        if self.spec.state_dir != dir {
+            self.spec.state_dir = dir;
             self.forget();
         }
         true
@@ -1120,7 +1494,7 @@ impl Chat {
     /// conversation goes on next time); past that, or for the API, the turn is dropped.
     pub async fn send(
         &mut self,
-        turn: Turn,
+        mut turn: Turn,
         out: mpsc::Sender<Delta>,
         approver: Arc<dyn Approver>,
         mut stop: oneshot::Receiver<()>,
@@ -1141,35 +1515,68 @@ impl Chat {
         if !turn.files.is_empty() && self.outside().is_none() {
             self.set_outside(Some("attachments".into()));
         }
+        // An engine that took the conversation over: what was said before, once, ahead of the rest.
+        if let Some(handoff) = self.handoff.take() {
+            turn.context = Some(match turn.context.take() {
+                Some(context) => format!("{handoff}\n{context}"),
+                None => handoff,
+            });
+        }
         let name = self.name();
-        if matches!(self.provider, Provider::Claude | Provider::Codex) && self.driver.is_none() {
+        if matches!(
+            self.provider,
+            Provider::Claude | Provider::Codex | Provider::Acp(_)
+        ) && self.driver.is_none()
+        {
             self.driver = drivers::for_cli(self.provider, self.spec.clone());
         }
         let interrupter = self.driver.as_ref().map(|d| d.interrupter());
         let stopped = std::sync::atomic::AtomicBool::new(false);
-        let run = tokio::time::timeout(TURN_TIMEOUT, self.run(&turn, &out, approver.as_ref(), &stopped));
+        // What the turn says goes through here: each delta is a sign of life for the idle watch.
+        let (relay, mut relayed) = mpsc::channel::<Delta>(64);
+        let run = self.run(&turn, &relay, approver.as_ref(), &stopped);
         tokio::pin!(run);
-        let last = tokio::select! {
-            // A press on Stop wins over whatever the turn was about to say: the chat hears
-            // Stopped at once, and nothing after it, while the CLI ends its turn.
-            biased;
-            Ok(()) = &mut stop, if !stop_gone => {
-                stopped.store(true, std::sync::atomic::Ordering::SeqCst);
-                let _ = out.send(Delta::Stopped).await;
-                if let Some(i) = interrupter {
-                    let _ = i.interrupt().await;
-                    let _ = tokio::time::timeout(STOP_GRACE, &mut run).await;
+        let mut idle = tokio::time::Instant::now() + TURN_IDLE;
+        let last = loop {
+            tokio::select! {
+                // A press on Stop wins over whatever the turn was about to say: the chat hears
+                // Stopped at once, and nothing after it, while the CLI ends its turn.
+                biased;
+                Ok(()) = &mut stop, if !stop_gone => {
+                    stopped.store(true, std::sync::atomic::Ordering::SeqCst);
+                    let _ = out.send(Delta::Stopped).await;
+                    if let Some(i) = interrupter {
+                        let _ = i.interrupt().await;
+                        // Its last words are dropped, but read: a full relay must not hold it up.
+                        let _ = tokio::time::timeout(STOP_GRACE, async {
+                            loop {
+                                tokio::select! {
+                                    _ = &mut run => break,
+                                    Some(_) = relayed.recv() => {}
+                                }
+                            }
+                        })
+                        .await;
+                    }
+                    return;
                 }
-                return;
-            }
-            result = &mut run => match result {
-                Ok(Ok(())) => Delta::Done,
-                Ok(Err(message)) => Delta::Error { message },
-                Err(_) => Delta::Error {
-                    message: format!("{name} took too long to answer."),
+                Some(delta) = relayed.recv() => {
+                    idle = tokio::time::Instant::now() + TURN_IDLE;
+                    let _ = out.send(delta).await;
+                }
+                result = &mut run => break match result {
+                    Ok(()) => Delta::Done,
+                    Err(message) => Delta::Error { message },
                 },
-            },
+                () = tokio::time::sleep_until(idle) => break Delta::Error {
+                    message: format!("{name} stopped responding."),
+                },
+            }
         };
+        // What it said just before it ended, then how it ended.
+        while let Ok(delta) = relayed.try_recv() {
+            let _ = out.send(delta).await;
+        }
         let _ = out.send(last).await;
     }
 
@@ -1178,6 +1585,7 @@ impl Chat {
             Provider::Claude => "Claude",
             Provider::Codex => "Codex",
             Provider::ClaudeApi => self.api.0.label,
+            Provider::Acp(key) => acp::agent(key).map_or(key, |a| a.title),
         }
     }
 
@@ -1190,7 +1598,7 @@ impl Chat {
     ) -> Result<(), String> {
         std::fs::create_dir_all(&self.spec.dir).map_err(|e| format!("Can't prepare the chat folder: {e}"))?;
         match self.provider {
-            Provider::Claude | Provider::Codex => {
+            Provider::Claude | Provider::Codex | Provider::Acp(_) => {
                 let specialist = self.is_specialist();
                 let Some(driver) = self.driver.as_mut() else {
                     return Err("This chat has no agent to run.".into());
@@ -1227,7 +1635,24 @@ impl Chat {
                         () = service.serve(&self.tools,approver,&self.outside,out) => Err("The specialist tool service stopped.".into()),
                     };
                 }
-                driver.send(turn, &sink).await
+                let fallback = self.fallback.take();
+                let result = driver.send(turn, &sink).await;
+                // The session to resume is gone: a fresh one goes on from what was said, once.
+                match (result, fallback) {
+                    (Err(e), Some(said)) if driver.session().is_some() && lost_session(&e) => {
+                        // The same driver, so Stop still reaches it.
+                        driver.forget_session();
+                        let again = Turn {
+                            context: Some(match &turn.context {
+                                Some(context) => format!("{said}\n{context}"),
+                                None => said,
+                            }),
+                            ..turn.clone()
+                        };
+                        driver.send(&again, &sink).await
+                    }
+                    (result, _) => result,
+                }
             }
             Provider::ClaudeApi => {
                 let (provider, model) = (self.api.0, self.api.1.clone());
@@ -1392,6 +1817,37 @@ mod tests {
     use super::*;
 
     #[test]
+    fn a_lost_session_is_told_apart_from_other_failures() {
+        assert!(lost_session(
+            "Claude stopped: No conversation found with session ID: 1f2e"
+        ));
+        assert!(lost_session("no rollout found for thread id 019a"));
+        assert!(!lost_session("Claude stopped: rate limited"));
+    }
+
+    #[test]
+    fn an_edit_diff_keeps_a_little_context_around_the_change() {
+        let old = "a\nb\nc\nd\ne\nf\n";
+        let new = "a\nb\nc\nD\ne\nf\n";
+        assert_eq!(
+            edit_diff("x.rs", old, new).unwrap(),
+            "@@ x.rs\n b\n c\n-d\n+D\n e\n f"
+        );
+        assert_eq!(edit_diff("x.rs", "same", "same"), None);
+        assert_eq!(edit_diff("", "", "new\nfile").unwrap(), "+new\n+file");
+    }
+
+    #[test]
+    fn a_long_diff_is_cut_and_its_secrets_redacted() {
+        let long = "x\n".repeat(DIFF_MAX);
+        let cut = edit_diff("", "", &long).unwrap();
+        assert!(cut.ends_with('…'));
+        assert!(cut.chars().count() <= DIFF_MAX + 2);
+        let key = edit_diff("", "", "token = ghp_abcdefghijklmnopqrstuvwxyz0123456789").unwrap();
+        assert!(!key.contains("ghp_abcdefghijklmnopqrstuvwxyz0123456789"));
+    }
+
+    #[test]
     fn sse_events_wait_for_a_whole_character() {
         let wire = "event: x\r\ndata: {\"text\":\"a\u{e7}\u{e3}o 🦅\"}\r\n\r\ndata: end\n\n".as_bytes();
         let mut events = SseEvents::default();
@@ -1463,7 +1919,7 @@ mod tests {
     }
 
     #[test]
-    fn the_pick_is_fixed_once_the_conversation_starts_and_never_a_flag() {
+    fn the_pick_changes_midway_and_is_never_a_flag() {
         let tmp = std::env::temp_dir();
         let mut chat = Chat::new(Provider::Claude, tmp.clone());
         assert!(chat.set_pick(Some("--dangerously-skip-permissions".into()), Some(Effort::High)));
@@ -1474,13 +1930,82 @@ mod tests {
             (Some("sonnet"), Some(Effort::Max))
         );
         chat.driver = Some(Box::new(drivers::ClaudeDriver::resumed(Spec::in_dir(tmp), "s")));
-        assert!(!chat.set_pick(Some("opus".into()), None));
-        assert_eq!(chat.spec.model.as_deref(), Some("sonnet"));
+        // Started: the next turn runs with the new model, the same session going on.
+        assert!(chat.set_pick(Some("opus".into()), None));
+        assert_eq!(chat.spec.model.as_deref(), Some("opus"));
+        let driver = chat.driver.as_ref().unwrap();
+        assert_eq!(driver.spec().model.as_deref(), Some("opus"));
+        assert_eq!(driver.session(), Some("s"));
         // Before the first turn, an effort alone drops a driver made with the old one.
         let mut chat = Chat::new(Provider::Claude, std::env::temp_dir());
         chat.driver = drivers::for_cli(Provider::Claude, chat.spec.clone());
         assert!(chat.set_pick(None, Some(Effort::Low)));
         assert!(chat.driver.is_none());
+    }
+
+    #[test]
+    fn a_handoff_keeps_the_first_request_and_the_latest_lines_within_its_budget() {
+        let said = |who: &str, text: &str| (who.to_string(), text.to_string());
+        let mut lines = vec![said("you", "Fix the login bug"), said("note", "Started")];
+        for i in 0..40 {
+            lines.push(said("zeca", &format!("step {i} {}", "x".repeat(50))));
+        }
+        lines.push(said("you", "Now write the tests"));
+        let text = handoff("Claude Code", &lines, 600).unwrap();
+        assert!(text.starts_with("<handoff from=\"Claude Code\">"));
+        assert!(
+            text.contains("[user] Fix the login bug"),
+            "the first request always goes"
+        );
+        assert!(
+            text.contains("[user] Now write the tests"),
+            "the latest line always goes"
+        );
+        assert!(text.contains("earlier lines left out"));
+        assert!(!text.contains("Started"), "notes stay out");
+        assert!(!text.contains("step 0 "), "the oldest steps are what is left out");
+        assert!(handoff("Codex", &[said("note", "x")], 600).is_none());
+        // The new engine is not started yet: its first turn takes the user's setup and the handoff.
+        let mut chat = Chat::new(Provider::Codex, std::env::temp_dir());
+        chat.set_handoff(Some(text));
+        assert!(!chat.started());
+    }
+
+    #[test]
+    fn an_engine_reads_back_as_itself_and_an_unknown_acp_agent_as_none() {
+        for name in ["claude", "codex", "api"] {
+            assert_eq!(Provider::parse(name).map(Provider::name).as_deref(), Some(name));
+        }
+        let first = acp::agents().first().expect("the registry has ACP agents");
+        let acp = Provider::parse(&format!("acp:{}", first.name)).unwrap();
+        assert_eq!(acp, Provider::Acp(first.name));
+        assert_eq!(serde_json::to_value(acp).unwrap(), format!("acp:{}", first.name));
+        assert_eq!(
+            serde_json::from_value::<Provider>(serde_json::json!("claude")).unwrap(),
+            Provider::Claude
+        );
+        assert_eq!(Provider::parse("acp:an-agent-from-the-future"), None);
+        assert!(serde_json::from_value::<Provider>(serde_json::json!("gemini")).is_err());
+    }
+
+    #[test]
+    fn a_question_card_carries_the_questions_and_their_options() {
+        let input = serde_json::json!({ "questions": [
+            { "question": "Which database?", "options": [ { "label": "Postgres" }, { "label": "SQLite" } ] },
+            { "question": "  ", "options": [] },
+        ] });
+        let q = questions("AskUserQuestion", &input);
+        assert_eq!(
+            q,
+            vec![Question {
+                question: "Which database?".into(),
+                options: vec!["Postgres".into(), "SQLite".into()]
+            }]
+        );
+        assert!(
+            questions("Bash", &input).is_empty(),
+            "only the agent's question tool"
+        );
     }
 
     #[test]
@@ -1673,7 +2198,7 @@ mod tests {
             if let Ok(mut seen) = self.1.lock() {
                 seen.0 += 1;
             }
-            let _ = tx.send(self.0);
+            let _ = tx.send(self.0.clone());
             rx
         }
         fn ruled(&self, _: &str, target: &str) {
@@ -1740,7 +2265,7 @@ mod tests {
             rx
         }
         fn settle(&self, _: &AgentAsk, outside: bool) -> Option<Settled> {
-            self.0.filter(|_| !outside)
+            self.0.clone().filter(|_| !outside)
         }
         fn settled(&self, _: &str, target: &str, s: Settled) {
             self.1.lock().unwrap().push((target.into(), s.answer.allows()));
@@ -1792,7 +2317,7 @@ mod tests {
             by: SettledBy::Policy,
             consent: Some(7),
         };
-        let approver = Settling(Some(deny), Default::default());
+        let approver = Settling(Some(deny.clone()), Default::default());
         let outside = std::sync::Mutex::new(None);
         rules.lock().unwrap().note(&ls, Answer::AllowInConversation);
         let sink = TurnSink {

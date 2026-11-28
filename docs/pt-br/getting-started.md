@@ -1,5 +1,5 @@
 # Primeiros passos
-<!-- source: a494d77771f9 -->
+<!-- source: 2b73621366eb -->
 
 <a id="install"></a>
 
@@ -130,7 +130,7 @@ põem a próxima ou a sessão anterior na frente, e segurar **Ctrl+Alt+V** fala 
 ## Idioma
 
 O Vults fala inglês, português do Brasil, espanhol e chinês simplificado. Ele segue o idioma do seu
-desktop; **Settings → General → Language** escolhe outro para a ilha, as configurações, a bandeja e
+desktop; **Settings → Appearance → Language** escolhe outro para a ilha, as configurações, a bandeja e
 as notificações. O que os seus agentes dizem fica nas palavras deles.
 
 <a id="next"></a>

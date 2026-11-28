@@ -36,6 +36,8 @@ pub enum Act {
     AlwaysAllow,
     /// A plan allowed, and its Claude Code session accepts edits without asking (ADR 0002).
     AllowAcceptingEdits,
+    /// A plan's card: no, with what to change (the words are not kept).
+    RevisePlan,
     /// Allowed, and the same whole command again until the chat's conversation ends (Z2).
     AllowInConversation,
     /// A question card answered (the answers themselves are not kept).
@@ -73,6 +75,7 @@ impl Act {
             Self::Deny => "deny",
             Self::AlwaysAllow => "always-allow",
             Self::AllowAcceptingEdits => "allow-accepting-edits",
+            Self::RevisePlan => "revise-plan",
             Self::AllowInConversation => "allow-in-conversation",
             Self::Answer => "answer",
             Self::Release => "release",

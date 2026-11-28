@@ -573,17 +573,21 @@ impl State {
 pub(crate) fn editor(t: &Terminal) -> Option<&'static str> {
     let env = |k: &str| t.env.get(k).map(String::as_str);
     if env("TERM_PROGRAM") != Some("vscode") && env("VSCODE_PID").is_none() {
-        return None;
+        // Claude Code's VS Code extension says so itself, with no editor terminal around it.
+        return (env("CLAUDE_CODE_ENTRYPOINT") == Some("claude-vscode")).then_some("VS Code");
     }
+    // The program's own name, on Windows too: a VS Code under a folder named after Cursor is VS Code.
     let binary = env("VSCODE_GIT_ASKPASS_NODE")
-        .and_then(|p| p.rsplit('/').next())
+        .and_then(|p| p.rsplit(['/', '\\']).next())
         .unwrap_or_default()
         .to_ascii_lowercase();
-    Some(if binary.contains("cursor") || env("CURSOR_TRACE_ID").is_some() {
-        "Cursor"
-    } else {
-        "VS Code"
-    })
+    Some(
+        if binary.starts_with("cursor") || env("CURSOR_TRACE_ID").is_some() {
+            "Cursor"
+        } else {
+            "VS Code"
+        },
+    )
 }
 
 /// What `platform::jump` can act on: a multiplexer's pane (herdr, tmux, kitty/wezterm with their

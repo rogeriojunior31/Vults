@@ -453,11 +453,8 @@ pub fn set_phone_transport(window: tauri::Webview, app: AppHandle, transport: St
 pub fn set_phone_relay(window: tauri::Webview, app: AppHandle, url: String) -> Result<(), String> {
     crate::settings_page(&window)?;
     let url = url.trim().trim_end_matches('/').to_string();
-    let ok = (url.starts_with("https://") || url.starts_with("http://"))
-        && url.len() <= 300
-        && !url.chars().any(|c| c.is_whitespace() || c.is_control());
-    if !ok {
-        return Err("Give an address that starts with https://.".into());
+    if url.len() > 300 || !vults_link::pair::relay_url_ok(&url) {
+        return Err("Give an address that starts with https://, or http:// for one on this computer, a LAN or a tailnet.".into());
     }
     crate::settings::edit(&app, |s| s.phone_relay = Some(url))?;
     restart(&app);
@@ -532,6 +529,31 @@ pub fn phone_pair_cancel(window: tauri::Webview, app: AppHandle) -> Result<(), S
         inner.pairing += 1;
     }
     Ok(())
+}
+
+/// Settings → Phone → Copy: the pairing code's text, left out of clipboard history and cloud
+/// sync (it holds the one-time secret). The owner stays alive, or X11 would drop the text.
+#[tauri::command]
+pub async fn phone_pair_copy(window: tauri::Webview, text: String) -> Result<(), String> {
+    crate::settings_page(&window)?;
+    #[cfg(any(target_os = "linux", windows))]
+    {
+        static OWNER: Mutex<Option<vults_platform::clipboard::Clipboard>> = Mutex::new(None);
+        tauri::async_runtime::spawn_blocking(move || {
+            let mut owner = OWNER.lock().map_err(|_| "The clipboard is busy.".to_string())?;
+            if owner.is_none() {
+                *owner = Some(vults_platform::clipboard::Clipboard::new()?);
+            }
+            owner.as_mut().map_or(Ok(()), |c| c.copy(&text))
+        })
+        .await
+        .map_err(|e| e.to_string())?
+    }
+    #[cfg(not(any(target_os = "linux", windows)))]
+    {
+        let _ = text;
+        Err("Copying is not available here.".into())
+    }
 }
 
 /// Settings → Phone → Revoke: nothing it signs is taken from now on.

@@ -38,8 +38,12 @@ cargo run --release -p vults-relay --bin vults-relay
 ```
 
 `VULTS_RELAY_ADDR` says where it listens (`0.0.0.0:8787` by default). It speaks plain HTTP: put a
-reverse proxy with TLS in front of it, or reach it only over a tailnet or your LAN. A proxy in
-front should limit connections per address too: the relay's own caps are for the whole server.
+reverse proxy with TLS in front of it, or reach it only over a tailnet or your LAN. One address
+holds at most 64 connections at once; behind a proxy every connection comes from the proxy's
+address, so set `VULTS_RELAY_PER_ADDRESS=0` there and let the proxy limit each client instead.
+Vults takes a plain `http://` relay only on this computer, a LAN or a tailnet (private and
+tailnet addresses, `.local`, `.lan`, `.home.arpa`, `.internal`, `.ts.net`); anywhere else it
+must be `https://`.
 
 ## Limits
 
@@ -53,6 +57,7 @@ front should limit connections per address too: the relay's own caps are for the
 | A read waiting for a message | 25 seconds |
 | A request, its body included | 35 seconds |
 | Connections at once (more wait their turn) | 1,000 |
+| Connections from one address at once (more are closed) | 64 |
 | A connection that sends nothing | 60 seconds |
 
 ## HTTP

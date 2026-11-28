@@ -45,6 +45,15 @@ const nest = createNest(
       handoff: (text, folder, generation) => Bridge.continueCommand(text, folder, generation),
       setAccess: (access) => Bridge.setChatAccess(access),
       openSettings: () => void Bridge.openSettings("chat"),
+    setNative: (on) => Bridge.setNativeChat(on),
+    switchEngine: (provider, generation) => Bridge.chatSwitchEngine(provider, generation),
+    signIn: (provider) => Bridge.chatSignIn(provider),
+    paths: (folder, query) => Bridge.chatPaths(folder, query),
+    paste: (name, bytes) => Bridge.chatPaste(name, bytes),
+    reply: (id, text) => Bridge.chatReply(id, text),
+    pickFolder: (title) => Bridge.chatPickFolder(title),
+    checkFolder: (path) => Bridge.chatCheckFolder(path),
+    recentFolders: () => Bridge.chatRecentFolders(),
       engines: () => Bridge.chatEngines(),
       openFlock: () => void changeSize(async () => nest.open("flock")),
       pickFiles: (title) => Bridge.chatPickFiles(title),
@@ -236,7 +245,7 @@ Bridge.onShortcutKeys((keys) => nest.setKeys(shownKeys(keys)));
 Bridge.onMedia((now) => nest.setMedia(now));
 void Bridge.mediaNow().then((now) => nest.setMedia(now), () => {});
 // The Nest's paperclip: the files it picked, never the island's.
-Bridge.onFiles((d) => d.to === "nest" && nest.chat.attach(d.copied, d.refused));
+Bridge.onFiles((d) => d.to === "nest" && nest.chat.attach(d.copied, d.refused, d.folders));
 Bridge.onChatSync((s) => { nest.chat.sync(s); dictationContext(); });
 Bridge.onVoiceLevel((level) => nest.chat.voiceLevel(level));
 Bridge.onVoiceSilence(() => nest.chat.voiceSilence());

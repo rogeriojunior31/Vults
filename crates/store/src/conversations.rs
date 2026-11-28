@@ -206,6 +206,23 @@ impl Store {
         Ok(())
     }
 
+    /// Another engine took the conversation over midway: its lines stay, and what resumed the old
+    /// one (its session, its API history) goes, so the new one starts its own.
+    pub fn conversation_switch_engine(
+        &mut self,
+        id: ConversationId,
+        engine: &str,
+        model: Option<&str>,
+        effort: Option<&str>,
+    ) -> Result<(), Error> {
+        self.conn.execute(
+            "UPDATE conversations SET engine = ?2, model = ?3, effort = ?4, session = NULL, history = NULL
+             WHERE id = ?1",
+            params![id.0, engine, model, effort],
+        )?;
+        Ok(())
+    }
+
     /// What resumes it, after a turn: the CLI's session, or the API's history; and the tool that
     /// brought outside content in, once one did (never cleared).
     pub fn conversation_save(

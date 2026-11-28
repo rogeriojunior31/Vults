@@ -1,5 +1,5 @@
 # Arquitetura
-<!-- source: 0c18485a5b3a -->
+<!-- source: f5736727fa15 -->
 
 O acompanhamento de agentes flui num só sentido, por um único loop de execução:
 
@@ -29,11 +29,11 @@ mais baixa; `scripts/check-layers.sh` verifica isso na CI (os testes podem ir al
 | base | `brand`, `secrets` | O nome, o chaveiro do sistema |
 
 Só o `app` liga as camadas entre si: Connect nunca chama Experience, e Core não conhece nenhuma das duas.
-Isso mantém barata uma superfície nova (ela desenha `State::view` e envia intents, [ADR 0006](../adr/0006-surfaces.md))
-e mantém o Zeca opcional ([ADR 0005](../adr/0005-zeca.md)): ele usa Chat, Voice e
+Isso mantém barata uma superfície nova (ela desenha `State::view` e envia intents)
+e mantém o Zeca opcional: ele usa Chat, Voice e
 Connect, e nenhum deles sabe que ele existe. O corpo dele fica em Experience; o cérebro é o
 crate `zeca` em Connect, que lê o bando mas nunca responde a uma permissão
-([ADR 0005](../adr/0005-zeca.md)).
+.
 
 | Crate | Papel | Não pode usar |
 |---|---|---|
@@ -47,9 +47,9 @@ crate `zeca` em Connect, que lê o bando mas nunca responde a uma permissão
 | `agent-config` | Edições seguras das configurações dos agentes (JSON, TOML com os comentários mantidos, arquivos de plugin inteiros): leitura estrita, diff, fingerprint, backup, escrita atômica | Tauri |
 | `store` | O banco local: um `vults.sqlite` (SQLite embutido), migrações numeradas, o histórico de turnos, o log de auditoria só de acréscimo, os consentimentos (nunca apagados), traces, as conversas do Zeca (com o que cada uma leu de fora e o seu contexto congelado), os telefones pareados e o maior contador com que cada um assinou, o diário do Zeca e os resumos diários com a busca de texto e por vetor, as propostas de memória esperando um sim, as noites dele, o que os agentes custaram por dia e por roost e o histórico textual de ditado com totais independentes por dia/aplicativo (migração 21), gravado conforme o prazo escolhido, além de dicionário/substituições/trechos do usuário (migração 22), independentes do prazo do Histórico | Tauri, async, a rede |
 | `chat` | Chat pelas CLIs `claude` e `codex`, com pedidos de permissão, ou por uma API: Anthropic ou uma nuvem compatível com OpenAI com a chave do usuário, ou um Ollama / LM Studio local | Tauri |
-| `zeca` | O cérebro do Zeca (ADR 0005): uma visão só de leitura do bando, a memória dele como um repositório git de pequenos arquivos Markdown de fatos, cada um com um limite rígido (cada escrita um commit) | `core` (então nada nele consegue construir um `Intent`), Tauri |
-| `link` | O elo com um telefone pareado (ADR 0002): pareamento por QR, envelopes selados com X25519 e XChaCha20-Poly1305 (um relay só vê texto cifrado), respostas assinadas pelas chaves do Keystore do telefone e verificadas antes que o ledger do `core` as resgate | IO, a rede, Tauri |
-| `relay` | O relay do telefone (ADR 0002): um servidor axum que guarda e repassa envelopes selados por caixa, com limites e descartados depois de 10 minutos, e o cliente que as duas pontas usam, cada pedido pelo gate de rede do app; depende só do `link` | Tauri, `core` |
+| `zeca` | O cérebro do Zeca: uma visão só de leitura do bando, a memória dele como um repositório git de pequenos arquivos Markdown de fatos, cada um com um limite rígido (cada escrita um commit) | `core` (então nada nele consegue construir um `Intent`), Tauri |
+| `link` | O elo com um telefone pareado: pareamento por QR, envelopes selados com X25519 e XChaCha20-Poly1305 (um relay só vê texto cifrado), respostas assinadas pelas chaves do Keystore do telefone e verificadas antes que o ledger do `core` as resgate | IO, a rede, Tauri |
+| `relay` | O relay do telefone: um servidor axum que guarda e repassa envelopes selados por caixa, com limites e descartados depois de 10 minutos, e o cliente que as duas pontas usam, cada pedido pelo gate de rede do app; depende só do `link` | Tauri, `core` |
 | `evals` | Evals com cassettes (só para desenvolvimento, nunca no app): classes de política, redação, os prompts enviados aos modelos, streams gravados repetidos para injeção | ser ligado ao app |
 | `spike` | O kit de spike (só para desenvolvimento, nunca no app): um modelo falso, um app falso no socket do hook e um terminal para as TUIs, para gravar os hooks de um agente de verdade sem conta; o `scripts/spike.sh` roda o kit para cada agente | ser ligado ao app |
 | `secrets` | O chaveiro do sistema (Secret Service, Credential Manager), indexado pelo bundle id | Tauri, arquivos |
@@ -110,9 +110,9 @@ abertura do app. Análise de quem fala e resumos são opções à parte.
 
 Invariantes que toda mudança mantém, cada uma com um teste:
 
-- Nenhum caminho de voz chega a `Intent::Decide` ou `DecideAlways` (ADR 0002).
+- Nenhum caminho de voz chega a `Intent::Decide` ou `DecideAlways`.
 - O áudio fica na memória, exceto os arquivos temporários de uma reunião; sem palavra de ativação,
-  sem microfone sempre ligado (ADR 0004).
+  sem microfone sempre ligado.
 - Toda chamada de modelo sobre áudio ou texto passa pelo gate, com chave, orçamento e rastro próprios.
 - Um ticket atrasado ou substituído nunca executa nem entrega nada.
 - Texto falado nunca vira texto de comando de shell ou de tmux, e Enter nunca é enviado.
@@ -125,7 +125,7 @@ fala) ficam em `docs/dev/internals/`.
 
 ## Significado no core, aparência na superfície
 
-A view diz o que as coisas significam, para que todas as superfícies concordem ([ADR 0006](../adr/0006-surfaces.md)).
+A view diz o que as coisas significam, para que todas as superfícies concordem.
 Cada sessão carrega a sua `attention`, um nível ordenado (`quiet` < `info` < `done` < `failed` <
 `needs-you`), e a view carrega o maior deles; `card` marca a sessão cujo card é o primeiro
 da fila e ainda espera por ele. A ilha só escolhe a aparência: que som cada nível faz, e
@@ -138,7 +138,7 @@ superfície nova assina esses eventos pelos helpers com escopo de janela em `bri
 (`getCurrentWebviewWindow().listen`) para ficar fora deles.
 
 A janela do Nest tem dois webviews, o do Nest e o das Configurações, um visível por vez sob o mesmo
-cabeçalho (ADR 0006). Os comandos conferem o label do webview que chamou: as chamadas que só as
+cabeçalho. Os comandos conferem o label do webview que chamou: as chamadas que só as
 Configurações podem fazer são recusadas vindas do webview do Nest, que mostra texto de agente.
 
 `ended` lista os cards que saíram da fila mais recentemente, cada um com o seu `outcome`: respondido aqui
@@ -161,7 +161,7 @@ Um pedido de permissão mantém a conexão aberta. O servidor só espera por um 
 do app pegou o pedido e o `core` enfileirou o card dele (`Effect::AckPermission`). Se o app estiver
 travado ou não estiver escutando, o agente recebe a resposta (silêncio, então ele pergunta no terminal) em
 800 ms em vez de dois minutos. A ilha abre num card enfileirado e fica aberta até ele ser
-respondido; nenhum modo de presença pode escondê-lo depois de confirmado ([ADR 0006](../adr/0006-surfaces.md)).
+respondido; nenhum modo de presença pode escondê-lo depois de confirmado.
 
 <a id="why-only-core-produces-a-decision"></a>
 
@@ -170,7 +170,7 @@ respondido; nenhum modo de presença pode escondê-lo depois de confirmado ([ADR
 `core::reduce` transforma um evento `PermissionRequested` em estado pendente, e só o clique de um humano
 transforma estado pendente num effect `RespondPermission`: `Intent::Decide` (Allow, Deny) ou
 `Intent::DecideAlways`, que também salva uma regra. Uma regra salva só responde a um pedido que bate com
-ela exatamente: o mesmo agente, pasta, ferramenta e alvo ([ADR 0002](../adr/0002-permissions.md)). Uma pergunta
+ela exatamente: o mesmo agente, pasta, ferramenta e alvo. Uma pergunta
 (`QuestionAsked`) espera do mesmo jeito, e só um `Intent::Answer` que se encaixe nas perguntas dela a transforma
 num effect `AnswerQuestion`. Um teste alimenta
 todas as outras entradas em todas as ordens e verifica que nenhuma delas responde.
@@ -190,7 +190,7 @@ sem conteúdo ser persistida, enquanto continua processando invalidações. O re
 descarregar a resposta MCP no fluxo; falha/perda de confirmação nunca reutiliza o texto consumido.
 Cards de permissão têm prioridade. Só o webview dono da ilha/Nest pode editar ou confirmar; bloquear,
 navegar, sair, expirar e desconectar invalidam o trabalho pendente e conclusões tardias.
-A regra do rascunho de pergunta da [ADR 0002](../adr/0002-permissions.md) (um rascunho ditado só é enviado por um clique) também
+A regra do rascunho de pergunta (um rascunho ditado só é enviado por um clique) também
 é implementada por uma gravação local iniciada somente pela tecla física, vinculada ao token da
 pergunta ativa e ao identificador da gravação. `vults_dictate` é um alias da mesma troca tipada de
 `ask_user`. A captura usa o microfone e o transcritor local em cache existentes, com verificações de
@@ -239,7 +239,7 @@ agente faria), um comando e o fim. Passe o seu próprio arquivo JSONL (um JSON d
 ## Decisões
 
 Por que o app é construído assim (só Rust, as regras de segurança, um core para todas as superfícies, Zeca
-opcional, regras antes de modelos) está nos [registros de decisão](../adr/README.md).
+opcional, regras antes de modelos) está nos registros de decisão.
 
 <a id="documentation"></a>
 
@@ -248,5 +248,5 @@ opcional, regras antes de modelos) está nos [registros de decisão](../adr/READ
 `docs/` é a fonte da documentação no site
 ([rogeriojunior31.github.io/en/docs/vults](https://rogeriojunior31.github.io/en/docs/vults/)),
 publicada a cada tag de release; `docs/site.json` guarda o nome e o resumo que o site mostra. As páginas começam com um
-`# H1`, usam links relativos e guardam as imagens em `docs/assets/`. `docs/adr/` guarda os registros de decisão. `docs/dev/` é interno e não é
+`# H1`, usam links relativos e guardam as imagens em `docs/assets/`. `docs/dev/` é interno e não é
 publicado; `docs/pt-br/` guarda a tradução em português do Brasil (veja o CONTRIBUTING).

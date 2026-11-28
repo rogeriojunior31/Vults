@@ -34,6 +34,7 @@ pub fn resumed(
             in_turn: false,
         })),
         crate::Provider::ClaudeApi => None,
+        crate::Provider::Acp(name) => acp(name, spec, session),
     }
 }
 
@@ -128,6 +129,14 @@ impl AgentDriver for ClaudeDriver {
         self.spec.mcp_config = config;
         Ok(())
     }
+    // Each turn is its own process: the next one starts in the new mode and resumes the session.
+    fn set_full_access(&mut self, on: bool) {
+        self.spec.full_access = on;
+    }
+    fn set_pick(&mut self, model: Option<String>, effort: Option<vults_agents::driver::Effort>) {
+        self.spec.model = model;
+        self.spec.effort = effort;
+    }
     fn spec(&self) -> &Spec {
         &self.spec
     }
@@ -160,6 +169,10 @@ impl AgentDriver for ClaudeDriver {
     fn session(&self) -> Option<&str> {
         self.session.as_deref()
     }
+
+    fn forget_session(&mut self) {
+        self.session = None;
+    }
 }
 
 #[derive(Debug)]
@@ -179,6 +192,14 @@ impl AgentDriver for CodexDriver {
         self.spec.mcp_config = config;
         self.server = None;
         Ok(())
+    }
+    // Every `turn/start` carries the approval policy and sandbox: the server stays up.
+    fn set_full_access(&mut self, on: bool) {
+        self.spec.full_access = on;
+    }
+    fn set_pick(&mut self, model: Option<String>, effort: Option<vults_agents::driver::Effort>) {
+        self.spec.model = model;
+        self.spec.effort = effort;
     }
     fn spec(&self) -> &Spec {
         &self.spec
@@ -214,6 +235,11 @@ impl AgentDriver for CodexDriver {
     fn session(&self) -> Option<&str> {
         self.session.as_deref()
     }
+
+    fn forget_session(&mut self) {
+        self.server = None;
+        self.session = None;
+    }
 }
 
 impl CodexDriver {
@@ -229,7 +255,7 @@ impl CodexDriver {
         let Some(server) = self.server.as_mut() else {
             return Err("Codex: no app-server".into());
         };
-        let result = server.turn(input, sink, &self.stop).await;
+        let result = server.turn(input, sink, &self.stop, &self.spec).await;
         if result.is_err() {
             // A dead or confused server is restarted next turn and resumes the same thread.
             self.server = None;

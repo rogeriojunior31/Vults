@@ -116,7 +116,7 @@ globalThis.settingsTestBridge = new Proxy({}, { get: (_obj, name) => {
       case "apiProviders": return { selected: "example", providers: [{ id: "example", label: "Example", local: false, hasKey: false }] };
       case "webSettings": return { on: false, engine: "brave", hasKey: false };
       case "commandCheck": return { status: "parsed", actions: [{ action: "focus", target: "api", value: null, status: "recognized", candidates: [] }] };
-      case "voiceStatus": return { ready: false, models: [
+      case "voiceStatus": return { ready: globalThis.settingsTestVoiceReady ?? false, models: [
         {id:"base",label:"Base: fast, but weak outside English",size:60000000,installed:false},
         {id:"small",label:"Small: good in Portuguese and other languages",size:190000000,installed:false},
         {id:"turbo",label:"Large v3 Turbo: the most accurate; best with a GPU",size:574000000,installed:false}], downloading: [], language: null };
@@ -182,22 +182,23 @@ const dictationPage = async id => {
 const detail = label => page().querySelectorAll("details").find(n => n.dataset.setting === label);
 const button = label => page().querySelectorAll("button").find(n => n.textContent === label);
 assert.equal(root.querySelector(".page-kicker"), null, "Settings is not repeated above the page title");
-assert.equal(detail("Keyboard shortcuts").open, false);
-detail("Keyboard shortcuts").open = true;
+await go("Flock");
+assert.equal(detail("The flock draws from").open, false);
+detail("The flock draws from").open = true;
 page().scrollTop = 125;
 events.onSettings({ sounds: false });
-assert.equal(detail("Keyboard shortcuts").open, true);
+assert.equal(detail("The flock draws from").open, true);
 assert.equal(page().scrollTop, 125);
-await go("Chat & voice");
+await go("Agents");
 const key = page().querySelectorAll("input").find(n => n.type === "password" && n.dataset.setting.startsWith("Example API key"));
 assert.ok(key, "The existing key control remains available");
 key.value = "unsaved-example"; key.focus(); key.setSelectionRange(3, 9);
-detail("Your Claude Code and Codex setup").open = true;
+detail("What each agent can do").open = true;
 events.onSettings({ sounds: true });
 assert.equal(document.activeElement.value, "unsaved-example", "An unrelated refresh preserves the focused draft");
 assert.equal(document.activeElement.selectionStart, 3);
 assert.equal(document.activeElement.selectionEnd, 9);
-assert.equal(detail("Your Claude Code and Codex setup").open, true);
+assert.equal(detail("What each agent can do").open, true); detail("What each agent can do").open = false;
 const beforeMemoryNavigation = writes.length;
 events.onSettingsSection("chatmemory");await tick();
 assert.equal(location.hash,"chatmemory");
@@ -209,8 +210,8 @@ assert.equal(routes.at(-1),"memory");
 routes.pop();
 assert.equal(writes.length,beforeMemoryNavigation,"Memory deep links never enable or save a preference");
 console.log("check-settings-ui: Memory deep link selects/focuses the existing section and returns to Nest without writes");
-await go("General");
-assert.equal(detail("Keyboard shortcuts").open, true, "Disclosures stay open across navigation");
+await go("Flock");
+assert.equal(detail("The flock draws from").open, true, "Disclosures stay open across navigation");
 await go("Agents");
 assert.equal(detail("What each agent can do").open, false, "The duplicate diagnostic list is disclosed on demand");
 await go("History and budget");
@@ -223,7 +224,7 @@ button("Clear history…").fire("click");
 assert.ok(page().textContent.includes("This can't be undone."));
 button("Cancel").fire("click");
 assert.deepEqual(writes, [], "Navigation, disclosures, draft restoration and cancel never write settings or clear history");
-for (const label of ["Dictation", "Approvals", "Projects", "Connection setup", "Phone", "Flock & Zeca", "About"]) {
+for (const label of ["Zeca", "General", "Appearance", "Island", "Sound and notifications", "Keyboard shortcuts", "Dictation", "Approvals", "Projects", "Connection setup", "Phone", "Flock", "Labs", "About"]) {
   await go(label);
   assert.equal(page().querySelectorAll("h1").length, 1, `${label} keeps one page heading`);
   assert.ok(page().querySelector(".settings-heading"));
@@ -236,9 +237,9 @@ assert.equal(gitlabCard.querySelector("input").checked, false);
 assert.ok(gitlabCard.textContent.includes("glab auth login --hostname gitlab.com"));
 assert.ok(gitlabCard.textContent.includes("Last successful GitLab CLI account: reviewer on gitlab.com."));
 assert.deepEqual(writes, []);
-console.log("check-settings-ui: all eleven pages, single headings, disclosed diagnostics/shortcuts, retained scroll/focus/draft, Activity routing and explicit history confirmation");
+console.log("check-settings-ui: every page, single headings, disclosed diagnostics/shortcuts, retained scroll/focus/draft, Activity routing and explicit history confirmation");
 
-await go("General");
+await go("Sound and notifications");
 const soundsRow = () => page().querySelectorAll(".row").find(n => n.querySelector(".row-title")?.textContent === "Sounds");
 const soundsControl = () => soundsRow().querySelector("input");
 holdSettings = true;
@@ -262,6 +263,7 @@ assert.ok(soundsRow().textContent.includes("Saved."));
 console.log("check-settings-ui: localized saving/saved/failure, rollback and pending guard across row repaint");
 
 const rowNamed = name => page().querySelectorAll(".row").find(n => n.querySelector(".row-title")?.textContent === name);
+await go("Island");
 const presenceButtons = () => rowNamed("Presence").querySelectorAll("button");
 presenceButtons().find(n => n.textContent === "Panel").fire("click"); await tick();
 assert.equal(presenceButtons().find(n => n.textContent === "Panel").getAttribute("aria-pressed"), "true");
@@ -321,6 +323,13 @@ events.onSettingsSection("activity"); await tick();
 assert.equal(budgetReads, beforeExternalBudget + 1, "A native page request must load the budget just like sidebar navigation");
 assert.equal(budgetInput().disabled, false);
 console.log("check-settings-ui: external Activity navigation loads its budget editor");
+await go("General");
+const awake = page().querySelectorAll("input").find(n => n.type === "checkbox" && n.dataset.setting?.startsWith("Keep the computer awake"));
+assert.ok(awake && awake.checked, "General offers keep-awake, on by default");
+const beforeAwake = writes.length;
+awake.checked = false; awake.fire("change"); await tick(); await tick();
+assert.deepEqual(writes.slice(beforeAwake), [["setKeepAwake", false]], "Turning keep-awake off writes only that setting");
+console.log("check-settings-ui: keep-awake toggle on General");
 
 // Initial read failures and older responses must never replace a saved budget.
 const budgetBundle = await build({ configFile: false, root: ui, logLevel: "silent", build: {
@@ -355,18 +364,24 @@ reads[3].resolve({ usd: 1, tokens: 100, budget: 7, subscription: true }); await 
 assert.equal(field().value, "8.5", "A read from before the save must not restore the old limit");
 console.log("check-settings-ui: initial budget read failure, stale responses and read/write ordering");
 
-await go("General");
-const themeControl = () => rowNamed("Theme").querySelector("select");
-assert.equal(themeControl().dataset.savedValue, "0");
-themeControl().value = "1"; themeControl().fire("change"); await tick();
-assert.deepEqual(writes.at(-1), ["setTheme", "light"]); assert.equal(themeControl().disabled, true);
-events.onSettings({ volume: 70 }); assert.equal(themeControl().value, "1"); assert.equal(themeControl().disabled, true);
+await go("Appearance");
+// The themes are tiles, one radio group: pending, repaint, rollback and retry as any setting.
+const tiles = () => rowNamed("Theme").querySelectorAll(".theme-tile");
+const checked = () => tiles().findIndex(t => t.getAttribute("aria-checked") === "true");
+assert.equal(tiles().length, 5, "every theme has its tile");
+assert.equal(checked(), 0, "Dark, the default, is chosen");
+tiles()[1].fire("click"); await tick();
+assert.deepEqual(writes.at(-1), ["setTheme", "light"]); assert.equal(tiles()[1].getAttribute("aria-disabled"), "true");
+const pendingWrites = writes.length;
+tiles()[2].fire("click"); await tick();
+assert.equal(writes.length, pendingWrites, "a second click waits for the first");
+events.onSettings({ volume: 70 }); assert.equal(checked(), 1); assert.equal(tiles()[1].getAttribute("aria-disabled"), "true");
 pendingSettings.at(-1).reject(new Error("Cannot save theme")); await tick();
-assert.equal(themeControl().value, "0"); assert.equal(themeControl().disabled, false);
-themeControl().value = "1"; themeControl().fire("change"); await tick(); pendingSettings.at(-1).resolve(); await tick();
-assert.equal(themeControl().value, "1");
-assert.equal(page().querySelectorAll(".settings-group-title").length, 4);
-console.log("check-settings-ui: theme pending/repaint/rollback/retry and grouped General settings");
+assert.equal(checked(), 0); assert.equal(tiles()[0].getAttribute("aria-disabled"), "false");
+tiles()[1].fire("click"); await tick(); pendingSettings.at(-1).resolve(); await tick();
+assert.equal(checked(), 1);
+assert.equal(page().querySelectorAll(".settings-group-title").length, 2, "Appearance: Colors and themes, Interface");
+console.log("check-settings-ui: theme tiles pending/repaint/rollback/retry and grouped General settings");
 
 await go("Dictation");
 const musicControl = () => rowNamed("Music while you speak").querySelector("select");
@@ -408,7 +423,9 @@ for (const [label, key, field] of [["Help the model with these words", "vocabula
   assert.equal(control().checked, true);
 }
 console.log("check-settings-ui: independent processing choices, late-bootstrap race, pending redraw, failure rollback and explicit retry");
-await dictationPage("keys");
+// Dictation's keys live in Keyboard shortcuts, once dictation is set up.
+globalThis.settingsTestVoiceReady = true;
+await go("Keyboard shortcuts"); await tick();
 const modeControl = () => rowNamed("Recording mode").querySelector("select");
 assert.equal(modeControl().dataset.savedValue, "1", "Late bootstrap cannot undo newer gesture choices");
 for (const name of ["Space locks recording", "Esc cancels dictation"]) {
@@ -467,7 +484,7 @@ assert.equal(button("Refresh microphones").disabled, false);
 button("Refresh microphones").fire("click"); await tick();
 microphoneReads[2].reject(new Error("Audio server disconnected")); await tick();
 assert.ok(microphoneControl().textContent.includes("USB mic"), "A failed refresh retains its last list");
-assert.ok(page().textContent.includes("The last list may be out of date"));
+assert.ok(page().textContent.includes("the list may be outdated"));
 button("Refresh microphones").fire("click"); await tick();
 microphoneReads[3].resolve([]); await tick();
 assert.ok(page().textContent.includes("No microphones found"));
@@ -519,17 +536,19 @@ events.onSettings({ dictationInsert: false }); assert.equal(deliveryMode(), "cli
 events.onSettings({ dictationInsert: true }); events.onDictationPermission("ready");
 assert.equal(writes.length, modeWrites, "Mode presentation never writes settings or requests keyboard access");
 events.onShortcutKeys({ talk: "Meta+V", "talk-again": "Meta+B", "talk-cancel": "Meta+X", "talk-command": "Meta+Z" });
-await dictationPage("keys");
-assert.ok(page().textContent.includes("Meta+V") && page().textContent.includes("Meta+B") && page().textContent.includes("Meta+X"));
-assert.ok(rowNamed("Voice command").textContent.includes("Meta+Z"), "The shortcut page separates dictation and local commands");
+await go("Keyboard shortcuts"); await tick();
+// Keys are drawn as caps; each shortcut names its keys whole for assistive tech.
+const keysIn = node => node.querySelectorAll(".keycaps").map(n => n.getAttribute("aria-label")).join(" ");
+assert.ok(keysIn(page()).includes("Meta+V") && keysIn(page()).includes("Meta+B") && keysIn(page()).includes("Meta+X"));
+assert.ok(keysIn(rowNamed("Voice command")).includes("Meta+Z"), "The shortcut page separates dictation and local commands");
 const x11Keys = () => page().querySelector('[data-setting="dictation-x11-keys"]');
 assert.equal(x11Keys().open, false, "Platform-specific gestures start disclosed");
 x11Keys().open = true; events.onSettings({ volume: 80 });
 assert.equal(x11Keys().open, true, "A settings repaint keeps the keyboard disclosure choice");
 await dictationPage("commands");
-assert.ok(rowNamed("Command key").textContent.includes("Meta+Z"), "Dictation shows the command key's actual desktop binding");
+assert.ok(keysIn(rowNamed("Command key")).includes("Meta+Z"), "Dictation shows the command key's actual desktop binding");
 assert.equal(page().querySelector(".voice-command-check"), null, "Command testing belongs to the work page, not preferences");
-await dictationPage("keys");
+await go("Keyboard shortcuts"); await tick();
 assert.equal(pendingShortcutOpens.length, 0, "Entering Settings never launches a desktop editor");
 button("Change in KDE…").fire("click");
 assert.equal(pendingShortcutOpens.length, 1);
@@ -540,14 +559,14 @@ button("Change in KDE…").fire("click");
 assert.equal(pendingShortcutOpens.length, 1, "Repainting cannot duplicate a pending launch");
 await go("General");
 pendingShortcutOpens[0].reject(new Error("Desktop entry missing")); await tick();
-await go("Dictation"); await dictationPage("keys");
+await go("Keyboard shortcuts"); await tick();
 assert.ok(page().querySelector('[role="alert"]').textContent.includes("Could not open KDE Shortcuts"));
 button("Change in KDE…").fire("click");
 assert.ok(!page().querySelectorAll('[role="alert"]').some(n => n.textContent.includes("Could not open KDE Shortcuts")), "Retry clears the previous shortcut failure");
 pendingShortcutOpens[1].resolve(); await tick();
 assert.equal(button("Change in KDE…").disabled, false);
 assert.ok(!page().textContent.includes("Opening KDE Shortcuts"));
-assert.ok(page().textContent.includes("Meta+V"), "Launching the editor never guesses a new binding");
+assert.ok(keysIn(page()).includes("Meta+V"), "Launching the editor never guesses a new binding");
 console.log("check-settings-ui: explicit KDE shortcut launch, retained pending state, failure/retry and no duplicate launch");
 await dictationPage("privacy");
 button("Erase dictation history…").fire("click");
@@ -580,10 +599,10 @@ assert.equal(rowNamed("Language you speak"),undefined,"Chat links to the shared 
 button("Dictation settings").fire("click"); assert.equal(page().querySelector("h1").textContent, "Dictation");
 assert.equal(globalThis.settingsSelectedTab,"settings");
 assert.ok(root.querySelector(".settings-page-picker"), "Global Settings navigation stays available");
-await go("General");
+await go("Keyboard shortcuts");
 assert.equal(rowNamed("Keep dictation history"), undefined, "General links to the single settings owner");
 assert.ok(root.querySelectorAll("button.nav").some(n=>n.textContent==="Dictation"),"Dictation settings are discoverable in the global Settings sidebar");
-button("Dictation settings").fire("click"); assert.equal(globalThis.settingsSelectedTab,"settings");
+await go("Dictation"); assert.equal(globalThis.settingsSelectedTab,"settings");
 await dictationPage("commands");
 assert.equal(writes.filter(write => write[0] === "dictationClear").length, 2);
 console.log("check-settings-ui: dedicated Dictation navigation/keys, shared model link, late-settings race, explicit portal retry and erase confirmation/failure/retry without duplicate writes");
@@ -617,7 +636,7 @@ events.onSettings({ dictationCommandChat: false });
 pendingSettings.at(-1).resolve(); await tick();
 assert.equal(fallback().value, "0");
 assert.ok(page().textContent.includes("Unrecognized phrases stay local."));
-assert.ok(page().textContent.includes("Refused commands and ambiguous names stay local"));
+assert.ok(page().textContent.includes("Needs Zeca on and Chat idle, with nothing unsent. Refused or ambiguous commands stay local."));
 assert.ok(!page().textContent.includes("What you can say"), "Examples remain in the command work page");
 const outputSwitch = () => rowNamed("System audio voice commands").querySelector("input");
 assert.equal(outputSwitch().checked, false, "System audio has its own default-off grant");
@@ -681,7 +700,7 @@ for (const lang of ["pt-BR", "es", "zh"]) {
 events.onSettings({lang:"en"});assert.ok(page().textContent.includes("Base: fast, but weak outside English"));
 console.log("check-settings-ui: retained Dictation configuration and localized voice-model descriptions");
 
-await go("General");
+await go("Appearance");
 const widthPick = () => rowNamed("Mini and Quick width").querySelector("select");
 assert.equal(widthPick().value, "0");
 const priorWrites = writes.length;
@@ -873,7 +892,7 @@ console.log('check-settings-ui: Gitea keeps drafts, clears tokens, serializes sa
 
 // A list that cannot be read says so, with a retry, instead of looking empty or off.
 for (const [label, call, failed] of [
-  ["Projects", "projectsList", "Could not read your project choices."],
+  ["Projects", "projectsList", "Could not show your project choices"],
   ["Phone", "phoneSettings", "Could not read the phone settings."],
   ["Connection setup", "connectorsStatus", "Could not read which connections are on."],
 ]) {

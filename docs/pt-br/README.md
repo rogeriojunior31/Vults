@@ -1,5 +1,5 @@
 # Vults
-<!-- source: fac52ad71713 -->
+<!-- source: 193316d31989 -->
 
 O Vults mostra seus agentes de código na sua área de trabalho e te dá um companheiro para trabalhar junto.
 **O bando**: cada sessão do Claude Code, Codex, Antigravity, OpenCode, Hermes Agent, Qwen Code, Copilot CLI,
@@ -51,4 +51,3 @@ pelas CLIs que você já usa e escuta a sua voz. Ele é opcional: desligue-o e o
 - [Adicionando um agente](contributing/agents.md)
 - [Adicionando um conector](contributing/connectors.md)
 - [Animações](contributing/animations.md)
-- [Decisões (ADRs)](adr/README.md)

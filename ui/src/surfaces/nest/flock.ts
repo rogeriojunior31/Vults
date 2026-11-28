@@ -781,6 +781,7 @@ export function createFlock(on: FlockActions & FlockAsk): {
     decide: () => {},
     decideAlways: () => {},
     decidePlan: () => {},
+    revisePlan: () => {},
     answer: (request: string, answers: Answer[]) => on.answer(request, answers),
     release: (request: string) => on.release(request),
     keyboard: () => {},

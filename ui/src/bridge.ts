@@ -158,10 +158,13 @@ export interface UsageWindow {
   used_percent: number;
   /** Epoch seconds. */
   resets_at: number | null;
+  /** Not the whole plan: a model's weekly allowance (its name), "spend" (a monthly spend cap) or
+   *  "credits" (Codex's monthly credit limit). */
+  scope?: string;
 }
 
 /** Who the chat talks through: a CLI, or a provider's API with the user's key (or a local model). */
-export type ChatProvider = "claude" | "codex" | "api";
+export type ChatProvider = "claude" | "codex" | "api" | `acp:${string}`;
 /** The paired phone (L2) as Settings shows it. */
 export type PhoneDevice = { id: string; name: string; pairedAt: number; revoked: boolean };
 export type PhoneSettings = {
@@ -185,7 +188,7 @@ export type ModelChoice = { id: string; label: string; efforts: string[] };
 export type ChatPick = { model?: string | null; effort?: string | null };
 /** Each CLI engine of the chat: off the PATH, there, or there and signed in. */
 export type EngineState = "missing" | "installed" | "signed-in";
-export type ChatEngines = { claude: EngineState; codex: EngineState };
+export type ChatEngines = { claude: EngineState; codex: EngineState; acp?: { id: `acp:${string}`; title: string }[] };
 
 /** The API chat as the island sees it: usable now, and through whom. */
 export interface ApiStatus {
@@ -420,7 +423,7 @@ export type OpenedConversation = {
   started: boolean;
   model: string | null;
   effort: string | null;
-  lines: { who: string; text: string; files: string[] }[];
+  lines: { who: string; text: string; files: string[]; ms?: number }[];
   profileTitle?: string;
   profileRevision?: number;
   profileSpecies?: string;
@@ -455,16 +458,26 @@ export type ChatActivityEvent =
   | { type: "reasoning"; text: string }
   | { type: "start"; id: string; tool: string; detail: string }
   | { type: "end"; id: string; ok: boolean }
-  | { type: "decision"; tool: string; target: string; answer: string; by: string };
+  /** What the tool printed or returned: its tail, secrets redacted. */
+  | { type: "output"; id: string; text: string }
+  /** The change an editing tool makes, as diff lines (`-`, `+`, ` `, `@@ path`). */
+  | { type: "diff"; id: string; diff: string }
+  | { type: "decision"; tool: string; target: string; answer: string; by: string }
+  /** The agent's plan, the whole list each time. */
+  | { type: "plan"; steps: { text: string; status: string }[] };
 export type ChatActivity = {
   reasoning: string;
-  tools: { id: string; tool: string; detail: string; ok: boolean | null }[];
+  tools: { id: string; tool: string; detail: string; ok: boolean | null; output?: string; diff?: string }[];
   decisions: { tool: string; target: string; answer: string; by: string }[];
   truncated: boolean;
+  /** `pending`, `in_progress` or `completed` each. */
+  plan?: { text: string; status: string }[];
 };
 
 export type ChatDelta =
   | { kind: "text"; text: string }
+  /** How full the model's context is: each part only when the engine says. */
+  | { kind: "context"; used: number | null; window: number | null }
   | { kind: "activity"; event: ChatActivityEvent }
   | {
       kind: "permission";
@@ -479,6 +492,8 @@ export type ChatDelta =
       always: boolean;
       /** The conversation read content from outside, through this tool: the card warns. */
       outside: string | null;
+      /** The agent asks the user: each question with its options. */
+      questions?: { question: string; options: string[] }[];
     }
   | { kind: "allowed"; tool: string; target: string }
   /** The user's own choice for the chat answered with no card (ADR 0002). */
@@ -495,6 +510,8 @@ export type SpecialistFiles = Dropped & { generation: number };
 export interface Dropped {
   copied: string[];
   refused: { name: string; reason: "folder" | "too-big" | "unreadable" }[];
+  /** Folders dropped, by absolute path: named in the draft, never copied. */
+  folders?: string[];
   to: "island" | "nest";
 }
 
@@ -518,7 +535,7 @@ export type DictationOutputLanguage = "en" | "pt-BR" | "es" | "zh";
 
 export type DictationMusic = "lower" | "pause" | "leave";
 
-export type SettingsChange = { questionAgents?: boolean; theme?: Theme; sounds?: boolean; volume?: number; api?: ApiStatus; foldAfter?: number; openOnHover?: boolean; voice?: boolean; zecaSpecies?: string; visitors?: boolean; presence?: Presence; zeca?: boolean; nativeChat?: boolean; dictationKeep?: string; dictationSound?: boolean; dictationCommands?: boolean; dictationCommandMedia?: boolean; dictationCommandApps?: boolean; dictationCommandOutput?: boolean; dictationCleanup?: boolean; meetingSummary?: boolean; voiceRealtime?: boolean; dictationStyle?: DictationStyle; dictationWriteIn?: DictationOutputLanguage | null; dictationSessionsEnglish?: boolean; dictationCommandChat?: boolean; dictationMusic?: DictationMusic; dictationCancelByVoice?: boolean; dictationSpokenCode?: boolean; dictationCutRepeats?: boolean; dictationRetryBase?: boolean; dictationVocabulary?: boolean; dictationProjectVocabulary?: boolean; dictationMicrophone?: string | null; dictationDoubleTap?: boolean; dictationSpaceLock?: boolean; dictationEscapeCancel?: boolean; dictationCaption?: boolean; dictationInsert?: boolean; chatAccess?: ChatAccess; memory?: boolean; journalSummary?: boolean; localEmbeddings?: boolean; memorySuggest?: boolean; sleep?: boolean; zecaLook?: string; widget?: Corner | null; projects?: Record<string, ProjectPrefs>; dndUntil?: number | null; language?: string | null; lang?: string; history?: boolean; flock?: Flock };
+export type SettingsChange = { labs?: Record<string, boolean>; questionAgents?: boolean; theme?: Theme; sounds?: boolean; volume?: number; api?: ApiStatus; foldAfter?: number; openOnHover?: boolean; voice?: boolean; zecaSpecies?: string; visitors?: boolean; presence?: Presence; zeca?: boolean; nativeChat?: boolean; dictationKeep?: string; dictationSound?: boolean; dictationCommands?: boolean; dictationCommandMedia?: boolean; dictationCommandApps?: boolean; dictationCommandOutput?: boolean; dictationCleanup?: boolean; meetingSummary?: boolean; voiceRealtime?: boolean; dictationStyle?: DictationStyle; dictationWriteIn?: DictationOutputLanguage | null; dictationSessionsEnglish?: boolean; dictationCommandChat?: boolean; dictationMusic?: DictationMusic; dictationCancelByVoice?: boolean; dictationSpokenCode?: boolean; dictationCutRepeats?: boolean; dictationRetryBase?: boolean; dictationVocabulary?: boolean; dictationProjectVocabulary?: boolean; dictationMicrophone?: string | null; dictationDoubleTap?: boolean; dictationSpaceLock?: boolean; dictationEscapeCancel?: boolean; dictationCaption?: boolean; dictationInsert?: boolean; chatAccess?: ChatAccess; memory?: boolean; journalSummary?: boolean; localEmbeddings?: boolean; memorySuggest?: boolean; sleep?: boolean; zecaLook?: string; widget?: Corner | null; projects?: Record<string, ProjectPrefs>; dndUntil?: number | null; language?: string | null; lang?: string; history?: boolean; flock?: Flock };
 
 /** The presence preset (crates/core `Presence`). */
 export type Presence = "island" | "panel" | "quiet" | "paused";
@@ -586,6 +603,7 @@ export const Bridge = {
   decideAlways: (request: string) => invoke<void>("decide_always", { request }),
   /** A Claude Code plan allowed, its session accepting edits (ADR 0002). */
   decidePlan: (request: string) => invoke<void>("decide_plan", { request }),
+  revisePlan: (request: string, feedback: string) => invoke<void>("revise_plan", { request, feedback }),
   setQuestionAgents: (on: boolean) => invoke<void>("question_agents_set", { on }),
   questionInstallStatus: () => invoke<QuestionInstallStatus[]>("question_install_status"),
   questionInstallPreview: (agent: string, install: boolean) => invoke<InstallPreview>("question_install_preview", { agent, install }),
@@ -666,7 +684,7 @@ export const Bridge = {
       ? invoke<void>("set_voice_realtime", { on, limitMicrousd, model })
       : Promise.reject(new Error("Invalid realtime voice budget.")),
   appSettings: () =>
-    invoke<{ questionAgents: boolean; antigravityApprovals: boolean; theme: Theme; history: boolean; sounds: boolean; volume: number; autostart: boolean; foldAfter: number; openOnHover: boolean; monitor: string | null; nowPlaying: boolean; codexUsage: boolean; claudeUsage: boolean; priceUpdates: boolean; nativeChat: boolean; dictationKeep: string; dictationSound: boolean; dictationCommands: boolean; dictationCommandMedia: boolean; dictationCommandApps: boolean; dictationCommandOutput: boolean; dictationCleanup: boolean; meetingSummary: boolean; dictationStyle: DictationStyle; dictationWriteIn: DictationOutputLanguage | null; dictationSessionsEnglish: boolean; dictationCommandChat: boolean; dictationMusic: DictationMusic; dictationCancelByVoice: boolean; dictationSpokenCode: boolean; dictationCutRepeats: boolean; dictationRetryBase: boolean; dictationVocabulary: boolean; dictationProjectVocabulary: boolean; dictationMicrophone: string | null; dictationDoubleTap: boolean; dictationSpaceLock: boolean; dictationEscapeCancel: boolean; dictationCaption: boolean; dictationInsert: boolean; dictationInsertAvailable: boolean; dictationWayland: boolean; chatAccess: ChatAccess; memory: boolean; journalSummary: boolean; localEmbeddings: boolean; memorySuggest: boolean; sleep: boolean; zecaSpecies: string; zecaLook: string; flock: Flock; visitors: boolean; presence: Presence; notifications: boolean; quietWhenWatching: boolean; zeca: boolean; widget: Corner | null; dndUntil: number | null; language: string | null; lang: string; settingsPath: string; dataPath: string }>("app_settings"),
+    invoke<{ questionAgents: boolean; antigravityApprovals: boolean; labs: Record<string, boolean>; theme: Theme; history: boolean; sounds: boolean; volume: number; autostart: boolean; foldAfter: number; openOnHover: boolean; monitor: string | null; nowPlaying: boolean; codexUsage: boolean; claudeUsage: boolean; priceUpdates: boolean; nativeChat: boolean; dictationKeep: string; dictationSound: boolean; dictationCommands: boolean; dictationCommandMedia: boolean; dictationCommandApps: boolean; dictationCommandOutput: boolean; dictationCleanup: boolean; meetingSummary: boolean; dictationStyle: DictationStyle; dictationWriteIn: DictationOutputLanguage | null; dictationSessionsEnglish: boolean; dictationCommandChat: boolean; dictationMusic: DictationMusic; dictationCancelByVoice: boolean; dictationSpokenCode: boolean; dictationCutRepeats: boolean; dictationRetryBase: boolean; dictationVocabulary: boolean; dictationProjectVocabulary: boolean; dictationMicrophone: string | null; dictationDoubleTap: boolean; dictationSpaceLock: boolean; dictationEscapeCancel: boolean; dictationCaption: boolean; dictationInsert: boolean; dictationInsertAvailable: boolean; dictationWayland: boolean; chatAccess: ChatAccess; memory: boolean; journalSummary: boolean; localEmbeddings: boolean; memorySuggest: boolean; sleep: boolean; zecaSpecies: string; zecaLook: string; flock: Flock; visitors: boolean; presence: Presence; notifications: boolean; quietWhenWatching: boolean; keepAwake: boolean; zeca: boolean; widget: Corner | null; dndUntil: number | null; language: string | null; lang: string; settingsPath: string; dataPath: string }>("app_settings"),
   /** "While you were away" read: it goes. */
   digestDismiss: () => invoke<void>("digest_dismiss"),
   recapDismiss: () => invoke<void>("recap_dismiss"),
@@ -675,6 +693,7 @@ export const Bridge = {
   /** Desktop notifications (finished, failed, a card waiting): on or off. */
   setNotifications: (on: boolean) => invoke<void>("set_notifications", { on }),
   setQuietWhenWatching: (on: boolean) => invoke<void>("set_quiet_when_watching", { on }),
+  setKeepAwake: (on: boolean) => invoke<void>("set_keep_awake", { on }),
   /** The presence preset: Island, Panel (by the tray), Quiet or Paused. Switches at once. */
   setPresence: (presence: Presence) => invoke<void>("set_presence", { presence }),
   /** Where the island is now, for its page on load. */
@@ -768,6 +787,8 @@ export const Bridge = {
   setMemorySuggest: (on: boolean) => invoke<void>("set_memory_suggest", { on }),
   setSleep: (on: boolean) => invoke<void>("set_sleep", { on }),
   setAntigravityApprovals: (on: boolean) => invoke<void>("set_antigravity_approvals", { on }),
+  /** A Labs feature on or off (Settings → Labs only). */
+  setLab: (id: string, on: boolean) => invoke<void>("set_lab", { id, on }),
   webSettings: () => invoke<WebSettings>("web_settings"),
   setWeb: (on: boolean) => invoke<void>("set_web", { on }),
   setWebEngine: (engine: WebEngine) => invoke<void>("set_web_engine", { engine }),
@@ -781,6 +802,7 @@ export const Bridge = {
   setPhoneListen: (addr: string) => invoke<void>("set_phone_listen", { addr }),
   phonePair: () => invoke<Pairing>("phone_pair"),
   phonePairCancel: () => invoke<void>("phone_pair_cancel"),
+  phonePairCopy: (text: string) => invoke<void>("phone_pair_copy", { text }),
   phoneRevoke: (id: string) => invoke<void>("phone_revoke", { id }),
   onPhone(cb: (e: PhoneEvent) => void): void {
     void listen<PhoneEvent>("phone", (e) => cb(e.payload));
@@ -860,6 +882,17 @@ export const Bridge = {
   chatDecide: (id: string, answer: ChatAnswer) => invoke<void>("chat_decide", { id, answer }),
   chatStop: () => invoke<void>("chat_stop"),
   chatReset: (provider: ChatProvider | null, generation?: number) => invoke<{ provider: ChatProvider; generation: number }>("chat_reset", { provider, generation }),
+  chatReply: (id: string, text: string) => invoke<void>("chat_reply", { id, text }),
+  /** The system's folder chooser for where the chat works; null when cancelled. */
+  chatPickFolder: (title: string) => invoke<string | null>("chat_pick_folder", { title }),
+  /** A typed or pasted folder, as the system resolves it; refused when it isn't one. */
+  chatCheckFolder: (path: string) => invoke<string>("chat_check_folder", { path }),
+  /** The folders the chat last worked in that are still there, newest first. */
+  chatRecentFolders: () => invoke<string[]>("chat_recent_folders"),
+  chatPaste: (name: string, bytes: number[]) => invoke<string>("chat_paste", { name, bytes }),
+  chatPaths: (folder: string | null, query: string) => invoke<{ path: string; dir: boolean }[]>("chat_paths", { folder, query }),
+  chatSignIn: (provider: ChatProvider) => invoke<void>("chat_sign_in", { provider }),
+  chatSwitchEngine: (provider: ChatProvider, generation?: number) => invoke<OpenedConversation>("chat_switch_engine", { provider, generation }),
   chatCurrent: () => invoke<OpenedConversation | null>("chat_current"),
   chatDraft: () => invoke<ChatDraft>("chat_draft"),
   chatPrepareZeca: (generation?: number) => invoke<void>("chat_prepare_zeca", { generation }),

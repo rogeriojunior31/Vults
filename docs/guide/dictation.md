@@ -11,8 +11,8 @@ is [Meetings](meetings.md).
 
 1. Open **Settings > Dictation > Voice** and install a speech model. *Small* is a good start; on a
    computer with a GPU (Vulkan), *Turbo* is faster and more accurate.
-2. Accept the desktop's request for the global shortcuts. **Settings > Dictation > Keyboard
-   shortcuts** shows the keys actually bound.
+2. Accept the desktop's request for the global shortcuts. **Settings > Keyboard shortcuts > Dictation**
+   shows the keys actually bound, once dictation has a voice model.
 3. Click in the app where you want the text, **hold Ctrl+Alt+V**, speak, and release.
 4. Wait for **Copied**, then paste (Ctrl+V, or Ctrl+Shift+V in a terminal).
 
@@ -29,7 +29,7 @@ and the result. It never takes focus or clicks, and it hides whenever a permissi
 | **Ctrl+Alt+X** | Cancel the dictation, even while it is transcribing |
 | **Ctrl+Alt+B** | Copy the last dictation again |
 
-- **Hold only** (in Keyboard shortcuts) turns off the double tap.
+- **Hold only** (in **Settings > Keyboard shortcuts > Dictation**) turns off the double tap.
 - On X11, **Space** while holding also locks hands-free, and **Esc** cancels. Both can be turned off.
   On Wayland use the double tap and Ctrl+Alt+X.
 - Saying **cancel** or **never mind** at the end (*cancela*, *deixa pra lá*, *déjalo*) discards the <!-- check-english:allow -->
@@ -90,7 +90,7 @@ Other apps keep the words. Turn it off in **Settings > Dictation > Paste > Spoke
 ## Styles and text clean-up
 
 Optionally, a model can tidy the text after it is transcribed. **Dictation > Styles**, **Clean up
-with a model** is off by default; it uses the API provider chosen in **Settings > Chat & voice**
+with a model** is off by default; it uses the API provider chosen in **Settings > Agents**
 (a local Ollama or LM Studio works too). Only text is sent, never audio.
 
 | Style | Result |

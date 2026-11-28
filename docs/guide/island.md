@@ -6,7 +6,7 @@ On X11 it shows on every workspace. It takes the keyboard only while you type in
 **Ctrl+Alt+Space** ([below](#getting-to-a-session)).
 
 With more than one screen, the desktop picks one (usually the focused screen at start). To pin the
-island to a screen, choose it in **Settings → General → Screen**. If that screen goes away, the
+island to a screen, choose it in **Settings → Island → Screen**. If that screen goes away, the
 island moves to another one and comes back when it returns.
 
 The Windows preview uses a normal desktop window. Desktop notification setup is described
@@ -31,13 +31,13 @@ takes his spot. Every other session is a **vult**.
 The birds act out what their sessions do: they read, peck the wire while editing, take off for the
 web, and spread their wings when a permission waits (with a mark over the head; at dawn the resting
 birds open theirs to the sun, with no mark). New sessions fly in; ended ones fly off. Reduced
-motion keeps them on their perches. **Settings → Flock & Zeca** picks the species pool, Zeca's species and
-the rare visitors. [Animations](../contributing/animations.md) lists every clip.
+motion keeps them on their perches. **Settings → Flock** picks the species pool and the rare
+visitors; **Settings → Zeca**, his species and look. [Animations](../contributing/animations.md) lists every clip.
 
 ### Zeca's seasonal looks
 
 Zeca dresses for the season: a witch hat in October, a Santa hat in December, a party hat at New
-Year, bunny ears at Easter, by your computer's date. **Settings → Flock & Zeca → Look** (with Zeca drawn
+Year, bunny ears at Easter, by your computer's date. **Settings → Zeca → Look** (with Zeca drawn
 beside it: in the look you pick, in his own feathers on Auto) keeps one look all year, or none, and adds sunglasses and fourteen outfits with no season. **Right-click Zeca** on the
 island to pick one in place: he wears whatever the pointer rests on, a click keeps it, Escape leaves
 him as he was. Only Zeca wears them.
@@ -48,7 +48,7 @@ him as he was. Only Zeca wears them.
 
 ### Without Zeca
 
-Zeca is optional. **Settings → Flock & Zeca → Zeca** turns him off; the flock keeps working: sessions on the
+Zeca is optional. **Settings → Zeca → Zeca** turns him off; the flock keeps working: sessions on the
 wire, permission and question cards, the Allow / Deny shortcuts, notifications, connectors and the
 presets. What goes with him:
 
@@ -95,7 +95,7 @@ gear), and **Full** opens it on the whole screen. Each one says what it is in th
 a card waits, it takes the flock's place. **Settings → General →
 Fold the island** sets the wait.
 
-With **Settings → General → Open on hover** on, resting the pointer on the pill opens it without a
+With **Settings → Island → Open on hover** on, resting the pointer on the pill opens it without a
 click. Opened that way, it folds as soon as the pointer leaves, unless you clicked in it. Off by
 default, and not in *Panel*.
 
@@ -110,7 +110,7 @@ Two things keep it open until you are done:
 With nobody on the wire for a minute, the island **hides**. Move the pointer to the middle of the top
 edge of the screen to bring it back.
 
-**Settings > General > Appearance > Mini and Quick width**, also available in Quick's gear
+**Settings > Appearance > Mini and Quick width**, also available in Quick's gear
 under **General**, offers 560, 680 or 760 logical pixels. Both controls edit the same preference;
 a change in one is reflected in the other. The flock wire, bird positions, labels and
 session targets follow the measured content width together, keeping the sprites at their original scale.
@@ -136,7 +136,7 @@ position. A failed width save is announced and leaves the saved choice active.
 
 ## Presence: how much it shows
 
-**Settings → General → Presence**, or the tray's menu (Linux), picks one of four presets, at once.
+**Settings → Island → Presence**, or the tray's menu (Linux), picks one of four presets, at once.
 
 | Preset | At rest | A card that needs you |
 |---|---|---|
@@ -176,7 +176,7 @@ island at the top.
 
 ## The corner widget
 
-**Settings → General → Corner widget** puts a small window in a corner you pick; it is off until you
+**Settings → Island → Corner widget** puts a small window in a corner you pick; it is off until you
 pick one. It works with every preset. It shows up to three birds (the session in front, then the ones
 that want you most) and how many sessions need you or are working. An amber rim means someone needs
 you.
@@ -199,7 +199,7 @@ titled with its project; it goes away once the card is answered, the session wor
 leaves when its session closes; finishing a response or staying silent does not remove it. What happened while they were off is not raised later.
 
 **Open** (or a click) brings up the island with that session in front. A notification never has Allow
-or Deny. Turn them off in **Settings → General → Notifications**.
+or Deny. Turn them off in **Settings → Sound and notifications → Notifications**.
 
 On Windows, install the NSIS package with its Start menu shortcut so Windows can identify Vults.
 An unregistered development executable may not display notifications. Windows notification settings
@@ -277,7 +277,7 @@ the network).
 
 ## Now playing
 
-Turn on **Settings → General → Now playing** and the island shows the song your player is playing
+Turn on **Settings → Sound and notifications → Now playing** and the island shows the song your player is playing
 (any player that speaks MPRIS: Spotify, a browser tab, mpv). The compact island shows it when nothing
 runs; the open island shows it in the top bar, with previous, play/pause and next on hover. While
 it plays, Zeca dances and the flock's idle birds court on the wire instead of soaring.
@@ -289,6 +289,11 @@ it plays, Zeca dances and the flock's idle birds court on the wire instead of so
 The open island's top bar shows how much of your plans' limits you have used, next to each agent's
 dot: *7d 12%* is 12% of the weekly window. It turns amber at 70% and red at 90%; hover to see when it
 resets. No token of yours is read: each number comes from the CLI you logged into.
+The chat's usage hint and **Nest → Records** also say each window's pace: *Ahead of pace* when more
+than 5 points of it are used beyond the share of time gone, *Under pace* when 5 below, else *On pace*.
+Tokens read as 950, 1.25K, 12.5K or 1.2M. Beside the 5-hour and weekly windows, Records lists what
+the same answers also carry: a model's own weekly allowance (*Opus, weekly*), Claude's *Monthly spend*
+when extra usage is on, a Free or Go plan's monthly Codex window and Codex's *Monthly credit limit*.
 
 - **Codex**: with **Settings → General → Codex usage** on, asked every 5 minutes, read-only, never
   while the screen is locked. It reaches OpenAI through your codex, so it is off on a new install.
@@ -424,7 +429,7 @@ These choices belong to the project (its folder): every session in it follows th
 
 Short 8-bit blips when a session needs you, finishes or fails, and for connector news; softer ones
 when the island opens or folds and when Zeca reacts to you. The speaker button on the island, or
-**Settings → General → Sounds**, turns them off; **Volume** sets how loud. A card that keeps waiting
+**Settings → Sound and notifications → Sounds**, turns them off; **Volume** sets how loud. A card that keeps waiting
 sounds again, and **Do not disturb** silences sounds and notifications for a while: see
 [When nobody answers](approvals.md#when-nobody-answers).
 

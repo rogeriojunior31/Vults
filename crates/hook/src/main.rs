@@ -110,10 +110,17 @@ fn relay(event: Event, raw: &[u8]) -> Option<String> {
     };
     match outcome {
         // The whole input, as the agent sent it: the app's copy had its strings capped.
-        Some(Outcome::Decision(decision, _)) if antigravity => Some(output::antigravity_decision(decision)),
-        Some(Outcome::Decision(decision, then)) => {
-            output::decision_for(agent, tool.as_deref(), original_input(raw), decision, then)
-        }
+        Some(Outcome::Decision(decision, ..)) if antigravity => Some(output::antigravity_decision(decision)),
+        Some(Outcome::Decision(decision, then, reason)) => output::decision_for(
+            agent,
+            tool.as_deref(),
+            original_input(raw),
+            output::Click {
+                decision,
+                then,
+                reason,
+            },
+        ),
         // The answers go back inside the tool's own input, as the agent sent it: the copy
         // the app saw had its strings capped.
         Some(Outcome::Answers(answers)) => {
@@ -132,7 +139,7 @@ enum Step {
 
 /// What the app said to an event that waited.
 enum Outcome {
-    Decision(protocol::Decision, Option<protocol::Then>),
+    Decision(protocol::Decision, Option<protocol::Then>, Option<String>),
     Answers(Vec<protocol::Answer>),
 }
 
@@ -281,9 +288,9 @@ fn talk(event: &Event, steps: &mpsc::Sender<Step>) -> Option<Outcome> {
                 id,
                 decision,
                 then,
-                ..
+                reason,
             } if v == protocol::VERSION && id == event.id => {
-                return Some(Outcome::Decision(decision, then));
+                return Some(Outcome::Decision(decision, then, reason));
             }
             Reply::Answer { v, id, answers } if v == protocol::VERSION && id == event.id => {
                 return Some(Outcome::Answers(answers));

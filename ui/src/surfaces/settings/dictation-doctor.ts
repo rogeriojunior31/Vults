@@ -62,9 +62,9 @@ export function createDictationDoctor(api: Backend) {
     });
     const meter = el("div", { class: "diagnostic-bands" }, ...bars); meter.setAttribute("aria-hidden", "true");
     micBody.replaceChildren(el("h3", { text: t("Microphone test") }),
-      el("p", { class: "hint", text: t("Six seconds: stay quiet for two, then speak. Audio stays in memory, is discarded after the test and is never transcribed.") }),
+      el("p", { class: "hint", text: t("Six seconds: stay quiet for two, then speak. Audio stays in memory and is never transcribed.") }),
       el("div", { class: "actions" }, start, cancel), meter, instruction,
-      ...(mic?.phase === "done" ? [el("p", { class: "hint", text: t("Estimated noise floor: {value} dBFS (digital level, not room loudness).", { value: number(mic.noise_db) }) })] : []));
+      ...(mic?.phase === "done" ? [el("p", { class: "hint", text: t("Noise floor: {value} dBFS (digital level, not room loudness).", { value: number(mic.noise_db) }) })] : []));
     updateMeter();
     if (focused) (running ? cancel : start).focus({ preventScroll: true });
   }
@@ -113,14 +113,14 @@ export function createDictationDoctor(api: Backend) {
         fact(t("Native input rate"), number(s.rate, " Hz")), fact(t("Desktop session"), s.session === "unknown" ? t("Unknown") : s.session),
         fact(`${t("Recording shortcut")} · ${s.session === "Windows" ? t("Windows global shortcuts") : t("GlobalShortcuts portal")}`, state(s.shortcuts)), fact(`${t("Text delivery")} · ${s.session === "Windows" ? t("Windows text fields") : t("RemoteDesktop keyboard access")}`, state(s.keyboard)),
         fact(`${t("Text delivery")} · ${s.session === "Windows" ? t("Windows foreground tracking") : t("KWin focus script")}`, state(s.kwin)), fact(t("GPU transcription"), yes(s.gpu)), fact(`${t("Speech detection")} · ${t("Local VAD model")}`, yes(s.vad))),
-        el("p", { class: "hint", text: t("Checks read current state without requesting permissions. Missing input uses the same fallback as dictation. GPU readiness does not measure speed.") }));
+        el("p", { class: "hint", text: t("Checks never ask for permissions. GPU readiness does not measure speed.") }));
       const counters = el("details", { class: "diagnostic-counters" }, el("summary", { text: t("Counters since app start") }), el("dl", { class: "diagnostic-facts" },
         fact(t("Repetitive runs cut"), String(report.counters.loops)), fact(t("Base retries"), String(report.counters.retries)), fact(t("Copied outcomes"), String(report.counters.copied))),
-        el("p", { class: "hint", text: t("Final dictation decodes only. Preview and Chat are excluded; Copy again can add a Copied outcome. Counters reset when Vults exits.") }));
+        el("p", { class: "hint", text: t("Counts final dictations only, not Preview or Chat. Resets when Vults exits.") }));
       counters.dataset.setting = "diagnostic-counters"; counters.open = countersExpanded;
       counters.addEventListener("toggle", () => { countersExpanded = counters.open; });
       const timings = el("details", { class: "diagnostic-timing-card" }, el("summary", { text: t("Stage timings") }),
-        el("p", { class: "hint", text: t("Latest 50 retained, delivered dictations. Missing or unused stages stay unknown; erasing text erases its timings.") }));
+        el("p", { class: "hint", text: t("Your last 50 dictations. Erasing a text erases its timings.") }));
       if (report.timings) {
         const table = el("table", { class: "diagnostic-timings" }, el("caption", { text: t("Measured durations in milliseconds") }),
           el("thead", {}, el("tr", {}, ...[t("Stage"), t("Samples"), "p50", "p95"].map(text => { const th = el("th", { text }); th.scope = "col"; return th; }))),

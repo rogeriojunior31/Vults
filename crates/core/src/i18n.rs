@@ -419,6 +419,58 @@ pub fn recap_card(lang: Lang, headline: &str) -> String {
     }
 }
 
+/// The notification when agent events can't reach Vults: another program holds its connection.
+pub fn hooks_unreachable(lang: Lang) -> (&'static str, &'static str) {
+    match lang {
+        Lang::En => (
+            "Vults can't hear your agents",
+            "Another program holds its connection, so no session, card or turn reaches it. Quit any other copy of Vults, or restart it.",
+        ),
+        Lang::PtBr => (
+            "O Vults não consegue ouvir os seus agentes",
+            "Outro programa está com a conexão dele, então nenhuma sessão, card ou turno chega. Feche qualquer outra cópia do Vults, ou reinicie-o.",
+        ),
+        Lang::Es => (
+            "Vults no puede oír a tus agentes",
+            "Otro programa tiene su conexión, así que no le llega ninguna sesión, tarjeta ni turno. Cierra cualquier otra copia de Vults o reinícialo.",
+        ),
+        Lang::Zh => (
+            "Vults 听不到你的代理",
+            "另一个程序占用了它的连接，所以会话、卡片和回合都无法到达。请退出其他 Vults 副本，或重新启动它。",
+        ),
+    }
+}
+
+/// Asked before quitting while a chat turn runs: title, body, the quit button, the stay button.
+pub fn quit_mid_turn(lang: Lang) -> (&'static str, &'static str, &'static str, &'static str) {
+    match lang {
+        Lang::En => (
+            "A chat turn is still running",
+            "Quitting now stops it, and its unfinished reply is lost.",
+            "Quit",
+            "Keep working",
+        ),
+        Lang::PtBr => (
+            "Um turno do chat ainda está rodando",
+            "Sair agora o interrompe, e a resposta pela metade se perde.",
+            "Sair",
+            "Continuar",
+        ),
+        Lang::Es => (
+            "Un turno del chat sigue en marcha",
+            "Salir ahora lo detiene, y su respuesta a medias se pierde.",
+            "Salir",
+            "Seguir",
+        ),
+        Lang::Zh => (
+            "聊天回合仍在运行",
+            "现在退出会中断它，未完成的回复会丢失。",
+            "退出",
+            "继续",
+        ),
+    }
+}
+
 /// A quiet bird's notification: it only informs (`crate::silence`).
 pub fn silent_body(lang: Lang) -> &'static str {
     match lang {

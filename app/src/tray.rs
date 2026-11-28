@@ -95,6 +95,27 @@ const PRESETS: [(&str, Presence, Menu); 4] = [
     ("preset-paused", Presence::Paused, Menu::Paused),
 ];
 
+/// Quits, but asks first while a chat turn runs, since quitting cuts it (t3code asks too).
+fn quit(app: &AppHandle) {
+    if !crate::chat::any_busy(app) {
+        app.exit(0);
+        return;
+    }
+    use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
+    let (title, body, leave, stay) = vults_core::i18n::quit_mid_turn(crate::settings::lang(app));
+    let app = app.clone();
+    app.dialog()
+        .message(body)
+        .title(title)
+        .kind(MessageDialogKind::Warning)
+        .buttons(MessageDialogButtons::OkCancelCustom(leave.into(), stay.into()))
+        .show(move |quit| {
+            if quit {
+                app.exit(0);
+            }
+        });
+}
+
 /// The menu: what each entry does.
 fn pick(app: &AppHandle, id: &str) {
     use tauri::Emitter;
@@ -104,7 +125,7 @@ fn pick(app: &AppHandle, id: &str) {
         }
         "nest" => crate::open_nest(app, None, None),
         "setup" => crate::open_settings(app, Some("agents")),
-        "quit" => app.exit(0),
+        "quit" => quit(app),
         _ => {
             if let Some((_, presence, _)) = PRESETS.iter().find(|(p, ..)| *p == id)
                 && let Err(e) = crate::panel::set(app, *presence)

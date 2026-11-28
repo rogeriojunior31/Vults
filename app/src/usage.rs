@@ -75,18 +75,21 @@ fn merge(old: &[Window], new: Vec<Window>, now: i64) -> Vec<Window> {
         .into_iter()
         .map(|read| {
             old.iter()
-                .find(|kept| kept.minutes == read.minutes && newer(kept, &read))
+                .find(|kept| kept.minutes == read.minutes && kept.scope == read.scope && newer(kept, &read))
                 .cloned()
                 .unwrap_or(read)
         })
         .collect();
     let mut windows: Vec<Window> = old
         .iter()
-        .filter(|w| !new.iter().any(|n| n.minutes == w.minutes) && w.resets_at.is_none_or(|at| at > now))
+        .filter(|w| {
+            !new.iter().any(|n| n.minutes == w.minutes && n.scope == w.scope)
+                && w.resets_at.is_none_or(|at| at > now)
+        })
         .cloned()
         .collect();
     windows.extend(new);
-    windows.sort_by_key(|w| w.minutes);
+    windows.sort_by_key(|w| (w.minutes, w.scope.is_some()));
     windows
 }
 
@@ -249,6 +252,7 @@ mod tests {
             minutes: 300,
             used_percent: 40,
             resets_at,
+            scope: None,
         }
     }
 
@@ -274,6 +278,7 @@ mod tests {
             minutes,
             used_percent,
             resets_at,
+            scope: None,
         };
         let both = merge(
             &[],

@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: 46d302306e04 -->
+<!-- source: 5572042b8520 -->
 
 Fale e suas palavras viram texto no aplicativo que você estava usando. Tudo roda neste computador:
 o modelo de fala é local, o áudio fica na memória e nada é enviado com Enter. O ditado funciona com
@@ -14,8 +14,8 @@ fica em [Reuniões](meetings.md).
 
 1. Abra **Configurações > Ditado > Voz** e instale um modelo de fala. *Small* é um bom começo; num
    computador com GPU (Vulkan), *Turbo* é mais rápido e mais preciso.
-2. Aceite o pedido do desktop para os atalhos globais. **Configurações > Ditado > Atalhos de
-   teclado** mostra as teclas realmente vinculadas.
+2. Aceite o pedido do desktop para os atalhos globais. **Configurações > Atalhos de teclado >
+   Ditado** mostra as teclas realmente vinculadas, quando o ditado tiver um modelo de voz.
 3. Clique no aplicativo onde quer o texto, **segure Ctrl+Alt+V**, fale e solte.
 4. Espere **Copiado** e cole (Ctrl+V, ou Ctrl+Shift+V num terminal).
 
@@ -34,7 +34,7 @@ fala e o resultado. Ela nunca pega o foco nem cliques, e some sempre que aparece
 | **Ctrl+Alt+X** | Cancela o ditado, mesmo durante a transcrição |
 | **Ctrl+Alt+B** | Copia de novo o último ditado |
 
-- **Só segurar** (em Atalhos de teclado) desliga o toque duplo.
+- **Só segurar** (em **Configurações > Atalhos de teclado > Ditado**) desliga o toque duplo.
 - No X11, **Espaço** enquanto segura também trava a gravação sem as mãos, e **Esc** cancela. Os dois
   podem ser desligados. No Wayland, use o toque duplo e Ctrl+Alt+X.
 - Dizer **cancela** ou **deixa pra lá** no final (*cancel*, *never mind*, *déjalo*) descarta o
@@ -105,7 +105,7 @@ Os outros aplicativos mantêm as palavras. Desligue em **Configurações > Ditad
 
 Se você quiser, um modelo pode arrumar o texto depois da transcrição. Em **Ditado > Estilos**,
 **Limpar com um modelo** começa desligado; ele usa o provedor de API escolhido em **Configurações >
-Chat e voz** (um Ollama ou LM Studio local também serve). Só texto é enviado, nunca áudio.
+Agentes** (um Ollama ou LM Studio local também serve). Só texto é enviado, nunca áudio.
 
 | Estilo | Resultado |
 | --- | --- |

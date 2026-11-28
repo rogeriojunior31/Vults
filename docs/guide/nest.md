@@ -11,9 +11,13 @@ and all: one surface on screen at a time. The Nest has no system title bar: its 
 (its window has the focus), and on the island, which comes up for it, while you are elsewhere.
 
 Activity, Connections and Settings share neutral controls, page headings, cards and view states.
-**Settings → General → Theme** chooses **Dark** (the default), the neutral **Light**, or one of
+**Settings → Appearance → Theme** chooses **Dark** (the default), the neutral **Light**, or one of
 three SP Night themes, three views of the city at night (**Noite Paulista**; **Garoa**, the flat
 grey of drizzle; **Pico do Jaraguá**, the dark of the forest), across every window. <!-- check-english:allow -->
+Each theme is a tile holding a small picture of Vults in its own colors (the island with its flock on
+the wire, the Nest's list and a card): Dark and Light first, then the three SP Night views under
+their name. Arrow keys move the choice; it applies at once, and a change that can't be saved goes
+back with a note.
 Activity and Connections use underlined view tabs; status colors keep their meaning. The Flock stage,
 diffs and Compact controls follow the same theme, including live changes to the birds'
 agent colors and wire.
@@ -67,7 +71,7 @@ agent's config, a key, a policy or a phone, and it never shows an agent's text. 
 the tab you are on: **Room** is the window, **Full** the whole screen (**Esc** goes
 back to Room), **Quick** closes the Nest and opens the island, **Mini** closes it and leaves the
 pill. **Alt+1** to **Alt+5** pick a tab in that order (hidden Chat is skipped). At the bottom, **Zeca on** / **Zeca off**
-switches him (as **Settings → Flock & Zeca → Zeca** does), the pencil (**Zeca's look**) opens his page in
+switches him (as **Settings → Zeca → Zeca** does), the pencil (**Zeca's look**) opens his page in
 Settings, **Open terminal** brings up the terminal of the session in front, and **Back to the
 island** brings the island up.
 
@@ -290,8 +294,10 @@ with their project, executor and time below the title; the current conversation 
 conversations past the initial 30. **Show more** reveals the rest. The search stays on this
 computer when the Nest closes and reopens. **+ New conversation** and switching to another
 conversation wait while Zeca replies. A failed update keeps the last list and offers **Try again**.
-The right button opens **Memory**, what Zeca remembers, beside the conversation: what waits for
-your yes, the files and their history ([Zeca's memory](memory.md)). Before anything is said, the
+The right button opens the **Side panel** beside the conversation. **Memory** is what Zeca
+remembers: what waits for your yes, the files and their history ([Zeca's memory](memory.md)).
+**Changes** lists the files the agent changed in this conversation with their diffs, and **Files**
+finds files and folders in its folder; a click in either puts the path in the draft. Before anything is said, the
 composer waits in the middle with a few questions to start. Without Zeca there is no Chat tab.
 
 ## Activity

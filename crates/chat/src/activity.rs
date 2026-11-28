@@ -17,12 +17,43 @@ pub enum Event {
         id: String,
         ok: bool,
     },
+    /// What the tool printed or returned (its tail, redacted), for the user to read.
+    Output {
+        id: String,
+        text: String,
+    },
+    /// The change an editing tool makes, as diff lines, for the user to read.
+    Diff {
+        id: String,
+        diff: String,
+    },
     Decision {
         tool: String,
         target: String,
         answer: String,
         by: String,
     },
+    /// The agent's plan, the whole list each time: it replaces the one before.
+    Plan {
+        steps: Vec<Step>,
+    },
+}
+
+/// One step of the agent's plan.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Step {
+    pub text: String,
+    /// `pending`, `in_progress` or `completed`.
+    pub status: String,
+}
+
+/// A plan step's status in the chat's three words, whatever the agent calls it.
+pub fn step_status(status: &str) -> &'static str {
+    match status.to_ascii_lowercase().replace(['-', ' '], "_").as_str() {
+        "completed" | "complete" | "done" => "completed",
+        "in_progress" | "inprogress" | "active" | "running" => "in_progress",
+        _ => "pending",
+    }
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -31,6 +62,8 @@ pub struct Activity {
     pub tools: Vec<Tool>,
     pub decisions: Vec<Decision>,
     pub truncated: bool,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub plan: Vec<Step>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -39,6 +72,10 @@ pub struct Tool {
     pub tool: String,
     pub detail: String,
     pub ok: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub output: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub diff: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -56,6 +93,16 @@ fn bounded(text: &str, limit: usize) -> String {
 impl Activity {
     pub fn apply(&mut self, event: &Event) {
         match event {
+            Event::Plan { steps } => {
+                self.plan = steps
+                    .iter()
+                    .take(64)
+                    .map(|s| Step {
+                        text: bounded(&s.text, 500),
+                        status: step_status(&s.status).to_string(),
+                    })
+                    .collect();
+            }
             Event::Reasoning { text } => {
                 let remaining = 32_768usize.saturating_sub(self.reasoning.chars().count());
                 self.reasoning.push_str(&bounded(text, remaining));
@@ -75,11 +122,23 @@ impl Activity {
                     tool: bounded(tool, 512),
                     detail: bounded(detail, 16_384),
                     ok: None,
+                    output: None,
+                    diff: None,
                 });
             }
             Event::End { id, ok } => {
                 if let Some(t) = self.tools.iter_mut().find(|t| t.id == *id) {
                     t.ok = Some(*ok);
+                }
+            }
+            Event::Output { id, text } => {
+                if let Some(t) = self.tools.iter_mut().find(|t| t.id == *id) {
+                    t.output = Some(bounded(text, 4_096));
+                }
+            }
+            Event::Diff { id, diff } => {
+                if let Some(t) = self.tools.iter_mut().find(|t| t.id == *id) {
+                    t.diff = Some(bounded(diff, 16_384));
                 }
             }
             Event::Decision {
@@ -110,6 +169,9 @@ impl Activity {
             tool.detail = vults_core::redact::secrets(&tool.detail);
             tool.tool = vults_core::redact::secrets(&tool.tool);
         }
+        for step in &mut saved.plan {
+            step.text = vults_core::redact::secrets(&step.text);
+        }
         for decision in &mut saved.decisions {
             decision.target = vults_core::redact::secrets(&decision.target);
             decision.tool = vults_core::redact::secrets(&decision.tool);
@@ -118,7 +180,10 @@ impl Activity {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.reasoning.is_empty() && self.tools.is_empty() && self.decisions.is_empty()
+        self.reasoning.is_empty()
+            && self.tools.is_empty()
+            && self.decisions.is_empty()
+            && self.plan.is_empty()
     }
 }
 

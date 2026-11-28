@@ -3191,3 +3191,26 @@ button.touched-row:hover,
 .voice-command-examples { flex: 1; min-width: min(240px, 100%); }
 .voice-command-examples > summary { min-height: 32px; box-sizing: border-box; padding: 6px 0; cursor: pointer; color: var(--fg-dim); font-size: var(--text-m); }
 .voice-command-examples[open] > .voice-command-help { padding: 12px 16px; border-radius: var(--radius-card); background: var(--panel); }
+
+/* The side pane: Memory, Changes, Files. */
+.workspace { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; }
+.workspace-tabs { display: flex; gap: 2px; padding: 0 0 8px; border-bottom: 1px solid var(--border); }
+.workspace-tab { flex: 1 1 0; padding: 6px 8px; border-radius: var(--radius-control); color: var(--fg-dim); font: 600 var(--text-s)/1.2 var(--font); }
+.workspace-tab.on { background: var(--raised); color: var(--fg-bright); }
+.workspace-tab:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.workspace-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-top: 8px; }
+.workspace-body > [hidden] { display: none; }
+.workspace-empty { margin: 8px 4px; color: var(--fg-dim); font: var(--text-s)/1.5 var(--font); }
+.workspace-change { margin: 0 0 6px; border: 1px solid var(--border); border-radius: var(--radius-card); }
+.workspace-change > summary { display: flex; align-items: center; gap: 8px; padding: 6px 8px; cursor: pointer; }
+.workspace-path { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 12px/1.4 var(--mono); direction: rtl; text-align: left; }
+.workspace-change .activity-diff { margin: 0 8px 6px; max-height: 360px; }
+.workspace-actions { display: flex; justify-content: flex-end; padding: 0 8px 8px; }
+.workspace-files { display: flex; flex-direction: column; gap: 6px; }
+.workspace-search { padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--bg-deep); color: var(--fg); font: var(--text-s)/1.4 var(--font); }
+.workspace-found { display: flex; flex-direction: column; }
+.workspace-file { display: flex; align-items: center; gap: 8px; padding: 5px 6px; border-radius: var(--radius-control); color: var(--fg); text-align: left; font: 12px/1.4 var(--mono); }
+.workspace-file:hover, .workspace-file:focus-visible { background: var(--raised); }
+.workspace-file span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.workspace-file svg { flex: none; color: var(--fg-dim); }
+.roost-tree .roost-chat { margin-left: auto; flex: none; }

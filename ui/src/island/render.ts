@@ -58,6 +58,7 @@ export interface Actions extends UpdateActions {
   decide(request: string, decision: "allow" | "deny"): void;
   decideAlways(request: string): void;
   decidePlan(request: string): void;
+  revisePlan(request: string, feedback: string): void;
   /** The replies to a question card, one per question. */
   answer(request: string, answers: Answer[]): void;
   /** A question card goes back to the agent's terminal. */
@@ -1955,6 +1956,9 @@ export function createIsland(root: HTMLElement, actions: Actions): Island {
     },
     decidePlan: (request: string) => {
       if (answered(request, "allow")) actions.decidePlan(request);
+    },
+    revisePlan: (request: string, feedback: string) => {
+      if (answered(request, "deny")) actions.revisePlan(request, feedback);
     },
     answer: (request: string, answers: Answer[]) => {
       if (answered(request, "answered")) actions.answer(request, answers);

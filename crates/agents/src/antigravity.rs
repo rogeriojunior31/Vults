@@ -87,6 +87,10 @@ impl Agent for Antigravity {
         let event = match e.event.as_str() {
             // Before every model call: the bird thinks between tools too.
             "PreInvocation" => AgentEvent::PromptSubmitted,
+            // agy waits on the user in its terminal: a question to see, never one the island answers.
+            "PreToolUse" if is_question(tool) => AgentEvent::Question {
+                message: first_question(&input).unwrap_or_default(),
+            },
             "PreToolUse" => AgentEvent::ToolStarted(Step {
                 activity: activity(tool),
                 detail: detail(&input).or_else(|| summary(p)),
@@ -275,6 +279,23 @@ pub fn permission(e: &Event) -> Option<AgentUpdate> {
     Some(update)
 }
 
+/// agy's tool that asks the user, alone or behind an MCP server's prefix (`server:ask_question`).
+fn is_question(tool: &str) -> bool {
+    tool == "ask_question" || tool.ends_with(":ask_question")
+}
+
+/// The first question's text, in either spelling agy uses for its arguments.
+fn first_question(input: &Value) -> Option<String> {
+    let questions = input.get("questions").or_else(|| input.get("Questions"))?;
+    let first = questions.get(0)?;
+    let text = first
+        .get("question")
+        .or_else(|| first.get("Question"))
+        .and_then(Value::as_str)
+        .or_else(|| first.as_str())?;
+    crate::filled(text)
+}
+
 fn input(args: Option<&Value>) -> Value {
     let Some(Value::Object(args)) = args else {
         return Value::Null;
@@ -456,6 +477,37 @@ mod tests {
         );
         // No workspace in the payload: the terminal's folder is all there is.
         assert_eq!(u.cwd.as_deref(), Some("/home/me/.gemini/config"));
+    }
+
+    #[test]
+    fn a_question_waits_on_the_user_and_says_what_it_asks() {
+        for tool in ["ask_question", "server:ask_question"] {
+            let u = Antigravity
+                .parse(&event(
+                    "PreToolUse",
+                    json!({ "conversationId": "c1", "toolCall": { "name": tool,
+                            "args": { "questions": [{ "question": "Which database?" }] } } }),
+                ))
+                .unwrap();
+            assert_eq!(
+                u.event,
+                AgentEvent::Question {
+                    message: "Which database?".into()
+                }
+            );
+        }
+        let bare = Antigravity
+            .parse(&event(
+                "PreToolUse",
+                json!({ "conversationId": "c1", "toolCall": { "name": "ask_question", "args": {} } }),
+            ))
+            .unwrap();
+        assert_eq!(
+            bare.event,
+            AgentEvent::Question {
+                message: String::new()
+            }
+        );
     }
 
     #[test]

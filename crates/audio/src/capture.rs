@@ -237,6 +237,14 @@ fn open(
         cpal::SampleFormat::U16 => stream::<u16>(&device, config.into(), tx, failed),
         cpal::SampleFormat::I32 => stream::<i32>(&device, config.into(), tx, failed),
         cpal::SampleFormat::F64 => stream::<f64>(&device, config.into(), tx, failed),
+        // A USB microphone PipeWire offers as s24le arrives as I24; the rest for any other card.
+        cpal::SampleFormat::I24 => stream::<cpal::I24>(&device, config.into(), tx, failed),
+        cpal::SampleFormat::U24 => stream::<cpal::U24>(&device, config.into(), tx, failed),
+        cpal::SampleFormat::I8 => stream::<i8>(&device, config.into(), tx, failed),
+        cpal::SampleFormat::U8 => stream::<u8>(&device, config.into(), tx, failed),
+        cpal::SampleFormat::U32 => stream::<u32>(&device, config.into(), tx, failed),
+        cpal::SampleFormat::I64 => stream::<i64>(&device, config.into(), tx, failed),
+        cpal::SampleFormat::U64 => stream::<u64>(&device, config.into(), tx, failed),
         other => return Err(format!("the microphone's format ({other}) is not supported")),
     }?;
     let converter = Converter::new(rate)?;
@@ -399,6 +407,14 @@ fn capture(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use cpal::Sample;
+
+    #[test]
+    fn a_24_bit_microphone_reads_as_full_scale_audio() {
+        let peak = cpal::I24::new((1 << 23) - 1).unwrap().to_sample::<f32>();
+        assert!((peak - 1.0).abs() < 1e-3, "{peak}");
+        assert_eq!(cpal::I24::new(0).unwrap().to_sample::<f32>(), 0.0);
+    }
 
     #[test]
     fn missing_devices_fall_back_and_monitors_are_never_selected() {

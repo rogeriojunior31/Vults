@@ -304,6 +304,16 @@ pub fn start(app: AppHandle) {
             Err(err) => tracing::error!("no hook endpoint: {err}"),
         }
     });
+    // Silence from every agent is not a quiet day when the endpoint never opened: said once.
+    let told = app.clone();
+    tauri::async_runtime::spawn(async move {
+        tokio::time::sleep(Duration::from_secs(15)).await;
+        if vults_ipc::endpoint_busy() {
+            tracing::warn!("hook endpoint held by another program: no agent event reaches this run");
+            let (title, body) = vults_core::i18n::hooks_unreachable(crate::settings::lang(&told));
+            crate::notify::plain(&told, title.into(), body.into());
+        }
+    });
     let forward = tx.clone();
     tauri::async_runtime::spawn(async move {
         while let Some(incoming) = hooks_rx.recv().await {
@@ -1224,6 +1234,12 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
                         h.allow_accepting_edits();
                     }
                 }
+                Effect::RevisePlan { request, feedback } => {
+                    tracing::info!("plan sent back with what to change");
+                    if let Some(h) = waiting.remove(&request) {
+                        h.deny_with(feedback);
+                    }
+                }
                 Effect::AnswerQuestion { request, answers } => {
                     tracing::info!(count = answers.len(), "question answered");
                     if let Some(h) = waiting.remove(&request) {
@@ -1392,6 +1408,12 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
         if last_view.as_ref() != Some(&view) {
             publish_view(&app, &view);
             crate::tray::show(&app, &view);
+            crate::awake::flock(
+                &app,
+                view.sessions
+                    .iter()
+                    .any(|s| matches!(s.status, core::Status::Thinking | core::Status::Working)),
+            );
             last_view = Some(view);
         }
         #[cfg(target_os = "linux")]
@@ -1627,6 +1649,27 @@ pub async fn decide_always(
         .0
         .send(Msg::User(Intent::DecideAlways {
             request: RequestId(request),
+        }))
+        .await
+        .map_err(|_| ())
+}
+
+/// "Send to Claude" under a plan's "Change plan…": the core takes it for a Claude Code plan only.
+#[tauri::command]
+pub async fn revise_plan(
+    window: tauri::Webview,
+    request: String,
+    feedback: String,
+    inbox: tauri::State<'_, Inbox>,
+) -> Result<(), ()> {
+    if !card_host(&window) {
+        return Err(());
+    }
+    inbox
+        .0
+        .send(Msg::User(Intent::RevisePlan {
+            request: RequestId(request),
+            feedback,
         }))
         .await
         .map_err(|_| ())
@@ -2472,7 +2515,17 @@ pub fn place_top_center(win: &tauri::WebviewWindow) {
         let screen = monitor.size().to_logical::<f64>(scale);
         let origin = monitor.position().to_logical::<f64>(scale);
         let x = origin.x + (screen.width - f64::from(width)) / 2.0;
-        let position = tauri::LogicalPosition::new(x, origin.y);
+        // A taskbar or app bar at the top of the screen keeps its strip: the island hangs below it.
+        #[cfg(windows)]
+        let top = monitor
+            .work_area()
+            .position
+            .to_logical::<f64>(scale)
+            .y
+            .max(origin.y);
+        #[cfg(not(windows))]
+        let top = origin.y;
+        let position = tauri::LogicalPosition::new(x, top);
         #[cfg(windows)]
         let _ = win.set_position(position.to_physical::<i32>(scale));
         #[cfg(not(windows))]

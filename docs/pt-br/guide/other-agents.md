@@ -1,5 +1,5 @@
 # Outros agentes
-<!-- source: 624fb8fdbc42 -->
+<!-- source: d429ffa1ee8c -->
 
 Claude Code, Codex, Antigravity, OpenCode, Hermes Agent, Qwen Code, Copilot CLI, Cursor, Factory Droid e Kimi Code já vêm integrados (**Settings →
 Agents**). Qualquer outra ferramenta também pode colocar suas sessões no fio, se ela rodar um
@@ -80,7 +80,9 @@ outros hooks dali nunca são tocados; se um hook seu já se chamar `vults`, o in
 nada. As sessões dele aparecem como `antigravity`.
 
 A ilha mostra o Antigravity pensando, cada passo (`view_file`, `run_command`…) e quando ele para,
-e o diff de cada edição, refeito a partir do texto que ela trocou (sem números de linha). O
+e o diff de cada edição, refeito a partir do texto que ela trocou (sem números de linha). Quando
+ele te pergunta algo (`ask_question`), o pássaro dele espera por você com o som e o texto da
+pergunta; você responde no terminal dele. O
 Antigravity não manda a resposta dele, então uma sessão terminada não tem linha de resumo, e não há
 início nem fim de sessão. O silêncio não a remove mais: uma sessão aberta pode descansar ou voar, e a limpeza exige confirmar a saída de um processo local antes observado.
 

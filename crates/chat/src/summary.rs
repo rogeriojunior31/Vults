@@ -23,12 +23,14 @@ pub fn installed() -> bool {
     on_path("claude")
 }
 
-pub(crate) fn on_path(program: &str) -> bool {
+/// Whether `program` is on the `PATH`, as Windows names it too (`.exe`, an npm `.cmd` shim, `.bat`).
+pub fn on_path(program: &str) -> bool {
     std::env::var_os("PATH").is_some_and(|path| {
         std::env::split_paths(&path).any(|d| {
             d.join(program).is_file()
                 || d.join(format!("{program}.exe")).is_file()
                 || d.join(format!("{program}.cmd")).is_file()
+                || d.join(format!("{program}.bat")).is_file()
         })
     })
 }

@@ -20,7 +20,7 @@ export interface AgentEntry {
 export const AGENTS: readonly AgentEntry[] = [
   { id: "claude", name: "Claude Code", kind: "claude", setup: "hooks", run: "native", watch: true, answer: true, drive: "available" },
   { id: "codex", name: "Codex", kind: "codex", setup: "hooks", run: "native", watch: true, answer: true, drive: "available" },
-  { id: "antigravity", name: "Antigravity", kind: "other", setup: "hooks", run: "no", watch: true, answer: false, drive: "none" },
+  { id: "antigravity", name: "Antigravity", kind: "other", setup: "hooks", run: "acp", watch: true, answer: false, drive: "planned" },
   { id: "opencode", name: "OpenCode", kind: "opencode", setup: "plugin", run: "acp", watch: true, answer: true, drive: "planned" },
   { id: "hermes", name: "Hermes Agent", kind: "other", setup: "plugin", run: "no", watch: true, answer: false, drive: "none" },
   { id: "qwen", name: "Qwen Code", kind: "qwen", setup: "hooks", run: "acp", watch: true, answer: true, drive: "planned" },
@@ -34,4 +34,4 @@ export const AGENTS: readonly AgentEntry[] = [
 /** An agent the installer knows, by the name its hooks run with. */
 export type InstallAgent = "claude" | "codex" | "antigravity" | "opencode" | "hermes" | "qwen" | "copilot" | "cursor" | "droid" | "kimi" | "gemini";
 /** An agent with a supported CLI execution mode. */
-export type Engine = "claude" | "codex" | "opencode" | "qwen" | "copilot" | "kimi";
+export type Engine = "claude" | "codex" | "antigravity" | "opencode" | "qwen" | "copilot" | "kimi";

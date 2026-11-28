@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: 340277f3eebd -->
+<!-- source: 0cb7d9ff08f3 -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, o
 chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -12,9 +12,12 @@ card que espera é respondido onde você está: no Nest enquanto você está nel
 foco), e na ilha, que aparece para ele, enquanto você está em outro lugar.
 
 Atividade, Conexões e Configurações usam controles neutros, títulos, cards e estados de leitura
-compartilhados. **Settings → General → Theme** escolhe **Dark** (o padrão), o neutro **Light** ou um dos três
+compartilhados. **Settings → Appearance → Theme** escolhe **Dark** (o padrão), o neutro **Light** ou um dos três
 temas SP Night, três vistas de São Paulo à noite (**Noite Paulista**; **Garoa**, o cinza chapado do
-chuvisco; **Pico do Jaraguá**, o escuro da mata), em todas as janelas. Atividade e Conexões usam abas sublinhadas; as cores de status mantêm seus significados. O palco do Flock,
+chuvisco; **Pico do Jaraguá**, o escuro da mata), em todas as janelas. Cada tema é um bloco com uma
+pequena imagem do Vults nas próprias cores (a ilha com o bando no fio, a lista do Nest e um cartão):
+Dark e Light primeiro, depois as três vistas SP Night sob o nome delas. As setas mudam a escolha; ela
+vale na hora, e uma mudança que não pode ser salva volta atrás com um aviso. Atividade e Conexões usam abas sublinhadas; as cores de status mantêm seus significados. O palco do Flock,
 os diffs e os controles do Compact seguem o mesmo tema, incluindo a atualização ao vivo
 das cores dos agentes nas aves e do fio.
 
@@ -66,7 +69,7 @@ config de um agente, uma chave, uma política ou um celular, e nunca mostram tex
 menu mantém a aba em que você está: **Room** é a janela, **Full** a tela toda
 (**Esc** volta para Room), **Quick** fecha o Nest e abre a ilha, **Mini** o fecha e deixa a pílula.
 **Alt+1** a **Alt+5** escolhem uma aba nessa ordem (Chat oculto é ignorado). Embaixo, **Zeca on** / **Zeca off** liga e
-desliga o Zeca (como **Settings → Flock & Zeca → Zeca**), o lápis (**Zeca's look**) abre a página dele nas
+desliga o Zeca (como **Settings → Zeca → Zeca**), o lápis (**Zeca's look**) abre a página dele nas
 Configurações, **Open terminal** traz o terminal da sessão da frente e **Back to the island** traz a
 ilha.
 
@@ -253,8 +256,10 @@ com projeto, executor e horário abaixo do título; a conversa atual fica marcad
 inclusive além das primeiras 30 conversas. **Show more** revela o restante. A busca fica neste
 computador ao fechar e reabrir o Nest. **+ New conversation** e a troca de conversa esperam
 enquanto o Zeca responde. Se a atualização falhar, a última lista fica disponível com **Try again**.
-O botão à direita abre **Memory**, o que o Zeca lembra, ao lado da conversa: o
-que espera o seu sim, os arquivos e o histórico deles ([A memória do Zeca](memory.md)). Antes de
+O botão à direita abre o **Painel lateral** ao lado da conversa. **Memory** é o que o Zeca
+lembra: o que espera o seu sim, os arquivos e o histórico deles ([A memória do Zeca](memory.md)).
+**Changes** lista os arquivos que o agente mudou nesta conversa com os seus diffs, e **Files** acha
+arquivos e pastas na pasta dela; um clique em qualquer um põe o caminho no rascunho. Antes de
 qualquer mensagem, o compositor espera no meio com algumas perguntas para começar. Sem o Zeca não há
 aba Chat.
 

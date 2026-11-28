@@ -15,6 +15,9 @@ import { LOOK_GROUPS, dress } from "../../character/looks";
 import { drawFrame, frameAt, type Frame } from "../../character/sprites";
 import { perchOf } from "../../character/zeca";
 import { AGENTS as REGISTRY } from "../../agents";
+import { acpSummary, apiSummary, dot, engineSummary } from "./provider-status";
+import { brandMark } from "../../brands";
+import { LABS, labOn } from "../../labs";
 import { CONNECTORS, connectorError } from "../../connectors";
 import { el } from "../../dom";
 import { button, confirmed, diff, disclosure, row, saveSetting, toggle } from "./pieces";
@@ -40,26 +43,34 @@ import { createNestFoot, createNestHead, tabByKey } from "../nest/head";
 import { needsYou } from "../nest/flock";
 import type { SessionView } from "../../view.gen";
 
-type Page = "dictation" | "general" | "agents" | "chat" | "approvals" | "projects" | "activity" | "connectors" | "phone" | "flock" | "about";
+type Page = "zeca" | "dictation" | "general" | "appearance" | "island" | "sound" | "shortcuts" | "agents" | "chat" | "approvals" | "projects" | "activity" | "connectors" | "phone" | "flock" | "labs" | "about";
 
 /** The sidebar's groups, in the prototype's order: how it feels, the work, the system. */
 const GROUPS = [
+  { id: "companion", label: tk("Zeca, chat and agents") },
   { id: "experience", label: tk("Experience") },
   { id: "work", label: tk("Work") },
   { id: "system", label: tk("System") },
 ] as const;
 
 const PAGES: { id: Page; label: string; group: (typeof GROUPS)[number]["id"]; icon: IconName }[] = [
+  { id: "zeca", label: "Zeca", group: "companion", icon: "bird" },
+  { id: "chat", label: tk("Chat & voice"), group: "companion", icon: "chat" },
+  { id: "agents", label: tk("Agents"), group: "companion", icon: "terminal" },
   { id: "general", label: tk("General"), group: "experience", icon: "gear" },
+  { id: "appearance", label: tk("Appearance"), group: "experience", icon: "palette" },
+  { id: "island", label: tk("Island"), group: "experience", icon: "island" },
+  { id: "sound", label: tk("Sound and notifications"), group: "experience", icon: "sound" },
+  { id: "shortcuts", label: tk("Keyboard shortcuts"), group: "experience", icon: "keyboard" },
   { id: "dictation", label: tk("Dictation"), group: "experience", icon: "mic" },
-  { id: "chat", label: tk("Chat & voice"), group: "experience", icon: "chat" },
-  { id: "flock", label: tk("Flock & Zeca"), group: "experience", icon: "flock" },
-  { id: "agents", label: tk("Agents"), group: "work", icon: "terminal" },
+  { id: "flock", label: tk("Flock"), group: "experience", icon: "flock" },
+
   { id: "approvals", label: tk("Approvals"), group: "work", icon: "check" },
   { id: "projects", label: tk("Projects"), group: "work", icon: "folder" },
   { id: "activity", label: tk("History and budget"), group: "system", icon: "bars" },
   { id: "connectors", label: tk("Connection setup"), group: "system", icon: "plug" },
   { id: "phone", label: tk("Phone"), group: "system", icon: "phone" },
+  { id: "labs", label: tk("Labs"), group: "system", icon: "flask" },
   { id: "about", label: tk("About"), group: "system", icon: "person" },
 ];
 
@@ -102,12 +113,12 @@ let boundShortcuts: Record<string, string> = {};
 const boundKeys = (...ids: string[]) => ids.map(id => boundShortcuts[id]?.trim() || t("Not bound")).join(" · ");
 const keepShortcuts = (keys: Record<string, string>) => {
   boundShortcuts = keys;
-  if (page === "general" || page === "dictation") render();
+  if (page === "general" || page === "appearance" || page === "island" || page === "sound" || page === "shortcuts" || page === "dictation") render();
 };
 Bridge.onShortcutKeys(keepShortcuts);
 void Bridge.shortcutKeys().then(keepShortcuts, () => {});
 const windowsShortcuts = createWindowsShortcuts({ read: Bridge.windowsShortcuts, save: Bridge.setWindowsShortcuts }, () => {
-  if (page === "general" || page === "dictation") render();
+  if (page === "general" || page === "appearance" || page === "island" || page === "sound" || page === "shortcuts" || page === "dictation") render();
 });
 windowsShortcuts.initialize();
 const playerAudio = createWindowsPlayerAudio({ status: Bridge.mediaAudioStatus, list: Bridge.mediaAudioChoices, select: Bridge.mediaAudioSelect }, () => { if (page === "dictation") render(); });
@@ -186,7 +197,7 @@ window.addEventListener("keydown", (e) => {
     void Bridge.setSize("room", "settings");
   }
 });
-const asked = (section: string): Page | null => section === "chatmemory" ? "chat" : dictationSetting(section) ? "dictation" : PAGES.find((p) => p.id === section)?.id ?? null;
+const asked = (section: string): Page | null => section === "chatmemory" ? "zeca" : dictationSetting(section) ? "dictation" : PAGES.find((p) => p.id === section)?.id ?? null;
 /** The page the app asked for (the tray's Set up agents…), else General until the agents are read:
  *  Agents when one has no hooks yet or older ones (`chooseStart`). */
 let focusDestination = dictationSetting(location.hash.slice(1)) !== null || location.hash.slice(1) === "chatmemory";
@@ -262,7 +273,7 @@ const permissionErrors = new Set([
   tk("Dictation insertion is changed in Settings."),
   tk("Dictation insertion requires native X11 or Plasma Wayland."),
   tk("The keyboard permission token is unavailable."),
-  tk("Insertion is off, but its saved keyboard token could not be removed. Retry turning insertion off."),
+  tk("Insertion is off, but its saved keyboard token could not be removed. Turn insertion off again."),
   tk("The keyboard permission worker is unavailable."),
   tk("Enable dictation insertion in Settings first."),
   tk("Dictation insertion is unavailable."),
@@ -289,16 +300,23 @@ let localEmbeddings = false;
 let memorySuggest = false;
 let sleep = false;
 let antigravityApprovals = false;
+/** Settings → Labs: the beta features turned on, by key. */
+let labs: Record<string, boolean> = {};
 let voice: VoiceStatus | null = null;
 /** Model id → percent downloaded, for every download running. */
 const downloading = new Map<string, number>();
 let voiceError: string | null = null;
 let autostart = false;
+let keepAwake = true;
 let foldAfter = 15;
 let openOnHover = false;
 /** The language chosen, or null to follow the system. */
 let language: string | null = null;
 let theme: Theme = DEFAULT_THEME;
+/** Why the last theme change did not hold, until the next one. */
+let themeNote: string | null = null;
+/** A theme being saved: the tiles wait, so two clicks never race. */
+let themeSaving = false;
 /** SP Night's flavors keep their names in every language. */
 const THEMES: [Theme, string][] = [
   ["dark", tk("Dark")],
@@ -352,6 +370,10 @@ function readState(failed: boolean, reading: string, failure: string, retry: () 
   return card;
 }
 let apiProviders: ApiProvider[] = [];
+/** The chat's engines as last checked, and when; read when Chat & voice opens, again on request. */
+let engines: import("../../bridge").ChatEngines | null = null;
+let enginesLoading = false;
+let enginesNote: string | null = null;
 let apiSelected = "";
 /** Provider id → its live model list, or why it couldn't be had. */
 const apiModels = new Map<string, { models: string[] } | { error: string }>();
@@ -388,20 +410,20 @@ function approvalsPage(): HTMLElement[] {
     ...(chatAccess === "ask" ? [] : [el("div", { class: "approvals-banner" },
       icon("warning", 14, 2),
       el("span", { text: chatAccess === "full"
-        ? t("Zeca's chat runs with full access: its commands and edits run without a card. Destructive commands, and what a policy denies or asks first, still ask.")
+        ? t("Full access: Zeca's chat runs commands and edits without a card. Only a policy's deny still refuses.")
         : t("Zeca's chat follows your policies: what they allow runs without a card.") }),
       button(t("Chat & voice"), () => choosePage("chat")))]),
-    el("h2", { text: t("What was answered") }),
-    el("p", { class: "lede", text: t("Every card's answer and who gave it: you, your phone, a rule or a policy below, or the chat's access. Kept 90 days, never changed.") }),
+    el("h2", { class: "settings-group-title", text: t("What was answered") }),
+    el("p", { class: "lede", text: t("Every card's answer and who gave it. Kept 90 days, never changed.") }),
     answersLog.element,
-    el("h2", { text: t("What answers without a card") }),
+    el("h2", { class: "settings-group-title", text: t("What answers without a card") }),
     group("approvals-rules", ruleCount === undefined ? t("Always allowed") : t("Always allowed ({n})", { n: ruleCount }), !!rulesNote || rulesFailed,
     el("p", {
       class: "lede",
-      text: t("Permissions you chose to always allow, with Always on a card. Each one covers only that exact command or file, for that agent, in that folder."),
+      text: t("What you allowed with Always on a card. Each covers only that exact command or file, agent and folder."),
     }),
     ...(rulesFailed
-      ? [readState(true, "", t("Could not read your always-allowed permissions. What is allowed is unknown until this is read."), () => void refreshRules())]
+      ? [readState(true, "", t("Could not read your always-allowed permissions, so what is allowed is unknown."), () => void refreshRules())]
       : []),
     ...(rulesNote ? [el("p", { class: "note error", text: rulesNote })] : []),
     ...(!rules
@@ -499,11 +521,11 @@ function projectsPage(): HTMLElement[] {
     el("h1", { text: t("Projects") }),
     el("p", {
       class: "lede",
-      text: t("Choices kept per project folder, for every session in it now and later. Right-click a session on the island to mute, pin or hide its project, or to choose its bird."),
+      text: t("Choices per project folder, for all its sessions. Right-click a session on the island to set them."),
     }),
-    el("details", { class: "row-more" }, el("summary", { text: t("What each choice does") }), el("p", { text: t("Muted: no sounds and no notifications when its sessions finish or fail; a card keeps both. Pinned: its sessions come first. Hidden: its sessions stay off the island, but a card from one still shows. Bird: every session of the project is that species; Automatic lets the flock draw it.") })),
+    el("details", { class: "row-more" }, el("summary", { text: t("What each choice does") }), el("p", { text: t("Muted: no sounds or notifications, except on cards. Pinned: shown first. Hidden: off the island, except its cards. Bird: one species for all its sessions, or Automatic.") })),
     ...(projectsFailed
-      ? [readState(true, "", t("Could not read your project choices. They still apply; this page cannot show them."), () => void refreshProjects())]
+      ? [readState(true, "", t("Could not show your project choices, but they still apply."), () => void refreshProjects())]
       : []),
     ...(projectsNote ? [el("p", { class: "note error", text: projectsNote })] : []),
     ...(!projects
@@ -538,7 +560,7 @@ function projectsPage(): HTMLElement[] {
                     await refreshProjects();
                   },
                 ),
-                confirmed(t("Forget"), t("Mute, pin, hide and bird choices for this project are cleared."), t("Forget project"), () =>
+                confirmed(t("Forget"), t("This project's choices are cleared."), t("Forget project"), () =>
                   Bridge.projectSet(cwd, {}).then(
                     () => {
                       projectsNote = null;
@@ -554,7 +576,7 @@ function projectsPage(): HTMLElement[] {
             );
           }),
         )
-      : el("section", { class: "card" }, el("p", { class: "note", text: t("No project has a choice yet. Every session shows, in the order it arrived, with its sounds.") }))]),
+      : el("section", { class: "card" }, el("p", { class: "note", text: t("No project choices yet. Every session shows in arrival order, with sounds.") }))]),
   ];
 }
 
@@ -582,7 +604,7 @@ function fullAccessConfirm(warning: string): HTMLElement {
       },
       () => {
         askingFull = false;
-        accessNote = t("Could not turn on full access. Zeca's cards still ask as before.");
+        accessNote = t("Could not turn on full access. Zeca's cards still ask.");
         render();
       },
     );
@@ -760,17 +782,28 @@ function agentStatus(s: InstallStatus): HTMLElement {
   return badge(t("Installed"), "ok");
 }
 
+/** How an agent works with Vults: read on request, so its card shows its state first. */
+function howItWorks(text: string): HTMLElement {
+  return disclosure(t("How it works"), el("p", { class: "note", text }));
+}
+
+/** A step that undoes (Remove): present, never the eye's first stop. */
+function quiet(b: HTMLButtonElement): HTMLButtonElement {
+  b.classList.add("quiet");
+  return b;
+}
+
 function agentCard(kind: InstallAgent, name: string, found = true): HTMLElement {
   const { status: s, message, pending } = panels.get(kind)!;
   const notice = message ? el("p", { class: message.error ? "note error" : "note ok", text: message.text }) : null;
   if (!s) return el("section", { class: "card" }, el("div", { class: "card-title", text: name }), notice);
 
   const codexHelp = s.codex?.error
-    ? el("p", { class: "note error", text: t("Vults can't read Codex's config.toml, so it can't tell which hooks Codex runs: {error}", { error: s.codex.error }) })
+    ? el("p", { class: "note error", text: t("Vults can't read Codex's config.toml, so it can't see Codex's hooks: {error}", { error: s.codex.error }) })
     : s.codex && s.installed && !s.codex.hooksDisabled && s.codex.untrusted > 0
       ? el("p", {
           class: "note warn",
-          text: t("Codex runs a hook only once you trust it, and while it is on: open Codex, type /hooks and trust or turn on the {n} Vults hooks waiting there.", { n: s.codex.untrusted }),
+          text: t("Codex runs only hooks you trust and turn on: open Codex, type /hooks and trust or turn on the {n} Vults hooks.", { n: s.codex.untrusted }),
         })
       : null;
   // Installing would be refused (`install_blocked` in installer.rs): say why instead of offering it.
@@ -782,27 +815,24 @@ function agentCard(kind: InstallAgent, name: string, found = true): HTMLElement 
       ? el("p", {
           class: "note warn",
           text: s.otherHookPath
-            ? t("These hooks still point to another copy of Vults, at {path}. Update them so they report to this app.", { path: s.otherHookPath })
+            ? t("These hooks report to another copy of Vults, at {path}. Update them to use this app.", { path: s.otherHookPath })
             : kind === "claude"
-              ? t("These hooks are from an older version. Update them to answer Claude Code's questions from the island.")
+              ? t("These hooks are outdated. Update them to answer Claude Code from the island.")
               : kind === "opencode"
-                ? t("This plugin is from an older version. Update it, then restart OpenCode.")
-                : t("These hooks are from an older version. Update them to get everything the island can do."),
+                ? t("This plugin is outdated. Update it, then restart OpenCode.")
+                : t("These hooks are outdated. Update them to get every island feature."),
         })
       : null;
   // The plan's usage reaches the island only through a statusLine of ours.
   const usageHelp =
     s.installed && s.statusLine === "none"
-      ? el("p", {
-          class: "note",
-          text: t("Reinstall the hooks to see your plan's usage on the island: it adds a status line that Claude Code fills in and that shows nothing on its screen."),
-        })
+      ? howItWorks(t("Reinstall the hooks to see your plan's usage on the island. It adds a hidden status line to Claude Code."))
       : s.statusLine === "theirs"
         ? el("p", {
             class: "note",
             text: s.installed
-              ? t("You have your own status line. Reinstall the hooks to see your plan's usage on the island too: yours keeps showing in Claude Code, and removing the hooks puts it back as it was.")
-              : t("You have your own status line. Installing the hooks also brings your plan's usage to the island: yours keeps showing in Claude Code, and removing the hooks puts it back as it was."),
+              ? t("Reinstall the hooks to see your plan's usage on the island too. Your status line stays; removing the hooks restores it.")
+              : t("Installing the hooks also shows your plan's usage on the island. Your status line stays; removing the hooks restores it."),
           })
         : null;
   const review = pending
@@ -810,7 +840,7 @@ function agentCard(kind: InstallAgent, name: string, found = true): HTMLElement 
         "div",
         { class: "review" },
         el("div", { class: "review-title", text: pending.install ? t("Review the install") : t("Review the removal") }),
-        pending.preview.diff ? diff(pending.preview.diff) : el("p", { class: "note", text: t("Nothing to change.") }),
+        pending.preview.diff ? diff(pending.preview.diff) : howItWorks(t("Nothing to change.")),
         el(
           "div",
           { class: "actions" },
@@ -826,7 +856,7 @@ function agentCard(kind: InstallAgent, name: string, found = true): HTMLElement 
   return el(
     "section",
     { class: "card" },
-    el("div", { class: "card-head" }, el("div", { class: "card-title", text: name }), agentStatus(s)),
+    el("div", { class: "card-head" }, el("div", { class: "card-title brand-title" }, brandMark(kind, name, 20), el("span", { text: name })), agentStatus(s)),
     el("div", { class: "path", text: s.configPath }),
     s.hookReady ? null : el("p", { class: "note error", text: t("The hook relay is missing at {path}.", { path: s.hookPath }) }),
     s.error ? el("p", { class: "note error", text: s.error }) : null,
@@ -836,55 +866,34 @@ function agentCard(kind: InstallAgent, name: string, found = true): HTMLElement 
     kind === "gemini"
       ? el("p", {
           class: "note warn",
-          text: t("Vults no longer supports Gemini CLI: Antigravity took its place. Remove the hooks it kept in Gemini's settings."),
+          text: t("Gemini CLI is no longer supported; Antigravity replaced it. Remove its hooks from Gemini's settings."),
         })
       : kind === "antigravity"
         ? el(
             "div",
             {},
-            el("p", {
-              class: "note",
-              text: t("Shared Antigravity hooks watch CLI, desktop and IDE sessions. CLI metrics also install a status line, preserving your previous command. Desktop and IDE hooks alone do not report cost or context."),
-            }),
+            howItWorks(t("Hooks watch Antigravity's CLI, desktop and IDE sessions. Cost and context come only from the CLI's status line, which keeps your old command.")),
             s.installed
-              ? row(t("Approve commands from the island"), t("A shell command that none of Antigravity's own rules covers waits on a card: Allow runs it, Deny stops it, and no answer leaves Antigravity's own prompt. Hooks installed before this switch need Update hooks… first."), toggle(antigravityApprovals, async (on) => {
+              ? row(t("Approve commands from the island"), t("Shell commands no Antigravity rule covers wait on a card: Allow runs, Deny stops, no answer falls back to Antigravity's prompt. Older hooks need Update hooks… first."), toggle(antigravityApprovals, async (on) => {
                   await Bridge.setAntigravityApprovals(on);
                   antigravityApprovals = on;
                 }))
               : null,
           )
         : kind === "opencode"
-          ? el("p", {
-              class: "note",
-              text: t("OpenCode loads a plugin file instead of hooks: restart it after installing. Permissions can be answered on the island or in OpenCode. In OpenCode 2, questions are answered only in its terminal."),
-            })
+          ? howItWorks(t("OpenCode loads a plugin, not hooks: restart it after installing. Answer permissions on the island or in OpenCode; in OpenCode 2, questions only in its terminal."))
           : kind === "hermes"
-            ? el("p", { class: "note", text: t("Hermes uses a Python observer plugin. After installing, enable it with hermes plugins enable vults and open a new Hermes session. Sessions, tools and repository changes appear in Flock; permissions and questions stay in Hermes.") })
+            ? howItWorks(t("After installing, run hermes plugins enable vults and open a new Hermes session. Sessions, tools and changes show in Flock; permissions and questions stay in Hermes."))
           : kind === "qwen"
-            ? el("p", {
-                class: "note",
-                text: t("Restart Qwen Code after installing. Its permissions show on the island; Qwen asks in its own terminal once the card goes away unanswered. Its questions stay in its terminal."),
-              })
+            ? howItWorks(t("Restart Qwen Code after installing. Permissions show on the island, then in Qwen's terminal if unanswered. Questions stay in its terminal."))
             : kind === "copilot"
-              ? el("p", {
-                  class: "note",
-                  text: t("Copilot CLI reads every hooks file in ~/.copilot/hooks/: this one is Vults' own. Restart Copilot after installing. Its permissions show on the island; Copilot asks in its own terminal once the card goes away unanswered."),
-                })
+              ? howItWorks(t("Vults adds its own file to ~/.copilot/hooks/. Restart Copilot after installing. Permissions show on the island, then in Copilot's terminal if unanswered."))
               : kind === "cursor"
-                ? el("p", {
-                    class: "note",
-                    text: t("One hooks file for the editor and cursor-agent; other tools' hooks in it stay. Cursor asks its permissions itself, and the island shows its sessions as cursor. Restart Cursor after installing."),
-                  })
+                ? howItWorks(t("One hooks file for the editor and cursor-agent; other hooks in it stay. Cursor asks permissions itself. Restart Cursor after installing."))
                 : kind === "droid"
-                  ? el("p", {
-                      class: "note",
-                      text: t("Droid runs these hooks in the CLI and its sessions show as droid. Droid asks its permissions itself, in its own prompt. Restart Droid after installing."),
-                    })
+                  ? howItWorks(t("Hooks run in Droid's CLI; Droid asks permissions in its own prompt. Restart Droid after installing."))
                   : kind === "kimi"
-                    ? el("p", {
-                        class: "note",
-                        text: t("Kimi Code reads these hooks from its config.toml, beside your own settings, and its sessions show as kimi. Kimi asks its permissions itself, in its own prompt. Restart Kimi after installing."),
-                      })
+                    ? howItWorks(t("Hooks go in Kimi's config.toml, beside your settings; Kimi asks permissions itself. Restart Kimi after installing."))
                     : null,
     notice,
     s.error || pending
@@ -892,7 +901,6 @@ function agentCard(kind: InstallAgent, name: string, found = true): HTMLElement 
       : el(
           "div",
           { class: "actions" },
-          s.installed ? button(setupWord(kind) === "plugin" ? t("Remove plugin…") : t("Remove hooks…"), () => void preview(kind, false)) : null,
           s.installBlocked
             ? null
             : // The white button is the step that is due: installing, updating, or a reinstall a note asks
@@ -905,6 +913,7 @@ function agentCard(kind: InstallAgent, name: string, found = true): HTMLElement 
                 // An agent that is not on this computer has nothing due: its install stays a plain button.
                 (found && !s.installed) || s.outdated || usageHelp !== null,
               ),
+          s.installed ? quiet(button(setupWord(kind) === "plugin" ? t("Remove plugin…") : t("Remove hooks…"), () => void preview(kind, false))) : null,
         ),
     review,
   );
@@ -924,22 +933,130 @@ let doctorAsked = false;
 
 /** The agents on this computer first, each with the step that is due; the others fold away. Before
  *  the doctor answers, or if its check fails, every agent shows as it always did. */
+/** The agent whose detail shows, kept while Settings is open. */
+let agentSelected: string | null = null;
+
+/** One agent in Zeca's chat: how its engine stands and its own sign-in; none for one that is not an
+ *  engine. One still in Labs says so. */
+function agentEngine(kind: string): HTMLElement | null {
+  const id = kind === "claude" || kind === "codex" ? kind : `acp:${kind}`;
+  const lab = LABS.find(l => l.id === `acp-${kind}`);
+  if (!engines && !enginesLoading && !enginesNote) checkEngines();
+  const listed = id === "claude" || id === "codex" || (engines?.acp ?? []).some(a => a.id === id);
+  const head = el("h3", { class: "shortcut-subtitle", text: t("In Zeca's chat") });
+  if (lab && !labOn(labs, lab.id))
+    return el("div", { class: "agent-engine" }, head,
+      el("div", { class: "row" }, el("div", { class: "row-text" }, el("div", { class: "row-about", text: t("It joins the chat once you turn it on in Labs.") })),
+        button(t("Labs"), () => choosePage("labs"))));
+  if (!listed || !engines) return engines || lab ? null : el("div", { class: "agent-engine" }, head, el("p", { class: "note", text: t("Checking the engines…") }));
+  const summary = id === "claude" || id === "codex" ? engineSummary(engines[id]) : acpSummary();
+  const SIGN_IN = ["claude", "codex", "acp:antigravity", "acp:opencode"];
+  const canSignIn = SIGN_IN.includes(id) && (id.startsWith("acp:") || engines[id as "claude" | "codex"] === "installed");
+  const signIn = canSignIn
+    ? button(t("Sign in"), () => {
+        Bridge.chatSignIn(id as import("../../bridge").ChatProvider).then(
+          () => { enginesNote = t("Finish signing in in the terminal that opened, then check again."); render(); },
+          e => { enginesNote = failure(t("Could not open a terminal."), e); render(); },
+        );
+      })
+    : null;
+  return el("div", { class: "agent-engine" }, head,
+    el("div", { class: "row engine-row" },
+      el("div", { class: "row-about engine-state" }, dot(summary.dot), el("span", { text: summary.headline })),
+      el("div", { class: "engine-actions" }, ...(signIn ? [signIn] : []), button(enginesLoading ? t("Checking…") : t("Check again"), () => checkEngines()))),
+    enginesNote ? el("p", { class: "note", text: enginesNote }) : null);
+}
+
 function agentCards(): HTMLElement[] {
   const listed = AGENTS.filter((a) => !a.retired || panels.get(a.kind)?.status?.installed || panels.get(a.kind)?.message);
   const known = present;
-  if (!known) return listed.map((a) => agentCard(a.kind, a.name));
   const here = (a: (typeof AGENTS)[number]) => {
     const p = panels.get(a.kind);
-    return known.has(a.kind) || !!p?.status?.installed || !!p?.status?.error || !!p?.message || !!p?.pending;
+    return !known || known.has(a.kind) || !!p?.status?.installed || !!p?.status?.error || !!p?.message || !!p?.pending;
   };
   const found = listed.filter(here), others = listed.filter((a) => !here(a));
   const due = listed.filter((a) => panels.get(a.kind)?.status?.outdated).length;
+  // As t3code lists its providers: what is connected first, then what is here to set up, then the rest.
+  const connected = found.filter((a) => !a.retired && panels.get(a.kind)?.status?.installed);
+  const toSetUp = found.filter((a) => !a.retired && !panels.get(a.kind)?.status?.installed);
+  const retired = found.filter((a) => a.retired);
+  const groups: [string, typeof found][] = [
+    [t("Connected to Vults"), connected], [t("On this computer, not connected yet"), toSetUp],
+    [t("No longer supported"), retired], [t("Not found on this computer"), others],
+  ];
+  const all = groups.flatMap(([, list]) => list);
+  if (!all.some(a => a.kind === agentSelected)) agentSelected = all[0]?.kind ?? null;
+  const state = (a: (typeof AGENTS)[number]): [string, "ok" | "warn" | "off"] => {
+    const s = panels.get(a.kind)?.status;
+    if (a.retired) return [t("No longer supported"), "warn"];
+    if (s?.error) return [t("Can't read"), "warn"];
+    if (s?.installed) return s.outdated ? [t("Update available"), "warn"] : [t("Connected"), "ok"];
+    return others.includes(a) ? [t("Not on this computer"), "off"] : [t("Not connected yet"), "off"];
+  };
+  const list = el("div", { class: "provider-list agent-list" });
+  list.setAttribute("role", "radiogroup");
+  list.setAttribute("aria-label", t("Agents"));
+  for (const [title, agents] of groups) {
+    if (!agents.length) continue;
+    list.append(el("span", { class: "provider-group", text: title }));
+    for (const a of agents) {
+      const [line, kind] = state(a);
+      const on = a.kind === agentSelected;
+      const item = el("button", { class: `provider-item${on ? " on" : ""}`, onclick: () => { agentSelected = a.kind; render(); } },
+        brandMark(a.kind, a.name, 18),
+        el("span", { class: "provider-text" }, el("span", { class: "provider-name", text: a.name }), el("span", { class: "provider-state", text: line })),
+        dot(kind));
+      item.setAttribute("role", "radio");
+      item.setAttribute("aria-checked", String(on));
+      list.append(item);
+    }
+  }
+  list.addEventListener("keydown", event => {
+    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+    const items = [...list.querySelectorAll<HTMLButtonElement>(".provider-item")];
+    const at = items.indexOf(document.activeElement as HTMLButtonElement);
+    const next = event.key === "Home" ? 0 : event.key === "End" ? items.length - 1 : (at + (event.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
+    event.preventDefault();
+    items[next]?.focus();
+  });
+  const chosen = all.find(a => a.kind === agentSelected);
+  const detail = chosen
+    ? el("div", { class: "provider-detail agent-detail" }, agentCard(chosen.kind, chosen.name, !others.includes(chosen)), agentEngine(chosen.kind))
+    : el("div", { class: "provider-detail" }, el("p", { class: "note", text: t("No supported agent found. Install one, then reopen this page.") }));
   return [
-    ...(due ? [el("p", { class: "note warn with-icon" }, icon("warning", 14, 2), el("span", { text: due === 1 ? t("1 agent needs an update.") : t("{n} agents need an update.", { n: due }) }))] : []),
-    ...(found.length
-      ? found.map((a) => agentCard(a.kind, a.name))
-      : [el("section", { class: "card" }, el("p", { class: "note", text: t("No supported agent was found on this computer. Install one, then open this page again.") }))]),
-    ...(others.length ? [disclosure(t("Agents not found on this computer"), ...others.map((a) => agentCard(a.kind, a.name, false)))] : []),
+    ...(due ? [el("p", { class: "note warn with-icon" }, icon("warning", 14, 2), el("span", { text: due === 1 ? t("1 agent needs an update.") : t("{n} agents need an update.", { n: due }) }))]
+      : connected.length ? [el("p", { class: "note ok with-icon" }, icon("check", 14, 2), el("span", { text: t("All connected agents are up to date.") }))] : []),
+    el("section", { class: "card provider-card" }, el("div", { class: "provider-pane" }, list, detail)),
+  ];
+}
+
+/** The API providers: the list beside the chosen one's key and model (t3code's providers). */
+function apiSection(): HTMLElement[] {
+  const p = apiProviders.find((x) => x.id === apiSelected);
+  const message = apiMessage ? el("p", { class: `note${apiMessage.error ? " error" : " ok"}`, text: apiMessage.text }) : null;
+  const done = (text: string, error = false) => {
+    apiMessage = { text, error };
+    void refreshApi();
+  };
+
+  // As t3code shows its providers: the list beside the chosen one's detail (stacked when narrow).
+  const summary = p ? apiSummary(p) : null;
+  const detail = p
+    ? el("div", { class: "provider-detail" },
+        el("div", { class: "provider-detail-head" },
+          el("div", { class: "provider-detail-name" }, brandMark(p.id, p.label, 22), el("span", { text: p.label }), dot(summary!.dot))),
+        el("div", { class: "rows" }, row(...keyRow(p, done)), row(...modelRow(p))),
+        message)
+    : el("div", { class: "provider-detail" }, el("p", { class: "note", text: t("Choose a provider on the left.") }));
+  const rows: (HTMLElement | null)[] = [
+    el("div", { class: "provider-pane" }, providerList(), detail),
+  ];
+  const apiNote = t("The API chat can't run commands or edit files. It reads files you drop and, when needed, what the island shows, and sends it to the provider. Keys stay in the system keyring and go only to their provider.");
+
+  return [
+    el("h2", { class: "settings-group-title", text: t("API providers") }),
+    el("section", { class: "card provider-card" }, ...rows),
+    el("p", { class: "note", text: apiNote }),
   ];
 }
 
@@ -952,11 +1069,13 @@ function agentsPage(): HTMLElement[] {
     el("h1", { text: t("Agents") }),
     el("p", {
       class: "lede",
-      text: t("Vults learns what your agents do through small entries it adds to their settings, called hooks. Before any change you see exactly what changes, and a dated backup is kept; other tools' hooks stay."),
+      text: t("Every agent and provider in one place: what Vults watches in your flock, and what runs Zeca's chat."),
     }),
+    el("h2", { class: "settings-group-title", text: t("Agents") }),
     ...agentCards(),
+    ...apiSection(),
     disclosure(t("What each agent can do"),
-      el("p", { class: "note", text: t("What this computer has of each agent, and what it can do with Vults: what the router and your policies lean on.") }),
+      el("p", { class: "note", text: t("What each agent on this computer can do with Vults, used by the router and your policies.") }),
       doctor.element,
     ),
   ];
@@ -981,7 +1100,7 @@ function connectorsPage(): HTMLElement[] {
     el("p", { class: "lede", text: t("News from outside services on the island. Each one is off until you switch it on.") }),
     ...(presence === "paused" ? [el("p", { class: "note", text: t("Paused: connectors do not check anything until you pick another presence in General.") })] : []),
     ...(connectorsFailed
-      ? [readState(true, "", t("Could not read which connections are on. Their switches stay as they are until this is read."), () => void refreshConnectors())]
+      ? [readState(true, "", t("Could not read which connections are on. Their switches stay as they are."), () => void refreshConnectors())]
       : !connectorsRead ? [readState(false, t("Reading your connections…"), "", () => {})] : []),
     ...CONNECTORS.map((c) => {
       const st = connectorStatus.get(c.id);
@@ -1006,7 +1125,7 @@ function connectorsPage(): HTMLElement[] {
         el(
           "div",
           { class: "card-head" },
-          el("div", { class: "card-title", text: c.name }),
+          el("div", { class: "card-title brand-title" }, brandMark(c.id, c.name, 20), el("span", { text: c.name })),
           el(
             "div",
             { class: "head-right" },
@@ -1023,7 +1142,7 @@ function connectorsPage(): HTMLElement[] {
         st?.enabled && st.lastOk && !st.error ? el("p", { class: "note", text: t("Last checked {when}.", { when: ago(st.lastOk) }) }) : null,
         st?.enabled && st.error ? el("p", { class: "note error", text: connectorError(st.error) }) : null,
         st?.enabled && st.overBudget
-          ? el("p", { class: "note warn", text: t("It made as many checks as it may in a day, so it waits: it checks again once it has room.") })
+          ? el("p", { class: "note warn", text: t("Today's check limit is reached. It checks again once it has room.") })
           : null,
       );
     }),
@@ -1073,7 +1192,7 @@ function updatesSection(): HTMLElement[] {
     el("section", { class: "card rows" },
       row(
         t("Look for new versions"),
-        t("Once a day, Vults reads its public list of releases on GitHub and tells you when a newer version exists. Nothing about you is sent, and nothing is downloaded or installed."),
+        t("Once a day, Vults checks GitHub's public release list for a newer version. Nothing about you is sent; nothing is downloaded or installed."),
         toggle(u.consent.state === "yes", async on => { update = await Bridge.setUpdateChecks(on); render(); }),
       ),
       row(t("Version"), updateState(u), controls),
@@ -1081,20 +1200,155 @@ function updatesSection(): HTMLElement[] {
   ];
 }
 
+/** A small picture of Vults in `value`'s own colors: the island with its flock on the wire, the
+ *  Nest's list with its chosen item, a card. Its colors are the theme's tokens, scoped to it. */
+function themePreview(value: Theme): HTMLElement {
+  const bird = (agent: string) => el("span", { class: `tp-bird tp-${agent}` });
+  const preview = el("div", { class: "tp" },
+    el("div", { class: "tp-island" }, el("span", { class: "tp-wire" }), bird("claude"), bird("codex"), bird("zeca")),
+    el("div", { class: "tp-nest" },
+      el("div", { class: "tp-side" }, el("span", { class: "tp-item on" }), el("span", { class: "tp-item" }), el("span", { class: "tp-item" })),
+      el("div", { class: "tp-card" }, el("span", { class: "tp-title" }), el("span", { class: "tp-line" }), el("span", { class: "tp-line short" }),
+        el("span", { class: "tp-chip" }))));
+  preview.dataset.theme = value;
+  preview.setAttribute("aria-hidden", "true");
+  return preview;
+}
+
+/** The themes as tiles, each a picture of Vults in its colors; one radio group, arrows move. */
+function themeTiles(): HTMLElement {
+  const group = el("div", { class: "theme-tiles" });
+  group.setAttribute("role", "radiogroup");
+  group.setAttribute("aria-label", t("Theme"));
+  group.setAttribute("aria-busy", String(themeSaving));
+  const tiles = THEMES.map(([value, label]) => {
+    // SP Night's three keep the family as a tag, so each flavor's own name fits its tile.
+    const night = value.startsWith("sp-night") ? label.replace(/^SP Night: /, "") : null;
+    const name = night ?? t(label);
+    const on = value === theme;
+    const tile = el("button", { class: `theme-tile${on ? " on" : ""}`, onclick: () => choose(value) },
+      themePreview(value),
+      el("span", { class: "theme-name" },
+        el("span", { text: name }),
+        value === DEFAULT_THEME ? el("span", { class: "theme-tag", text: t("Default") }) : null));
+    tile.setAttribute("aria-label", night ? label : name);
+    tile.setAttribute("role", "radio");
+    tile.setAttribute("aria-checked", String(on));
+    tile.setAttribute("aria-disabled", String(themeSaving));
+    tile.tabIndex = on ? 0 : -1;
+    tile.dataset.setting = `theme:${value}`;
+    return tile;
+  });
+  async function choose(value: Theme): Promise<void> {
+    if (value === theme || themeSaving) return;
+    const before = theme;
+    theme = value;
+    themeSaving = true;
+    themeNote = null;
+    render();
+    document.querySelector?.<HTMLElement>(`[data-setting="theme:${value}"]`)?.focus();
+    try {
+      await Bridge.setTheme(value);
+    } catch (e) {
+      theme = before;
+      themeNote = failure(t("Could not change the theme."), e);
+    } finally {
+      themeSaving = false;
+      render();
+    }
+  }
+  group.addEventListener("keydown", event => {
+    const keys = ["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp", "Home", "End"];
+    if (!keys.includes(event.key)) return;
+    event.preventDefault();
+    const at = THEMES.findIndex(([value]) => value === theme);
+    const n = THEMES.length;
+    const next = event.key === "Home" ? 0 : event.key === "End" ? n - 1
+      : (at + (event.key === "ArrowRight" || event.key === "ArrowDown" ? 1 : -1) + n) % n;
+    void choose(THEMES[next][0]);
+  });
+  // Dark and Light first; SP Night's three views under their family's name.
+  const family = el("span", { class: "theme-family", text: "SP Night" });
+  family.setAttribute("aria-hidden", "true");
+  const first = THEMES.findIndex(([value]) => value.startsWith("sp-night"));
+  group.append(...tiles.slice(0, first), family, ...tiles.slice(first));
+  return group;
+}
+
 function generalPage(): HTMLElement[] {
   return [
     el("h1", { text: t("General") }),
-    el("h2", { class: "settings-group-title", text: t("Appearance") }),
+    el("p", { class: "lede", text: t("Startup, plan usage and the price list Vults uses for cost estimates.") }),
+    el("h2", { class: "settings-group-title", text: t("Startup") }),
+    el("section", { class: "card rows" },
+      row(
+        t("Start with the desktop"),
+        t("Opens Vults when you log in."),
+        toggle(autostart, async (on) => {
+          await Bridge.setAutostart(on);
+          autostart = on;
+        }),
+      ),
+      row(
+        t("Keep the computer awake while agents work"),
+        t("It won't suspend while a session or a chat turn runs. The screen still locks."),
+        toggle(keepAwake, async (on) => {
+          await Bridge.setKeepAwake(on);
+          keepAwake = on;
+        }),
+      ),
+    ),
+    el("h2", { class: "settings-group-title", text: t("Usage and prices") }),
+    el("section", { class: "card rows" },
+      row(
+        t("Codex usage"),
+        t("Shows your Codex plan's usage. Asks codex every 5 minutes, which reaches OpenAI. Off, nothing is asked."),
+        toggle(codexUsage, async (on) => {
+          await Bridge.setCodexUsage(on);
+          codexUsage = on;
+        }),
+      ),
+      row(
+        t("Claude usage"),
+        t("Reads your Claude plan's usage via Claude Code every 5 minutes; may contact Anthropic, no prompt sent. Session reports work when off."),
+        toggle(claudeUsage, async (on) => {
+          await Bridge.setClaudeUsage(on);
+          claudeUsage = on;
+        }),
+      ),
+      row(
+        t("Automatic model prices"),
+        t("Checks models.dev every 15 minutes; no session data is sent. Estimates use standard API prices, cached up to 24 hours."),
+        toggle(priceUpdates, async on => { await Bridge.setPriceUpdates(on); priceUpdates = on; render(); }),
+      ),
+      priceCatalogRow(),
+    ),
+    ...updatesSection(),
+  ];
+}
+
+/** Settings → Appearance: how every window looks (t3code's Colors & themes, then Interface). */
+function appearancePage(): HTMLElement[] {
+  return [
+    el("h1", { text: t("Appearance") }),
+    el("p", { class: "lede", text: t("Colors, width and language for every window.") }),
+    el("h2", { class: "settings-group-title", text: t("Colors and themes") }),
+    el("section", { class: "card rows" },
+      el("div", { class: "row theme-row" },
+        el("div", { class: "row-title", text: t("Theme") }),
+        el("div", { class: "row-about", text: t("Dark, light or SP Night. Every window follows it.") }),
+        themeTiles(),
+        themeNote ? el("p", { class: "note error", text: themeNote }) : null),
+    ),
+    el("h2", { class: "settings-group-title", text: t("Window and language") }),
     el("section", { class: "card rows" },
       row(t("Mini and Quick width"), t("Shared width, limited to the available screen space."),
         dropdown(ISLAND_WIDTHS.map(value => ({ value, label: value ? `${value} px` : t("Default") })), restoreWidth(), async value => {
           if (!saveWidth(value)) throw new Error(t("Could not save the width. Choose it again to retry."));
         })),
-      row(t("Theme"), t("Dark, a neutral light theme, or SP Night: three views of the city at night. Every window follows it."),
-        dropdown(THEMES.map(([value, label]) => ({ value, label: t(label) })), theme, async value => { await Bridge.setTheme(value); theme = value; })),
       row(
         t("Language"),
-        t("The language of the island, these settings, the tray and the notifications. System follows your desktop's."),
+        t("For the island, settings, tray and notifications. System follows your desktop."),
         dropdown(
           [{ value: null as string | null, label: t("System") }, ...APP_LANGUAGES.map((l) => ({ value: l.code as string | null, label: l.name }))],
           language,
@@ -1105,62 +1359,15 @@ function generalPage(): HTMLElement[] {
         ),
       ),
     ),
-    el("h2", { class: "settings-group-title", text: t("Sound and notifications") }),
-    el("section", { class: "card rows" },
-      row(
-        t("Sounds"),
-        t("Short 8-bit blips when a session needs you, finishes or fails, and for connector news."),
-        toggle(sounds, async (on) => {
-          await Bridge.setSounds(on);
-          sounds = on;
-          render();
-        }),
-      ),
-      row(t("Volume"), t("How loud the sounds play. A cue plays when you let go of the slider."), slider(volume, !sounds)),
-      row(
-        t("Now playing"),
-        t("Shows the song your music player is playing, with play, pause and skip, and Zeca dances to it. Read from your media players on this computer; nothing leaves it."),
-        toggle(nowPlaying, async (on) => {
-          await Bridge.setNowPlaying(on);
-          nowPlaying = on;
-        }),
-      ),
-      row(
-        t("Do not disturb"),
-        dndUntil
-          ? t("On until {time}: no sounds and no notifications, and no reminders for a waiting card. A card still opens the island with its sound.", { time: new Date(dndUntil * 1000).toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit" }) })
-          : t("No sounds and no notifications for a while. A card still opens the island with its sound, so an agent never waits for nobody. It ends by itself."),
-        segmented(
-          [{ value: 0, label: t("Off") }, ...DND_CHOICES.map((m) => ({ value: m, label: m < 60 ? t("{n} min", { n: m }) : t("{n} h", { n: m / 60 }) }))],
-          // On, no length is marked: the time left is in the words.
-          dndUntil ? -1 : 0,
-          async (m) => {
-            await Bridge.setDnd(m || null);
-            dndUntil = m ? Math.floor(Date.now() / 1000) + m * 60 : null;
-            render();
-          },
-        ),
-      ),
-      row(
-        t("Notifications"),
-        t("Only in Panel, where the island is out of sight: a desktop notification when a session finishes or fails, goes quiet, or a card waits for you."),
-        toggle(notifications, async (on) => {
-          await Bridge.setNotifications(on);
-          notifications = on;
-        }),
-        t("In Island and Quiet the island shows it all, so nothing goes to the desktop. Its only button opens the island; it never answers a card."),
-      ),
-      row(
-        t("Stay quiet when I am looking"),
-        t("A session that finishes or fails while its terminal is in front makes no sound, and the island stays put. A card always sounds and opens."),
-        toggle(quietWhenWatching, async (on) => {
-          await Bridge.setQuietWhenWatching(on);
-          quietWhenWatching = on;
-        }),
-        t("Vults reads the active window once, when a turn ends. On GNOME Wayland, and for terminals on Windows, it cannot tell which session is in front, so every finish sounds as before."),
-      ),
-    ),
-    el("h2", { class: "settings-group-title", text: t("Island") }),
+  ];
+}
+
+/** Settings → Island. */
+function islandPage(): HTMLElement[] {
+  return [
+    el("h1", { text: t("Island") }),
+    el("p", { class: "lede", text: t("Where the island sits, how it opens and folds, and how present it is.") }),
+    el("h2", { class: "settings-group-title", text: t("Behavior") }),
     el("section", { class: "card rows" },
       row(
         t("Presence"),
@@ -1178,11 +1385,11 @@ function generalPage(): HTMLElement[] {
             presence = p;
           },
         ),
-        t("Island: the flock at the top. Panel: Zeca in the tray. Quiet: only cards. Paused: agents ask in their terminals, connectors and notifications stop. Also in the tray's menu."),
+        t("Island: the flock at the top. Panel: Zeca in the tray. Quiet: cards only. Paused: agents ask in their terminals; connectors and notifications stop."),
       ),
       row(
         t("Fold the island"),
-        t("How long the open island stays once the pointer leaves it. A permission keeps it open until you answer."),
+        t("How long the island stays open after the pointer leaves. A permission keeps it open."),
         segmented(
           FOLD_CHOICES.map((n) => ({ value: n, label: `${n} s` })),
           foldAfter,
@@ -1194,15 +1401,18 @@ function generalPage(): HTMLElement[] {
       ),
       row(
         t("Open on hover"),
-        t("Resting the pointer on the island opens it all the way, without a click. Opened that way it folds as soon as the pointer leaves, unless you clicked in it. Not in Panel."),
+        t("Hover to open the island fully, no click needed. It folds when the pointer leaves, unless you clicked in it. Not in Panel."),
         toggle(openOnHover, async (on) => {
           await Bridge.setOpenOnHover(on);
           openOnHover = on;
         }),
       ),
+    ),
+    el("h2", { class: "settings-group-title", text: t("Placement") }),
+    el("section", { class: "card rows" },
       row(
         t("Corner widget"),
-        t("A small window in a corner of the screen with up to three birds, the sessions that matter most, and how many work or need you."),
+        t("A corner window with up to three birds and how many sessions work or need you."),
         dropdown(
           [
             { value: null as Corner | null, label: t("Off") },
@@ -1221,7 +1431,7 @@ function generalPage(): HTMLElement[] {
       ),
       row(
         t("Screen"),
-        t("Where the island sits. Automatic lets the desktop choose; a chosen screen that is unplugged hands the island back until it returns."),
+        t("Automatic lets the desktop choose. If the chosen screen is unplugged, the island moves until it returns."),
         // A list, not buttons: screen names are long and a narrow window would break them.
         dropdown(
           [
@@ -1240,54 +1450,173 @@ function generalPage(): HTMLElement[] {
         ),
       ),
     ),
-    el("h2", { class: "settings-group-title", text: t("Startup and usage") }),
+  ];
+}
+
+/** Settings → Sound and notifications. */
+function soundPage(): HTMLElement[] {
+  return [
+    el("h1", { text: t("Sound and notifications") }),
+    el("p", { class: "lede", text: t("What Vults plays and shows when an agent finishes, fails or needs you.") }),
+    el("h2", { class: "settings-group-title", text: t("Sounds") }),
     el("section", { class: "card rows" },
       row(
-        t("Start with the desktop"),
-        t("Opens Vults when you log in."),
-        toggle(autostart, async (on) => {
-          await Bridge.setAutostart(on);
-          autostart = on;
+        t("Sounds"),
+        t("8-bit blips when a session needs you, finishes or fails, and for connector news."),
+        toggle(sounds, async (on) => {
+          await Bridge.setSounds(on);
+          sounds = on;
+          render();
         }),
       ),
+      row(t("Volume"), t("Sound volume. A cue plays when you release the slider."), slider(volume, !sounds)),
       row(
-        t("Codex usage"),
-        t("Shows your Codex plan's usage on the island. Vults asks the codex you are logged into every 5 minutes, and each ask reaches OpenAI. Off, nothing is asked."),
-        toggle(codexUsage, async (on) => {
-          await Bridge.setCodexUsage(on);
-          codexUsage = on;
+        t("Now playing"),
+        t("Shows what your music player is playing, with controls, and Zeca dances. Nothing leaves this computer."),
+        toggle(nowPlaying, async (on) => {
+          await Bridge.setNowPlaying(on);
+          nowPlaying = on;
         }),
       ),
-      row(
-        t("Claude usage"),
-        t("Reads your Claude plan's usage through Claude Code every 5 minutes and may contact Anthropic; no prompt is sent. Session reports still work when off."),
-        toggle(claudeUsage, async (on) => {
-          await Bridge.setClaudeUsage(on);
-          claudeUsage = on;
-        }),
-      ),
-      row(
-        t("Automatic model prices"),
-        t("Checks models.dev every 15 minutes without sending session data. Estimates use current standard API prices; cached prices expire after 24 hours."),
-        toggle(priceUpdates, async on => { await Bridge.setPriceUpdates(on); priceUpdates = on; render(); }),
-      ),
-      priceCatalogRow(),
     ),
-    ...updatesSection(),
-    disclosure(t("Keyboard shortcuts"), el(
+    el("h2", { class: "settings-group-title", text: t("Notifications") }),
+    el("section", { class: "card rows" },
+      row(
+        t("Do not disturb"),
+        dndUntil
+          ? t("On until {time}: no sounds, notifications or reminders. A card still opens the island with its sound.", { time: new Date(dndUntil * 1000).toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit" }) })
+          : t("No sounds or notifications for a while; it ends by itself. A card still opens the island with its sound."),
+        segmented(
+          [{ value: 0, label: t("Off") }, ...DND_CHOICES.map((m) => ({ value: m, label: m < 60 ? t("{n} min", { n: m }) : t("{n} h", { n: m / 60 }) }))],
+          // On, no length is marked: the time left is in the words.
+          dndUntil ? -1 : 0,
+          async (m) => {
+            await Bridge.setDnd(m || null);
+            dndUntil = m ? Math.floor(Date.now() / 1000) + m * 60 : null;
+            render();
+          },
+        ),
+      ),
+      row(
+        t("Notifications"),
+        t("Panel only: a desktop notification when a session finishes, fails, goes quiet or a card waits."),
+        toggle(notifications, async (on) => {
+          await Bridge.setNotifications(on);
+          notifications = on;
+        }),
+        t("In Island and Quiet, the island shows it all. Its only button opens the island, never answers a card."),
+      ),
+      row(
+        t("Stay quiet when I am looking"),
+        t("No sound and no island when a session ends while its terminal is in front. Cards always sound and open."),
+        toggle(quietWhenWatching, async (on) => {
+          await Bridge.setQuietWhenWatching(on);
+          quietWhenWatching = on;
+        }),
+        t("Vults checks the active window once, when a turn ends. On GNOME Wayland and Windows terminals, every finish still sounds."),
+      ),
+    ),
+  ];
+}
+
+/** Dictation's keys, on the Keyboard shortcuts page once dictation is set up: the global
+ *  shortcuts, how the talk key records, and X11's recording keys. */
+function dictationShortcuts(): HTMLElement[] {
+  const shortcutEditor = button(t("Change in KDE…"), () => {
+    if (shortcutsOpening) return;
+    shortcutsOpening = true;
+    shortcutsOpenFailed = false;
+    render();
+    void Bridge.openShortcutSettings().catch(() => { shortcutsOpenFailed = true; }).finally(() => {
+      shortcutsOpening = false;
+      if (page === "shortcuts") render();
+    });
+  });
+  (shortcutEditor as HTMLButtonElement).disabled = shortcutsOpening;
+  const shortcutFeedback = el("p", { class: `note${shortcutsOpenFailed ? " error" : ""}`, text: shortcutsOpenFailed
+    ? t("Could not open KDE Shortcuts. Open your desktop's shortcut settings, or try again.")
+    : t("Opening KDE Shortcuts…") });
+  shortcutFeedback.setAttribute("role", shortcutsOpenFailed ? "alert" : "status");
+  return [
+      el("section", { class: "card rows" },
+        row(t("Dictation"), t("Hold to dictate into the current app. Needs a local model in Settings > Dictation > Voice input."), keycaps(boundKeys("talk"))),
+        row(t("Voice command"), t("Hold to control Vults, then release. Nothing is typed into another app."), keycaps(boundKeys("talk-command"))),
+        row(t("Copy last dictation"), t("Copy the last dictation again, to paste yourself."), keycaps(boundKeys("talk-again"))),
+        row(t("Cancel voice"), t("Discard the current dictation or Chat recording."), keycaps(boundKeys("talk-cancel"))),
+        windowsShortcuts.render(),
+        ...(windowsShortcuts.desktopEditor() ? [row(t("Desktop shortcut settings"), t("Opens KDE System Settings → Shortcuts. Other desktops use their own settings."), shortcutEditor)] : []),
+        ...(shortcutsOpening || shortcutsOpenFailed ? [shortcutFeedback] : []),
+      ),
+      el("h3", { class: "shortcut-subtitle", text: t("Recording") }),
+      el("section", { class: "card rows" },
+        row(t("Recording mode"), t("Hold to dictate. Double-tap to go hands-free, then press again to finish."),
+          dropdown([{ value: true, label: t("Hold + double tap") }, { value: false, label: t("Hold only") }], dictationDoubleTap, async on => {
+            await Bridge.setDictationGesture("doubleTap", on);
+            dictationDoubleTap = on; dictationDoubleTapChanged = true;
+          })),
+      ),
+      ...(windowsShortcuts.supported() ? [] : [(() => {
+        const keys = disclosure(t("X11 recording keys"),
+          row(t("Space locks recording"), t("X11 only. Space keeps recording after you release the shortcut; when off, Space can discard it."), (() => {
+            const control = toggle(dictationSpaceLock, async on => {
+              await Bridge.setDictationGesture("spaceLock", on);
+              dictationSpaceLock = on; dictationSpaceLockChanged = true;
+            });
+            if (dictationWayland) control.setAttribute("disabled", "");
+            return control;
+          })()),
+          row(t("Esc cancels dictation"), t("X11 only. Esc discards the recording or transcription."), (() => {
+            const control = toggle(dictationEscapeCancel, async on => {
+              await Bridge.setDictationGesture("escapeCancel", on);
+              dictationEscapeCancel = on; dictationEscapeCancelChanged = true;
+            });
+            if (dictationWayland) control.setAttribute("disabled", "");
+            return control;
+          })()),
+        );
+        keys.dataset.setting = "dictation-x11-keys";
+        return keys;
+      })()]),
+  ];
+}
+
+/** A shortcut as keycaps: each key a cap, alternatives apart; one not bound reads as words. */
+function keycaps(text: string): HTMLElement {
+  const box = el("span", { class: "keycaps" });
+  box.setAttribute("aria-label", text);
+  text.split(" · ").forEach((combo, i) => {
+    if (i) box.append(el("span", { class: "keycaps-or", text: "/" }));
+    const trimmed = combo.trim();
+    if (!trimmed || trimmed === t("Not bound")) { box.append(el("span", { class: "keycaps-none", text: trimmed || t("Not bound") })); return; }
+    for (const key of trimmed.split(/\+(?!$)/)) box.append(el("kbd", { text: key }));
+  });
+  return box;
+}
+
+/** Settings → Keyboard shortcuts. */
+function shortcutsPage(): HTMLElement[] {
+  // Dictation's keys join once it has a voice model: before, they would do nothing.
+  const dictation = voice?.ready
+    ? dictationShortcuts()
+    : [el("section", { class: "card rows" },
+        row(t("Dictation is not set up"), t("Its keys show here once dictation has a voice model."), button(t("Set up dictation"), () => chooseDictation("voice"))))];
+  return [
+    el("h1", { text: t("Keyboard shortcuts") }),
+    el("p", { class: "lede", text: t("Keys that reach Vults from any app, and inside its windows.") }),
+    el("h2", { class: "settings-group-title", text: t("Island and flock") }),
+    el(
       "section",
       { class: "card rows" },
       windowsShortcuts.render(),
-      row(t("Allow / Deny from anywhere"), windowsShortcuts.supported() ? t("Use the Windows shortcut editor above to change these keys.") : t("Answer the visible permission card. Change global keys in System Settings → Shortcuts."), el("span", { class: "kbd", text: boundKeys("allow", "deny") })),
-      row(t("Dictation"), t("Choose a local model in Settings > Dictation > Voice input. Hold to dictate into your current app. This shortcut never opens Chat."), el("span", { class: "kbd", text: boundKeys("talk") })),
-      row(t("Voice command"), t("Hold to control Vults, then release. Nothing is typed into another app."), el("span", { class: "kbd", text: boundKeys("talk-command") })),
-      row(t("Dictation settings"), t("Configure dictation keys, feedback, insertion and history in its own page."), button(t("Dictation settings"), () => chooseDictation("voice"))),
-      row(t("Next / previous session"), t("Move through the flock. A waiting permission keeps its session in front."), el("span", { class: "kbd", text: boundKeys("next", "previous") })),
-      row(t("Open the island"), t("Open the island with keyboard control: ↑ ↓ sessions, Enter terminal, M actions, Y / N answer, C chat, Esc return."), el("span", { class: "kbd", text: boundKeys("open") })),
-      row(t("Change size"), t("Switch to Mini, Quick or Room from anywhere."), el("span", { class: "kbd", text: boundKeys("mini", "quick", "room") })),
-      row(t("Command palette"), t("Find a session, open a tab or prepare a chat command in Quick or Room."), el("span", { class: "kbd", text: "Ctrl+K" })),
-      row(t("The Nest's tabs"), t("Choose Flock, Chat, Dictation, Connections or Activity. Esc leaves Full."), el("span", { class: "kbd", text: "Alt+1–5" })),
-    )),
+      row(t("Allow / Deny from anywhere"), windowsShortcuts.supported() ? t("Answer the waiting permission card from any app.") : t("Answer the visible permission card. Change global keys in System Settings → Shortcuts."), keycaps(boundKeys("allow", "deny"))),
+      row(t("Next / previous session"), t("Move through the flock. A waiting permission keeps its session in front."), keycaps(boundKeys("next", "previous"))),
+      row(t("Open the island"), t("Open the island with keyboard control: ↑ ↓ sessions, Enter terminal, M actions, Y / N answer, C chat, Esc return."), keycaps(boundKeys("open"))),
+      row(t("Change size"), t("Switch to Mini, Quick or Room from anywhere."), keycaps(boundKeys("mini", "quick", "room"))),
+      row(t("Command palette"), t("Find a session, open a tab or prepare a chat command in Quick or Room."), keycaps("Ctrl+K")),
+      row(t("The Nest's tabs"), t("Choose Flock, Chat, Dictation, Connections or Activity. Esc leaves Full."), keycaps("Alt+1–5")),
+    ),
+    el("h2", { class: "settings-group-title", text: t("Dictation") }),
+    ...dictation,
   ];
 }
 
@@ -1341,24 +1670,9 @@ function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[]
   const microphoneFeedback = el("p", { class: `note${microphonesFailed ? " error" : ""}`, text: microphonesLoading
     ? t("Loading microphones…") : microphonesFailed
       ? microphones === null ? t("Could not list microphones. Refresh to try again.")
-        : t("Could not refresh microphones. The last list may be out of date. Refresh to try again.")
+        : t("Could not refresh microphones; the list may be outdated. Refresh to try again.")
       : t("No microphones found. Connect one and refresh.") });
   microphoneFeedback.setAttribute("role", microphonesFailed ? "alert" : "status");
-  const shortcutEditor = button(t("Change in KDE…"), () => {
-    if (shortcutsOpening) return;
-    shortcutsOpening = true;
-    shortcutsOpenFailed = false;
-    render();
-    void Bridge.openShortcutSettings().catch(() => { shortcutsOpenFailed = true; }).finally(() => {
-      shortcutsOpening = false;
-      if (page === "dictation") render();
-    });
-  });
-  (shortcutEditor as HTMLButtonElement).disabled = shortcutsOpening;
-  const shortcutFeedback = el("p", { class: `note${shortcutsOpenFailed ? " error" : ""}`, text: shortcutsOpenFailed
-    ? t("Could not open KDE Shortcuts. Open your desktop's shortcut settings manually, or try again.")
-    : t("Opening KDE Shortcuts…") });
-  shortcutFeedback.setAttribute("role", shortcutsOpenFailed ? "alert" : "status");
   const requestErasure = button(t("Erase dictation history…"), () => {
     if (dictationErasing) return;
     dictationEraseConfirm = true; dictationEraseFailed = false; dictationErased = false; render();
@@ -1413,84 +1727,45 @@ function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[]
   return [
     el("h1", { text: t(DICTATION_SETTINGS.find(p => p.id === dictationSection)!.label) }),
     ...(windowsShortcuts.supported() ? [
-      el("p",{class:"hint",text:t("Windows dictation uses the selected local model. Hold its shortcut to record and release to transcribe. Text is copied by default; optional insertion supports recognized desktop text fields. Browsers and terminals require manual paste.")}),
-      el("p",{class:"hint",text:t("Windows supports Vults navigation, selected-player playback and linked app volume, optional computer audio commands and installed desktop or Microsoft Store apps. Dictation can pause compatible media.")}),
+      el("p",{class:"hint windows-intro",text:t("Hold the shortcut to record with the local model, release to transcribe. Text is copied; optional insertion works in desktop text fields, not browsers or terminals.")}),
+      el("p",{class:"hint windows-intro",text:t("Windows supports navigation, player and app volume, optional system audio commands and installed apps. Dictation can pause media.")}),
     ] : []),
     ...(dictationSection === "keys" ? [
-      el("h2", { text: t("Global shortcuts") }),
-      el("p", { class: "hint", text: t("Dictation and voice commands have separate shortcuts.") }),
       el("section", { class: "card rows" },
-        row(t("Dictation"), t("Choose a local model in Settings > Dictation > Voice input. Hold to dictate into your current app. This shortcut never opens Chat."), el("span", { class: "kbd", text: boundKeys("talk") })),
-        row(t("Voice command"), t("Hold to control Vults, then release. Nothing is typed into another app."), el("span", { class: "kbd", text: boundKeys("talk-command") })),
-        row(t("Copy last dictation"), t("Copy the last successful dictation again. Paste it yourself; Vults does not submit anything."), el("span", { class: "kbd", text: boundKeys("talk-again") })),
-        row(t("Cancel voice"), t("Discard the current dictation or Chat recording."), el("span", { class: "kbd", text: boundKeys("talk-cancel") })),
-        windowsShortcuts.render(),
-        ...(windowsShortcuts.desktopEditor() ? [row(t("Desktop shortcut settings"), t("Opens KDE System Settings → Shortcuts. Other desktops manage global keys in their own settings."), shortcutEditor)] : []),
-        ...(shortcutsOpening || shortcutsOpenFailed ? [shortcutFeedback] : []),
-      ),
-      el("h2", { text: t("Recording controls") }),
-      el("section", { class: "card rows" },
-        row(t("Recording mode"), t("Hold to dictate. Optionally double-tap to keep recording hands-free, then press the shortcut again to finish."),
-          dropdown([{ value: true, label: t("Hold + double tap") }, { value: false, label: t("Hold only") }], dictationDoubleTap, async on => {
-            await Bridge.setDictationGesture("doubleTap", on);
-            dictationDoubleTap = on; dictationDoubleTapChanged = true;
-          })),
-        row(t("Cancel by voice"), t("Say a cancel phrase by itself or at the end of the final transcript, such as “cancel” or “never mind”. Discards this dictation without copying, inserting or saving it."), toggle(dictationCancelByVoice, async on => {
+        row(t("Cancel by voice"), t("Say “cancel” or “never mind” alone or at the end. The dictation is discarded, never copied, inserted or saved."), toggle(dictationCancelByVoice, async on => {
           await Bridge.setDictationProcessing("cancelByVoice", on);
           dictationCancelByVoice = on; dictationCancelByVoiceChanged = true;
         }), windowsShortcuts.supported() ? t("English, Portuguese and Spanish.") : t("English, Portuguese and Spanish; works on X11 and Wayland.")),
-        el("p", { class: "hint", text: t("Independent dictation only, checked after recording stops. To dictate a sentence ending in a cancel phrase, turn this off.") }),
+        el("p", { class: "hint", text: t("Standalone dictation only, checked when recording stops. Turn off to dictate a sentence ending in a cancel phrase.") }),
         // Windows holds and releases through its own hotkeys: no listener sees Space or Esc.
         el("p", { class: "hint", text: windowsShortcuts.supported()
-          ? t("Changes apply to the next dictation. The global Cancel voice shortcut always works.")
-          : t("Changes apply to the next dictation. The global Cancel voice shortcut always works. Space and Esc require an available X11 key listener.") }),
+          ? t("Applies to the next dictation. Cancel voice always works.")
+          : t("Applies to the next dictation. Cancel voice always works; Space and Esc need X11.") }),
       ),
-      ...(windowsShortcuts.supported() ? [] : [(() => {
-        const keys = disclosure(t("X11 recording keys"),
-          row(t("Space locks recording"), t("X11 only. Space keeps recording after you release the talk shortcut. When off, Space behaves like other typing and can discard a held recording."), (() => {
-            const control = toggle(dictationSpaceLock, async on => {
-              await Bridge.setDictationGesture("spaceLock", on);
-              dictationSpaceLock = on; dictationSpaceLockChanged = true;
-            });
-            if (dictationWayland) control.setAttribute("disabled", "");
-            return control;
-          })()),
-          row(t("Esc cancels dictation"), t("X11 only. Esc discards recording or transcription. When off, Esc does not cancel dictation."), (() => {
-            const control = toggle(dictationEscapeCancel, async on => {
-              await Bridge.setDictationGesture("escapeCancel", on);
-              dictationEscapeCancel = on; dictationEscapeCancelChanged = true;
-            });
-            if (dictationWayland) control.setAttribute("disabled", "");
-            return control;
-          })()),
-        );
-        keys.dataset.setting = "dictation-x11-keys";
-        return keys;
-      })()]),
     ] : []),
     ...(dictationSection === "commands" ? [
       el("section", { class: "card rows" },
-        row(t("Enable voice commands"), t("Hold the command key, speak and release to control Vults. Transcription and command matching stay on this computer."), toggle(dictationCommands, async on => {
+        row(t("Enable voice commands"), t("Hold the command key, speak and release to control Vults. It all stays on this computer."), toggle(dictationCommands, async on => {
           await Bridge.setDictationCommands("enabled", on);
           dictationCommands = on; dictationCommandsChanged = true;
           if (page === "dictation") render();
         })),
-        row(t("Media voice commands"), windowsShortcuts.supported() ? t("Allow pause, resume and track changes for the selected player. Now playing must also be on. For volume commands, choose its audio app below.") : t("Allow local pause, resume, skip and volume commands for the selected media player. Media controls must also be on. Project mute only silences project notifications."), toggle(dictationCommandMedia, async on => {
+        row(t("Media voice commands"), windowsShortcuts.supported() ? t("Pause, resume and skip on the selected player. Needs Now playing; for volume, pick its audio app below.") : t("Pause, resume, skip and volume for the selected player. Needs Media controls; project mute only silences its notifications."), toggle(dictationCommandMedia, async on => {
           await Bridge.setDictationCommands("media", on);
           dictationCommandMedia = on; dictationCommandMediaChanged = true;
           if (page === "dictation") render();
         })),
-        row(t("Application voice commands"), windowsShortcuts.supported() ? t("Allow opening registered Start Menu and Microsoft Store apps by name. Names stay local and ambiguous matches require a choice. Windows checks the app registration before opening. Spoken command lines, URLs and file arguments are unsupported.") : t("Allow opening installed desktop applications by name. Names stay local. A matching project and application require a choice. No spoken command line, URL or file argument is run."), toggle(dictationCommandApps, async on => {
+        row(t("Application voice commands"), windowsShortcuts.supported() ? t("Open Start Menu and Microsoft Store apps by name. Names stay local; if several match, you choose. No command lines, URLs or files.") : t("Open installed apps by name. Names stay local; if a project and an app both match, you choose. No command lines, URLs or files are run."), toggle(dictationCommandApps, async on => {
           await Bridge.setDictationCommands("applications", on);
           dictationCommandApps = on; dictationCommandAppsChanged = true;
         })),
-        row(t("System audio voice commands"), t("Allow mute and volume commands for the default computer output. Preserves channel balance and limits volume adjustments to 100%. Player controls and project notifications stay separate."), toggle(dictationCommandOutput, async on => {
+        row(t("System audio voice commands"), t("Mute or change the volume of the default output, up to 100%. Player controls stay separate."), toggle(dictationCommandOutput, async on => {
           await Bridge.setDictationCommands("output", on);
           dictationCommandOutput = on; dictationCommandOutputChanged = true;
         })),
         ...(windowsShortcuts.supported() ? [playerAudio.render()] : []),
-        row(t("Command key"), t("Hold to control Vults, then release. Nothing is typed into another app."), el("span", { class: "kbd", text: boundKeys("talk-command") })),
-        row(t("Names it understands"), t("Uses current project and agent names, plus replacements in Dictionary. Small spelling differences can match; when names tie, Vults asks which one."), button(t("Dictionary"), () => void Bridge.openNest("dictation-dictionary"))),
+        row(t("Command key"), t("Hold to control Vults, then release. Nothing is typed into another app."), keycaps(boundKeys("talk-command"))),
+        row(t("Names it understands"), t("Matches project and agent names and your Dictionary. Close spellings count; on a tie, Vults asks."), button(t("Dictionary"), () => void Bridge.openNest("dictation-dictionary"))),
       ),
       el("section", { class: "card rows" },
         el("p", { class: "dictation-command-routing", text: !dictationCommands ? t("Voice commands are off. Dictation keeps its own shortcut.")
@@ -1502,35 +1777,35 @@ function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[]
           });
           (control as HTMLSelectElement).disabled = !dictationCommands;
           return control;
-        })(), t("Zeca must be on and Chat idle, with no unsent text or attachments. Refused commands and ambiguous names stay local.")),
+        })(), t("Needs Zeca on and Chat idle, with nothing unsent. Refused or ambiguous commands stay local.")),
       ),
     ] : []),
     ...(dictationSection === "words" ? [
       el("section", { class: "card rows" },
-        row(t("Help the model with these words"), t("Give Whisper your dictionary words as local context. Off by default; currently only Turbo with fixed English is qualified by synthetic tests. Other models and languages keep their existing prompts."), toggle(dictationVocabulary, async on => {
+        row(t("Help the model with these words"), t("Give Whisper your dictionary words as local context. Off by default; tested only with Turbo in English."), toggle(dictationVocabulary, async on => {
           await Bridge.setDictationProcessing("vocabulary", on);
           dictationVocabulary = on; dictationVocabularyChanged = true;
         })),
-        row(t("Project vocabulary"), t("Add cached package, module, file and branch names from the captured session or an unambiguous editor/terminal title. Local only, off by default, with the same Turbo/English restriction."), toggle(dictationProjectVocabulary, async on => {
+        row(t("Project vocabulary"), t("Also add package, file and branch names from the current session or window title. Local only, off by default, Turbo in English only."), toggle(dictationProjectVocabulary, async on => {
           await Bridge.setDictationProcessing("projectVocabulary", on);
           dictationProjectVocabulary = on; dictationProjectVocabularyChanged = true;
         })),
-        el("p", { class: "hint", text: t("Dictionary words come first under the shared 224-token limit. Changes apply to the next recording. Edit Dictionary and Snippets in Dictation; Chat is unchanged.") }),
+        el("p", { class: "hint", text: t("Dictionary words go first, up to 224 tokens. Applies to the next recording; Chat is unchanged.") }),
       ),
     ] : []),
     ...(dictationSection === "voice" ? [
-      el("p", { class: "lede", text: t("Speak in another app. Transcription stays on this computer, with your choice of insertion and history.") }),
+      el("p", { class: "lede", text: t("Speak in another app. Transcription stays on this computer.") }),
       el("h2", { text: t("Model and language") }),
       el("section", { class: "card rows" }, ...voiceRows()),
       el("h2", { text: t("Microphone") }),
       el("section", { class: "card rows" },
-        row(t("Dictation microphone"), t("Used for the next independent dictation. If missing, capture uses the system default or another input. Chat keeps its system default microphone."), microphone),
+        row(t("Dictation microphone"), t("Used for the next dictation; if it is missing, another input is used. Chat keeps the default microphone."), microphone),
         el("div", { class: "actions" }, refresh),
         ...(microphonesLoading || microphonesFailed || microphones?.length === 0 ? [microphoneFeedback] : []),
       ),
       el("h2", { text: t("Sound and feedback") }),
       el("section", { class: "card rows" },
-        row(t("Music while you speak"), windowsShortcuts.supported() ? t("Pause compatible playing media during dictation and resume it afterwards only if unchanged. Leave it is the Windows default. Uses local media controls independently of Now playing. Per-player volume reduction is unavailable.") : t("Temporarily lower or pause playing media during independent dictation. Restore each player when recording stops or is cancelled, unless you changed it. Uses local media controls, separately from Now playing; unavailable players are left alone."), dropdown([
+        row(t("Music while you speak"), windowsShortcuts.supported() ? t("Pause playing media while you dictate, and resume it if you did not change it. Leave it is the Windows default.") : t("Lower or pause playing media while you dictate, and restore it afterwards unless you changed it."), dropdown([
           ...(!windowsShortcuts.supported() ? [{ value: "lower" as const, label: t("Lower to 25%") }] : []),
           { value: "pause" as const, label: t("Pause it") },
           { value: "leave" as const, label: t("Leave it") },
@@ -1542,21 +1817,21 @@ function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[]
           await Bridge.setDictationSound(on);
           dictationSound = dictation.startSound(on);
         })),
-        row(t("Dictation captions"), t("Show clipped words and the final transcript near the island. Captions take no clicks and disappear two seconds after completion."), toggle(dictationCaption, async (on) => {
+        row(t("Dictation captions"), t("Show captions of your words near the island. They take no clicks and vanish two seconds after you finish."), toggle(dictationCaption, async (on) => {
           await Bridge.setDictationCaption(on);
           dictationCaption = dictation.captions(on);
         })),
       ),
       disclosure(t("Advanced processing"), el("section", { class: "card rows" },
-        row(t("Remove repeated loops"), t("Collapse short phrases repeated at least six times in dictation preview and final text."), toggle(dictationCutRepeats, async on => {
+        row(t("Remove repeated loops"), t("Collapse short phrases repeated six or more times."), toggle(dictationCutRepeats, async on => {
           await Bridge.setDictationProcessing("cutRepeats", on);
           dictationCutRepeats = on; dictationCutRepeatsChanged = true;
-        }), t("Voice commands preserve repetitions in names. Sound annotations and standalone silence phrases are still removed when this is off.")),
-        row(t("Retry empty dictation with Base"), t("Retry once only when the selected model returns no text, speech was detected and a different Base model is already installed. Shows retry feedback and never downloads a model."), toggle(dictationRetryBase, async on => {
+        }), t("Voice commands keep repeats in names. When off, sound tags and silence phrases are still removed.")),
+        row(t("Retry empty dictation with Base"), t("If the model returns no text, retry once with an installed Base model. Never downloads a model."), toggle(dictationRetryBase, async on => {
           await Bridge.setDictationProcessing("retryBase", on);
           dictationRetryBase = on; dictationRetryBaseChanged = true;
         })),
-        el("p", { class: "hint", text: t("Processing choices apply to the next independent dictation. Active recordings keep their choices; Chat keeps its existing processing.") }),
+        el("p", { class: "hint", text: t("Applies to the next dictation. Recordings in progress and Chat are unchanged.") }),
       )),
     ] : []),
     ...(dictationSection === "paste" ? [
@@ -1571,8 +1846,8 @@ function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[]
         return overview;
       })(),
       el("section", { class: "card rows" },
-        ...(!windowsShortcuts.supported() ? [el("p", { class: "hint", text: t("App recognition works on X11 and Plasma Wayland. GNOME and wlroots Wayland may leave the app unknown. Background copying requires desktop support; if unavailable, dictation shows an error.") })] : []),
-        row(windowsShortcuts.supported() ? t("Insert dictation in supported Windows text fields") : t("Insert dictation in supported editors and tmux panes"), windowsShortcuts.supported() ? t("Off by default. Inserts only into a recognized, unchanged Windows text field. Password fields, terminals, read-only controls and focus changes keep the text copied. Nothing is submitted, and direct insertion leaves your clipboard unchanged.") : t("Off by default. Pastes in KWrite, GNOME Text Editor, Mousepad or Leafpad, or inserts one line into an exact tmux flock pane in XTerm or Kitty. Waiting cards, unknown panes and focus changes keep the text copied. Plasma Wayland requires desktop keyboard permission. Nothing is submitted."), (() => {
+        ...(!windowsShortcuts.supported() ? [el("p", { class: "hint", text: t("App detection works on X11 and Plasma Wayland; GNOME and wlroots may miss it. If background copying is unsupported, dictation shows an error.") })] : []),
+        row(windowsShortcuts.supported() ? t("Insert dictation in supported Windows text fields") : t("Insert dictation in supported editors and tmux panes"), windowsShortcuts.supported() ? t("Off by default. Types only into a recognized Windows text field; password fields, terminals and focus changes keep the text copied. Nothing is submitted; direct insertion leaves your clipboard untouched.") : t("Off by default. Pastes into KWrite, GNOME Text Editor, Mousepad, Leafpad or a flock tmux pane in XTerm or Kitty; otherwise the text stays copied. Plasma Wayland needs keyboard permission. Nothing is submitted."), (() => {
           const control = toggle(dictationInsert, async (on) => {
             permissionFailure = await permissionWrite(() => Bridge.setDictationInsert(on));
             dictationInsert = on;
@@ -1582,7 +1857,7 @@ function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[]
           if (!dictationInsertAvailable && !dictationInsert) control.setAttribute("disabled", "");
           return control;
         })()),
-        ...(!windowsShortcuts.supported() ? [el("p", { class: "hint", text: t("Insertion temporarily replaces the clipboard and restores only its previous text, up to 64 KiB. Images and rich formats are not restored. A newer copy is kept. Clipboard history exclusion depends on the desktop. Native X11 or Plasma Wayland with ext-data-control is required.") })] : []),
+        ...(!windowsShortcuts.supported() ? [el("p", { class: "hint", text: t("Insertion borrows the clipboard and restores only its previous text, up to 64 KiB; images and rich formats are lost. Clipboard history may keep it, depending on the desktop. Needs X11 or Plasma Wayland with ext-data-control.") })] : []),
         ...(permissionFailure ? [el("p", { class: "note error", text: permissionErrors.has(permissionFailure) ? t(permissionFailure) : permissionFailure }),
           ...(!dictationInsert ? [(() => {
             const control = button(t("Retry token removal"), () => saveSetting(control, async () => {
@@ -1592,11 +1867,11 @@ function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[]
             return control;
           })()] : [])] : []),
         ...(dictationInsert && dictationWayland ? [row(t("Wayland keyboard access"), t({
-          off: tk("Keyboard access is inactive. On Wayland, request access here to enable insertion."),
-          requesting: tk("Waiting for the desktop keyboard permission dialog. You can turn insertion off to cancel."),
+          off: tk("No keyboard access. On Wayland, request it here to enable insertion."),
+          requesting: tk("Waiting for the desktop's keyboard permission. Turn insertion off to cancel."),
           ready: tk("Keyboard access is ready. The restore token is kept only in the OS keyring."),
-          temporary: tk("Keyboard access is ready for this run. No reusable token was saved; request access again after restarting."),
-          unavailable: tk("Keyboard access is unavailable or was revoked. Dictation keeps copying; retry only when you want another desktop prompt."),
+          temporary: tk("Keyboard access is ready until you restart; then request it again."),
+          unavailable: tk("Keyboard access is unavailable or was revoked. Dictation keeps copying; retry to ask the desktop again."),
         }[dictationPermission]), (() => {
           const control = button(t("Request keyboard access"), () => saveSetting(control, () => permissionWrite(Bridge.retryDictationPermission), () => {}));
           if (["requesting", "ready", "temporary"].includes(dictationPermission)) control.setAttribute("disabled", "");
@@ -1605,21 +1880,21 @@ function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[]
       ),
       el("h2", { text: t("Terminals & sessions") }),
       el("section", { class: "card rows" },
-        row(t("Spoken code"), t("In recognized terminals or sessions, join identifier chunks around spoken dot, slash, underscore, dash and colon in English, Portuguese or Spanish."), toggle(dictationSpokenCode, async on => {
+        row(t("Spoken code"), t("In terminals, join words around spoken dot, slash, underscore, dash and colon (English, Portuguese, Spanish)."), toggle(dictationSpokenCode, async on => {
           await Bridge.setDictationProcessing("spokenCode", on);
           dictationSpokenCode = on; dictationSpokenCodeChanged = true;
         }), t("Other apps keep their text. Changes apply to the next dictation.")),
-        el("p", { class: "hint", text: t("Preserves case and existing punctuation; never adds an ending period. This changes text only and never submits it.") }),
+        el("p", { class: "hint", text: t("Keeps case and punctuation; never adds a final period or submits.") }),
       ),
     ] : []),
     ...(dictationSection === "privacy" ? [
       el("section", { class: "card rows" },
-        row(t("Keep dictation history"), t("Only text is kept on this computer. Shortening retention erases older text immediately. Usage totals stay; audio and previous clipboard contents are never saved."),
+        row(t("Keep dictation history"), t("Only text is kept on this computer, never audio or clipboard contents. A shorter retention erases older text at once."),
           dropdown([{ value: "0", label: t("Do not keep") }, { value: "7", label: t("7 days") }, { value: "30", label: t("30 days") }, { value: "365", label: t("1 year") }, { value: "all", label: t("Always") }],
             dictationKeep, async value => { await Bridge.setDictationKeep(value); dictationKeep = value; dictationKeepChanged = true; })),
       ),
       el("section", { class: "card rows dictation-privacy-erasure" },
-        row(t("Erase dictation history"), t("Every retained dictation is erased. Measured daily and app totals stay. Copy again keeps its existing in-memory lifetime."), requestErasure),
+        row(t("Erase dictation history"), t("Erases every saved dictation. Daily and per-app totals stay."), requestErasure),
         ...(dictationEraseConfirm ? [confirmation] : []),
         ...(dictationErasing || dictationEraseFailed || dictationErased ? [feedback] : []),
       ),
@@ -1630,7 +1905,13 @@ function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[]
 const dictationTool = () => dictationSection === "styles" || dictationSection === "diagnostics";
 function dictationPage(): HTMLElement[] {
   if (dictationTool()) return dictationSectionPage(dictationSection);
-  const body = (id: DictationSetting) => dictationSectionPage(id).filter(node => node.tagName !== "H1" && !node.classList.contains("lede")).map(node => node.tagName === "H2" ? el("h3", { text: node.textContent ?? "" }) : node);
+  // The Windows notes are the page's, said once under its lede: kept from the first group only.
+  const intro: HTMLElement[] = [];
+  const body = (id: DictationSetting) => dictationSectionPage(id).filter(node => {
+    if (!node.classList.contains("windows-intro")) return true;
+    if (id === "voice") intro.push(node);
+    return false;
+  }).filter(node => node.tagName !== "H1" && !node.classList.contains("lede")).map(node => node.tagName === "H2" ? el("h3", { text: node.textContent ?? "" }) : node);
   const group = (id: string, title: string, children: HTMLElement[], folded = false) => {
     const node = folded ? disclosure(title, ...children) : el("section", { class: "dictation-preference-group" }, el("h2", { text: title }), ...children);
     node.dataset.dictationSection = id;
@@ -1638,11 +1919,12 @@ function dictationPage(): HTMLElement[] {
     return node;
   };
   const voice = body("voice");
-  const feedback = voice.findIndex(node => node.tagName === "H2" && node.textContent === t("Sound and feedback"));
+  const feedback = voice.findIndex(node => node.tagName === "H3" && node.textContent === t("Sound and feedback"));
   const sound = feedback >= 0 ? voice.splice(feedback, 2) : [];
   const processing = voice.pop()!;
   return [el("h1", { text: t("Dictation") }),
-    el("p", { class: "lede", text: t("Set up your voice, recording controls and text delivery. Your writing tools stay in Dictation.") }),
+    el("p", { class: "lede", text: t("Set up your voice, recording and text delivery.") }),
+    ...intro,
     group("voice", t("Voice input"), voice),
     group("keys", t("Recording"), [...body("keys"), ...sound]),
     group("paste", t("Text delivery"), body("paste")),
@@ -1658,52 +1940,60 @@ function dictationPage(): HTMLElement[] {
 
 // ── Chat ─────────────────────────────────────────────────────────────────────
 
-function chatPage(): HTMLElement[] {
-  const p = apiProviders.find((x) => x.id === apiSelected);
-  const message = apiMessage ? el("p", { class: `note${apiMessage.error ? " error" : " ok"}`, text: apiMessage.text }) : null;
-  const done = (text: string, error = false) => {
-    apiMessage = { text, error };
-    void refreshApi();
-  };
+/** Asks the engines how they stand (each CLI's own word on its login). */
+function checkEngines(): void {
+  if (enginesLoading) return;
+  enginesLoading = true;
+  Bridge.chatEngines().then(
+    e => { engines = e; enginesNote = null; },
+    e => { enginesNote = failure(t("Could not check the engines."), e); },
+  ).finally(() => { enginesLoading = false; if (page === "chat" || page === "agents") render(); });
+}
 
-  const select = document.createElement("select");
-  select.className = "field select";
+/** The API providers as one list: each with its dot and how it stands, the chosen one marked. */
+function providerList(): HTMLElement {
+  const list = el("div", { class: "provider-list" });
+  list.setAttribute("role", "radiogroup");
+  list.setAttribute("aria-label", t("Provider"));
+  const item = (x: ApiProvider) => {
+    const s = apiSummary(x);
+    const b = el("button", { class: `provider-item${x.id === apiSelected ? " on" : ""}`, onclick: () => {
+      if (x.id === apiSelected) return;
+      apiSelected = x.id;
+      apiMessage = null;
+      render();
+      void Bridge.apiProviderSet(x.id).then(() => refreshApi());
+    } }, brandMark(x.id, x.label, 18), el("span", { class: "provider-text" }, el("span", { class: "provider-name", text: x.label }), el("span", { class: "provider-state", text: s.headline })), dot(s.dot));
+    b.setAttribute("role", "radio");
+    b.setAttribute("aria-checked", String(x.id === apiSelected));
+    return b;
+  };
   const group = (label: string, local: boolean) => {
-    const g = document.createElement("optgroup");
-    g.label = label;
-    for (const x of apiProviders.filter((x) => x.local === local)) {
-      const o = new Option(x.hasKey ? t("{name} · key saved", { name: x.label }) : x.label, x.id, false, x.id === apiSelected);
-      g.append(o);
-    }
-    return g;
+    const items = apiProviders.filter(x => x.local === local).map(item);
+    return items.length ? [el("span", { class: "provider-group", text: label }), ...items] : [];
   };
-  select.append(group(t("Cloud, with your key"), false), group(t("On this machine"), true));
-  select.addEventListener("change", () => {
-    apiSelected = select.value;
-    apiMessage = null;
-    void Bridge.apiProviderSet(select.value).then(() => refreshApi());
+  list.append(...group(t("Cloud, with your key"), false), ...group(t("On this machine"), true));
+  // Arrows move through the list, as a radio group does.
+  list.addEventListener("keydown", event => {
+    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+    const items = [...list.querySelectorAll<HTMLButtonElement>(".provider-item")];
+    const at = items.indexOf(document.activeElement as HTMLButtonElement);
+    const next = event.key === "Home" ? 0 : event.key === "End" ? items.length - 1 : (at + (event.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
+    event.preventDefault();
+    items[next]?.focus();
   });
+  return list;
+}
 
-  const rows: (HTMLElement | null)[] = [
-    row(t("Provider"), t("API messages go to this provider. This mode cannot run commands or edit files."), select, t("The API chat can't run commands, edit files or open your project. It reads the files you drop on the island and, when a question needs it, what the island shows (your sessions, the cards waiting, usage, your GitHub card), which then goes to the provider with the conversation. Keys are kept in the system keyring, never in a file, and only ever sent to their own provider.")),
-  ];
-  if (p) {
-    rows.push(row(...keyRow(p, done)));
-    rows.push(row(...modelRow(p)));
-  }
-  rows.push(message ? el("div", { class: "row" }, message) : null);
-
-  const memoryTitle = el("h2", { text: t("Memory") });
-  memoryTitle.dataset.chatSection = "memory";
-  memoryTitle.dataset.setting = "chat-memory-heading";
-  memoryTitle.tabIndex = -1;
+function chatPage(): HTMLElement[] {
   return [
     el("h1", { text: t("Chat & voice") }),
-    ...(zeca ? [] : [el("p", { class: "note", text: t("Zeca is off (Flock & Zeca): no chat or voice until you turn him back on.") })]),
+    ...(zeca ? [] : [el("p", { class: "note", text: t("Chat and voice need Zeca. Turn him on in Zeca.") })]),
     el("p", {
       class: "lede",
-      text: t("Claude Code and Codex use your CLI login and subscription. API providers use your own key or a local model."),
+      text: t("How Zeca's chat asks, searches the web and listens. Its agents and providers are in Agents."),
     }),
+    el("h2", { class: "settings-group-title", text: t("Permissions and setup") }),
     el(
       "section",
       { class: "card rows" },
@@ -1714,11 +2004,11 @@ function chatPage(): HTMLElement[] {
           await Bridge.setNativeChat(on);
           nativeChat = on;
         }),
-        t("The chat's CLI reads your own setup, as in your terminal: your CLAUDE.md, skills, MCP servers, hooks and allow rules. A project's settings join only in a folder you already trust in Claude Code. Cards still ask before every command or edit your rules don't allow. Off, it reads none of it. Applies to the next conversation."),
+        t("The chat reads your CLI setup: CLAUDE.md, skills, MCP servers, hooks and allow rules, plus project settings in folders you trust in Claude Code. Cards still ask for what your rules don't allow."),
       ),
       row(
         t("Who answers Zeca's cards"),
-        t("Choose who approves commands and edits. Destructive commands always ask; every answer is audited."),
+        t("Choose who approves commands and edits. Every answer is audited."),
         segmented<ChatAccess>(
           [
             { value: "ask", label: t("Asks first") },
@@ -1743,74 +2033,17 @@ function chatPage(): HTMLElement[] {
             return false;
           },
         ),
-        t("Asks first: a card before every command or edit. Your policies: the policies you accepted in Approvals answer what they cover, and the rest asks. Full access: everything runs without a card, but destructive commands and what a policy denies or asks first; once a conversation reads from outside (a web page, a fetch, an MCP tool), its cards ask again. Every answer is in the audit log. Holds at once."),
+        t("Asks first: a card for every command or edit. Your policies: your accepted policies answer, the rest asks. Full access: everything runs; only what a policy denies is refused."),
       ),
       ...(askingFull && chatAccess !== "full"
-        ? [fullAccessConfirm(t("With full access Zeca runs commands, edits files and reaches the network without asking. Destructive commands still ask; add deny lines to a policy for anything else that must never run."))]
+        ? [fullAccessConfirm(t("Full access runs commands, edits and network requests without asking, destructive ones too. Add deny lines to a policy for what must never run."))]
         : chatAccess === "full"
-          ? [el("p", { class: "note warn with-icon" }, icon("warning", 14, 2), el("span", { text: t("With full access Zeca runs commands, edits files and reaches the network without asking. Destructive commands still ask; add deny lines to a policy for anything else that must never run.") }))]
+          ? [el("p", { class: "note warn with-icon" }, icon("warning", 14, 2), el("span", { text: t("Full access runs commands, edits and network requests without asking, destructive ones too. Add deny lines to a policy for what must never run.") }))]
           : []),
       ...(accessNote ? [el("p", { class: "note error", text: accessNote })] : []),
     ),
-    memoryTitle,
-    ...(chatSection === "memory" ? [button(t("Back to Chat"), () => void Bridge.openNest("memory"))] : []),
-    el(
-      "section",
-      { class: "card rows" },
-      row(
-        t("Zeca's memory"),
-        t("Keeps a local journal with secrets redacted. Recalled memories join your chat and reach its model. Off, journaling and recall stop; Clear history in Activity removes the journal."),
-        toggle(memory, async (on) => {
-          await Bridge.setMemory(on);
-          memory = on;
-          render();
-        }),
-        t("Keeps a journal on this computer of what your agents and Zeca's chat did: each turn's time and changes, each card's answer with its command or path, and the chat's lines, secrets redacted. What he remembers joins your conversations with Zeca, and only that reaches their model. Off, none of it reaches a model and nothing more is written; Clear history in Activity removes the journal."),
-      ),
-      ...(memory
-        ? [
-            row(
-              t("A summary of each day"),
-              t("Sends yesterday's journal to Claude Code's Haiku on your subscription for a daily summary. Up to 8 requests a day, recorded in the local trace."),
-              toggle(journalSummary, async (on) => {
-                await Bridge.setJournalSummary(on);
-                journalSummary = on;
-              }),
-              t("Once a day, sends the day before's journal to Claude Code's smallest model (Haiku, on your subscription, with no tools) to write a short summary for Zeca to recall; only days from when you turn this on. A request on your behalf: at most 8 a day, each kept in the local trace."),
-            ),
-            row(
-              t("Suggest what to remember"),
-              t("Sends the conversation you leave to Claude Code's Haiku on your subscription to suggest memories. You review them in Chat, Memory. Up to 20 requests a day; excludes conversations that read outside content."),
-              toggle(memorySuggest, async (on) => {
-                await Bridge.setMemorySuggest(on);
-                memorySuggest = on;
-              }),
-              t("When you start a new conversation or open another, sends the one you left to Claude Code's smallest model (Haiku, on your subscription, with no tools) to propose up to three facts worth remembering; you accept or turn down each in the Memory beside the Nest's Chat. Never one that read content from outside. A request on your behalf: at most 20 a day, each kept in the local trace."),
-            ),
-            row(
-              t("Let Zeca sleep on it"),
-              t("While idle at night, Claude Code's Haiku on your subscription reviews memories and recent summaries. Proposed merges wait for you in the Nest. Up to 4 requests a day, recorded in the local trace."),
-              toggle(sleep, async (on) => {
-                await Bridge.setSleep(on);
-                sleep = on;
-              }),
-              t("Once a day, from two in the morning and while nothing is working, Zeca proposes removing facts he remembers twice. On, Claude Code's smallest model (Haiku, on your subscription, with no tools) also reads what he remembers about you and across projects and the last week's summaries, to propose merges, which wait for you in the Nest, and write a short debrief. A request on your behalf: at most 4 a day, each kept in the local trace."),
-            ),
-            row(
-              t("Recall by meaning"),
-              t("Recall also by meaning, not only by words, through an Ollama running on this computer with nomic-embed-text. Each summary and each message you send is embedded on 127.0.0.1; nothing leaves this computer."),
-              toggle(localEmbeddings, async (on) => {
-                await Bridge.setLocalEmbeddings(on);
-                localEmbeddings = on;
-              }),
-            ),
-          ]
-        : []),
-    ),
-    el("h2", { text: t("API") }),
-    el("section", { class: "card rows" }, ...rows),
-    ...(web ? [el("h2", { text: t("Web") }), el("section", { class: "card rows" }, ...webRows())] : []),
-    el("h2", { text: t("Voice") }),
+    ...(web ? [el("h2", { class: "settings-group-title", text: t("Web") }), el("section", { class: "card rows" }, ...webRows())] : []),
+    el("h2", { class: "settings-group-title", text: t("Voice") }),
     el("section", { class: "card rows" },
       row(t("Voice model and language"), t("Dictation and Chat share one local model and spoken language. Manage both in Settings > Dictation > Voice input."), button(t("Dictation settings"), () => chooseDictation("voice")))),
   ];
@@ -1822,7 +2055,7 @@ function voiceRows(): HTMLElement[] {
   const status = voice;
   const intro = row(
     t("Voice model and language"),
-    t("Dictation and Chat share this local transcription model. Audio stays on this computer and is never saved. Dictation works with Zeca off."),
+    t("Shared by Dictation and Chat, even with Zeca off. Audio stays on this computer and is never saved."),
     status.ready
       ? button(t("Turn off"), async () => {
           await Bridge.voiceOff();
@@ -1833,7 +2066,7 @@ function voiceRows(): HTMLElement[] {
   const named = (code: string) => LANGUAGES.find((l) => l.value === code)?.label ?? code;
   const language = row(
     t("Language you speak"),
-    t("Telling the speech model your language makes short phrases far more reliable than detecting it."),
+    t("Setting your language makes short phrases far more reliable than auto-detect."),
     dropdown<string | null>(
       [
         { value: null, label: status.system ? t("System ({name})", { name: named(status.system) }) : t("System") },
@@ -1851,7 +2084,8 @@ function voiceRows(): HTMLElement[] {
     const mb = t("{n} MB", { n: Math.round(m.size / 1_000_000) });
     let control: HTMLElement;
     const progress = downloading.get(m.id);
-    if (progress !== undefined) control = el("span", { class: "muted", text: t("Downloading… {pct}%", { pct: progress }) });
+    // At 100% the file is whole and being checked against its hash before use.
+    if (progress !== undefined) control = el("span", { class: "muted", text: progress >= 100 ? t("Verifying…") : t("Downloading… {pct}%", { pct: progress }) });
     else if (m.installed && status.selected === m.id && status.ready) control = badge(t("In use"), "ok");
     else if (m.installed)
       control = button(t("Use"), async () => {
@@ -1876,7 +2110,18 @@ function voiceRows(): HTMLElement[] {
         // The model that suits the spoken language: Base is weak outside English.
         !status.models.some((x) => x.installed) && m.id === (/^(en|auto)/.test(status.language ?? status.system ?? "en") ? "base" : "small"),
       );
-    return row(t(VOICE_MODEL_LABELS[m.id] ?? m.label), m.installed ? t("{size}, on this computer", { size: mb }) : t("{size} speech model, downloaded and checked before use (whisper.cpp, from Hugging Face)", { size: mb }), control);
+    // What sets each model apart, at a glance (t3code's model cards): speed or accuracy, the GPU,
+    // and the one that suits the language spoken.
+    const recommended = m.id === (/^(en|auto)/.test(status.language ?? status.system ?? "en") ? "base" : "small");
+    const tags = [
+      recommended ? [t("Recommended"), "ok"] : null,
+      m.id === "base" ? [t("Fastest"), "off"] : m.id === "small" ? [t("Balanced"), "off"] : m.id === "turbo" ? [t("Most accurate"), "off"] : null,
+      m.id === "turbo" ? [t("Best with a GPU"), "off"] : null,
+    ].filter((x): x is string[] => x !== null);
+    const modelRow = row(t(VOICE_MODEL_LABELS[m.id] ?? m.label), m.installed ? t("{size}, on this computer", { size: mb }) : t("{size} whisper.cpp model from Hugging Face, checked before use", { size: mb }), control);
+    modelRow.classList.add("model-row");
+    modelRow.querySelector(".row-title")?.after(el("div", { class: "model-tags" }, ...tags.map(([text, kind]) => badge(text, kind as "ok" | "off"))));
+    return modelRow;
   });
   return [intro, language, ...models, ...(voiceError ? [el("p", { class: "note error", text: voiceError })] : [])];
 }
@@ -1907,7 +2152,7 @@ function keyRow(p: ApiProvider, done: (text: string, error?: boolean) => void): 
     return [
       t("{provider} API key", { provider: p.label }),
       t("Saved in the system keyring."),
-      confirmed(t("Remove"), t("The key leaves the system keyring. This provider stops working until you save a key again."), t("Remove key"), () =>
+      confirmed(t("Remove"), t("Removes the key from the keyring. This provider stops until you save a new one."), t("Remove key"), () =>
         Bridge.apiKeyClear(p.id)
           .then(() => done(t("Key removed from the keyring.")))
           .catch((e) => done(failure(t("Could not remove the key."), e), true)),
@@ -1968,7 +2213,7 @@ async function loadModels(id: string): Promise<void> {
     apiModels.set(id, { error: String(e) });
   }
   apiLoading.delete(id);
-  if (page === "chat") render();
+  if (page === "chat" || page === "agents") render();
 }
 
 async function refreshApi(): Promise<void> {
@@ -1989,7 +2234,7 @@ async function refreshApi(): Promise<void> {
   } catch {
     web = null;
   }
-  if (page === "chat") render();
+  if (page === "chat" || page === "agents") render();
 }
 
 /** Zeca's web: off until turned on, an engine, its key or address. */
@@ -2003,12 +2248,12 @@ function webRows(): HTMLElement[] {
   const rows: HTMLElement[] = [
     row(
       t("Web for Zeca"),
-      t("Lets API chat search the web and read pages through your chosen engine and each site's server. Up to 200 requests a day, recorded in the local trace. Outside content never grants permissions."),
+      t("API chat can search through your engine and open pages. Up to 200 requests a day, logged locally."),
       toggle(w.on, async (on) => {
         await Bridge.setWeb(on);
         w.on = on;
       }),
-      t("Lets the API chat search the web and read pages when a question needs it. Each search and page read is a request on your behalf, to the engine you choose and to the page's site: at most 200 a day, each kept in the local trace. A page is read by a separate model call with no tools, and only its answer reaches Zeca; search results reach him as short snippets marked untrusted."),
+      t("Each search or page read is a request to your engine or the page's site: at most 200 a day, all logged locally. A separate model with no tools reads each page; Zeca gets only its answer, and search snippets marked untrusted."),
     ),
   ];
   const engine = document.createElement("select");
@@ -2045,7 +2290,7 @@ function webRows(): HTMLElement[] {
       row(
         t("Search key"),
         t("Saved in the system keyring."),
-        confirmed(t("Remove"), t("The key leaves the system keyring. Web search stops working until you save a key again."), t("Remove key"), () =>
+        confirmed(t("Remove"), t("Removes the key from the keyring. Web search stops until you save a new one."), t("Remove key"), () =>
           Bridge.clearWebKey(w.engine)
             .then(() => said(t("Key removed from the keyring.")))
             .catch((e) => said(failure(t("Could not remove the key."), e), true)),
@@ -2066,7 +2311,7 @@ function webRows(): HTMLElement[] {
     input.addEventListener("keydown", (e) => {
       if (e.key === "Enter") void save();
     });
-    rows.push(row(t("Search key"), t("Kept in the system keyring, never in a file, and only ever sent to that engine."), el("div", { class: "inline" }, input, button(t("Save"), () => void save(), true))));
+    rows.push(row(t("Search key"), t("Kept in the system keyring and sent only to that engine."), el("div", { class: "inline" }, input, button(t("Save"), () => void save(), true))));
   }
   if (webMessage) rows.push(el("div", { class: "row" }, el("p", { class: `note${webMessage.error ? " error" : " ok"}`, text: webMessage.text })));
   return rows;
@@ -2077,19 +2322,38 @@ function webRows(): HTMLElement[] {
 /** What opening the documentation said, when it failed. */
 let aboutNote: string | null = null;
 
+/** Settings → Labs: each beta feature with its switch, all off until turned on here. */
+function labsPage(): HTMLElement[] {
+  const rows = LABS.map(lab => {
+    const blocked = lab.requires !== null && !labOn(labs, lab.requires);
+    const control = toggle(labOn(labs, lab.id), async on => {
+      await Bridge.setLab(lab.id, on);
+      labs = { ...labs, [lab.id]: on };
+    });
+    control.disabled = blocked;
+    const about = lab.restart ? t("{about} It takes effect after Vults restarts.", { about: t(lab.about) }) : t(lab.about);
+    return row(t(lab.name), about, control);
+  });
+  return [
+    el("h1", { text: t("Labs") }),
+    el("p", { class: "lede", text: t("Beta features. Each stays off until you turn it on, and may change or break.") }),
+    el("h2", { class: "settings-group-title", text: t("Chat engines") }),
+    el("section", { class: "card rows" }, ...rows),
+  ];
+}
+
 function aboutPage(): HTMLElement[] {
   return [
     el("h1", { text: t("About") }),
     el(
       "section",
       { class: "card about" },
-      el("img", { class: "logo" }),
+      (() => { const logo = el("img", { class: "logo" }); logo.alt = "Vults"; logo.addEventListener("error", () => { logo.hidden = true; }); return logo; })(),
       el(
         "div",
         {},
-        el("div", { class: "card-title", text: "Vults" }),
+        el("div", { class: "card-title", text: version ? `Vults ${version}` : "Vults" }),
         el("p", { class: "row-about", text: t("A friendly flock watching your coding agents. MIT licensed; no telemetry.") }),
-        version ? el("p", { class: "note", text: t("Version {version}", { version }) }) : null,
         el("div", { class: "actions about-actions" }, button(t("Documentation"), () => {
           aboutNote = null;
           Bridge.openDocs().catch((e) => { aboutNote = failure(t("Could not open the documentation."), e); render(); });
@@ -2097,11 +2361,12 @@ function aboutPage(): HTMLElement[] {
         aboutNote ? el("p", { class: "note error", text: aboutNote }) : null,
       ),
     ),
+    el("h2", { class: "settings-group-title", text: t("Files on this computer") }),
     el(
       "section",
       { class: "card rows" },
-      row(t("Settings"), t("Your settings file."), el("code", { text: settingsPath })),
-      row(t("Data"), t("The hook relay, the inbox of dropped files, connector state."), el("code", { text: dataPath })),
+      row(t("Settings file"), t("Every choice on these pages."), el("code", { text: settingsPath })),
+      row(t("Data folder"), t("The hook relay, the inbox of dropped files, connector state."), el("code", { text: dataPath })),
     ),
   ];
 }
@@ -2117,7 +2382,73 @@ const FLOCKS: { value: Flock; label: string }[] = [
 /** The previews' timer: only while the page is on screen. */
 let previews: number | undefined;
 
-function flockPage(): HTMLElement[] {
+/** What Zeca remembers, and what may work on it: the Zeca page's last section (deep link
+ *  `chatmemory`, from the Nest's Memory). */
+function memorySection(): HTMLElement[] {
+  const memoryTitle = el("h2", { class: "settings-group-title", text: t("Memory") });
+  memoryTitle.dataset.chatSection = "memory";
+  memoryTitle.dataset.setting = "chat-memory-heading";
+  memoryTitle.tabIndex = -1;
+  return [
+    memoryTitle,
+    ...(chatSection === "memory" ? [button(t("Back to Chat"), () => void Bridge.openNest("memory"))] : []),
+    el(
+      "section",
+      { class: "card rows" },
+      row(
+        t("Zeca's memory"),
+        t("Keeps a local journal, secrets redacted. What Zeca recalls reaches the chat's model. Off, both stop."),
+        toggle(memory, async (on) => {
+          await Bridge.setMemory(on);
+          memory = on;
+          render();
+        }),
+        t("Logs each turn's time and changes, each card's answer and the chat on this computer, secrets redacted. Only what Zeca recalls reaches a model; Clear history in Activity deletes the journal."),
+      ),
+      ...(memory
+        ? [
+            row(
+              t("A summary of each day"),
+              t("Sends yesterday's journal to Claude Code's Haiku, on your subscription, for a summary. Up to 8 requests a day, logged locally."),
+              toggle(journalSummary, async (on) => {
+                await Bridge.setJournalSummary(on);
+                journalSummary = on;
+              }),
+              t("Once a day, Haiku (no tools) writes a short summary of the previous day for Zeca to recall. Only days since you turned this on; at most 8 requests a day, logged locally."),
+            ),
+            row(
+              t("Suggest what to remember"),
+              t("Sends the conversation you leave to Claude Code's Haiku, on your subscription, to suggest memories. Up to 20 requests a day; skips ones with outside content."),
+              toggle(memorySuggest, async (on) => {
+                await Bridge.setMemorySuggest(on);
+                memorySuggest = on;
+              }),
+              t("Haiku (no tools) proposes up to three facts from it; accept or decline each in the Memory beside the Nest's Chat. At most 20 requests a day, logged locally."),
+            ),
+            row(
+              t("Let Zeca sleep on it"),
+              t("At night, while idle, Claude Code's Haiku, on your subscription, proposes memory merges in the Nest. Up to 4 requests a day, logged locally."),
+              toggle(sleep, async (on) => {
+                await Bridge.setSleep(on);
+                sleep = on;
+              }),
+              t("Each night from 2 a.m., while idle, Zeca proposes removing duplicate facts. With this on, Haiku (no tools) also reads his memories and last week's summaries to propose merges, which wait in the Nest, and writes a short debrief."),
+            ),
+            row(
+              t("Recall by meaning"),
+              t("Recall by meaning, not only words, with a local Ollama (nomic-embed-text). Nothing leaves this computer."),
+              toggle(localEmbeddings, async (on) => {
+                await Bridge.setLocalEmbeddings(on);
+                localEmbeddings = on;
+              }),
+            ),
+          ]
+        : []),
+    ),
+  ];
+}
+
+function zecaPage(): HTMLElement[] {
   const canvases: { id: string; canvas: HTMLCanvasElement }[] = [];
   // Each preview perches on the same wire line, so their sizes compare at a glance.
   const SCALE = 2, W = 44, WIRE = 36;
@@ -2149,14 +2480,16 @@ function flockPage(): HTMLElement[] {
     return button;
   };
   const group = (family: string, title: string) => [
-    el("h2", { text: title }),
+    el("h3", { class: "species-family", text: title }),
     el("div", { class: "species-grid" }, ...SPECIES.filter((s) => s.family === family).map((s) => card(s.id, s.name, s.latin))),
   ];
   // Zeca in his own feathers, or in the look picked (Auto shows his feathers: the season decides).
   const zecaCanvas = document.createElement("canvas");
   zecaCanvas.className = "zeca-preview";
-  zecaCanvas.width = W * SCALE;
-  zecaCanvas.height = (WIRE + 10) * SCALE;
+  // His portrait leads the page: twice the species' scale, still whole pixels.
+  const HERO = SCALE * 2;
+  zecaCanvas.width = W * HERO;
+  zecaCanvas.height = (WIRE + 10) * HERO;
   zecaCanvas.setAttribute("role", "img");
   const labelPreview = () =>
     zecaCanvas.setAttribute("aria-label", !zecaLook || zecaLook === "auto" || zecaLook === "none" ? t("Zeca, in his own feathers") : t("Zeca, in the look you picked"));
@@ -2184,7 +2517,7 @@ function flockPage(): HTMLElement[] {
         shown.set(zecaCanvas, frame);
         const ctx = zecaCanvas.getContext("2d")!;
         ctx.clearRect(0, 0, zecaCanvas.width, zecaCanvas.height);
-        drawFrame(ctx, set, frame, 10, WIRE + 6 - perchOf(set), SCALE);
+        drawFrame(ctx, set, frame, 10, WIRE + 6 - perchOf(set), HERO);
       }
     }
   };
@@ -2193,67 +2526,76 @@ function flockPage(): HTMLElement[] {
   previews = undefined;
   paint();
   if (!matchMedia("(prefers-reduced-motion: reduce)").matches) previews = window.setInterval(paint, 100);
+  const species = SPECIES.find((x) => x.id === zecaSpecies);
   return [
-    el("h1", { text: t("Flock & Zeca") }),
-    el(
-      "section",
-      { class: "card rows" },
+    el("h1", { text: "Zeca" }),
+    el("p", { class: "lede", text: t("The bird who chats, listens and remembers. Choose who he is and how he looks.") }),
+    el("section", { class: "card zeca-hero" },
+      zecaCanvas,
+      el("div", { class: "zeca-hero-body" },
+        el("div", { class: "zeca-hero-name" }, el("span", { text: "Zeca" }), species ? el("span", { class: "zeca-hero-species", text: species.name }) : null),
+        el("p", { class: "row-about", text: zeca
+          ? t("Zeca is the bird in front: the session that needs you, or the one you picked.")
+          : t("Zeca is off: the session in front keeps its own bird.") }),
+        el("div", { class: "rows" },
+          row(
+            t("Zeca on"),
+            t("Chats and listens. Off, Chat stops; the flock, cards and dictation keep working."),
+            toggle(zeca, async (on) => {
+              await Bridge.setZeca(on);
+              zeca = on;
+              render();
+            }),
+          )))),
+    el("h2", { class: "settings-group-title", text: t("Look") }),
+    el("section", { class: "card rows" },
+      row(
+        t("What he wears"),
+        t("Only Zeca wears it; the flock keeps its feathers."),
+        dropdown(LOOKS, zecaLook, async (look) => {
+          await Bridge.setZecaLook(look);
+          zecaLook = look;
+          shown.delete(zecaCanvas);
+          labelPreview();
+          paint();
+        }),
+        t("Auto picks a seasonal hat: witch (Oct 1 to Nov 1), Santa (Dec 1 to 26), party (Dec 31 to Jan 2), bunny ears (Good Friday to Easter Monday). Other outfits only when you pick them."),
+      ),
+    ),
+    ...memorySection(),
+    el("h2", { class: "settings-group-title", text: t("Species") }),
+    el("p", { class: "note", text: t("The one you pick is Zeca on the island and in Chat.") }),
+    ...group("new-world", t("Vultures of the Americas")),
+    disclosure(t("Vultures of Africa, Europe and Asia"), ...group("old-world", t("Vultures of Africa, Europe and Asia")).slice(1)),
+  ];
+}
+
+function flockPage(): HTMLElement[] {
+  window.clearInterval(previews);
+  previews = undefined;
+  return [
+    el("h1", { text: t("Flock") }),
+    el("p", { class: "lede", text: t("Your sessions' birds: where they come from, and who drops by.") }),
+    el("h2", { class: "settings-group-title", text: t("Birds") }),
+    el("section", { class: "card rows" },
       row(
         t("The flock draws from"),
-        t("Where the sessions' birds come from: Brazil's vultures, the vultures of the Americas (with both condors), or every vulture in the world."),
+        t("Where session birds come from: Brazil, the Americas (with both condors), or the whole world."),
         segmented(FLOCKS.map((f) => ({ ...f, label: t(f.label) })), flock, async (f) => {
           await Bridge.setFlock(f);
           flock = f;
         }),
-        t("Each project is one species, the same every time the app starts, and the projects on the wire differ while there are species left. A project with three or more sessions gets a king vulture either way."),
+        t("Each project keeps the same species, and projects on the wire differ while species last. Three or more sessions bring a king vulture."),
       ),
       row(
         t("Rare visitors"),
-        t("Now and then, while sessions are open, a vulture from outside your flock (a condor, a griffon) crosses the sky once and goes on its way. It never lands."),
+        t("Now and then a vulture from outside your flock crosses the sky once. It never lands."),
         toggle(visitors, async (on) => {
           await Bridge.setVisitors(on);
           visitors = on;
         }),
       ),
     ),
-    el(
-      "section",
-      { class: "card rows" },
-      row(
-        "Zeca",
-        t("The companion who chats and listens. Off, the flock, cards, notifications, connectors and independent local dictation keep working; Chat is unavailable."),
-        toggle(zeca, async (on) => {
-          await Bridge.setZeca(on);
-          zeca = on;
-          render();
-        }),
-      ),
-      row(
-        t("Look"),
-        t("Only Zeca wears it; the flock keeps its feathers."),
-        el(
-          "div",
-          { class: "look-control" },
-          zecaCanvas,
-          dropdown(LOOKS, zecaLook, async (look) => {
-            await Bridge.setZecaLook(look);
-            zecaLook = look;
-            shown.delete(zecaCanvas);
-            labelPreview();
-            paint();
-          }),
-        ),
-        t("Auto dresses Zeca for the season: a witch hat from October 1 to November 1, a Santa hat from December 1 to 26, a party hat from New Year's Eve to January 2, bunny ears from Good Friday to Easter Monday. Sunglasses and the other outfits only when you pick them."),
-      ),
-    ),
-    el("p", {
-      class: "note",
-      text: zeca
-        ? t("Zeca is the bird in front: the session that needs you, or the one you picked. Choose his species.")
-        : t("Zeca is off: the session in front keeps its own bird. His species and look wait for him here."),
-    }),
-    ...group("new-world", t("Vultures of the Americas")),
-    ...group("old-world", t("Vultures of Africa, Europe and Asia")),
   ];
 }
 
@@ -2277,7 +2619,9 @@ function chooseDictation(section: DictationSetting): void {
 
 function choosePage(next: Page, section?: "memory"): void {
   page = next;
-  chatSection = next === "chat" ? section ?? null : null;
+  // Dictation's keys show once it is set up: asked again each time the page opens.
+  if (next === "shortcuts") void refreshVoice().catch(() => {});
+  chatSection = next === "zeca" ? section ?? null : null;
   navigated = true;
   location.hash = next === "dictation" ? `dictation${dictationSection}` : chatSection === "memory" ? "chatmemory" : next;
   apiMessage = null;
@@ -2293,7 +2637,7 @@ function choosePage(next: Page, section?: "memory"): void {
     void refreshActivity();
     budget.refresh();
   }
-  if (next === "chat") void refreshApi();
+  if (next === "chat" || next === "agents") void refreshApi();
   if (next === "phone") void refreshPhone(renderPhone);
   // Read again on the way in, like Projects and Phone: a stale or failed read is never shown as fresh.
   if (next === "connectors") void refreshConnectors();
@@ -2309,7 +2653,7 @@ function render(): void {
   playerAudio.context(page === "dictation" && dictationSection === "commands" && windowsShortcuts.supported() && !document.hidden, dictationCommands && dictationCommandMedia && nowPlaying);
   const tool = page === "dictation" && dictationTool();
   const preferences = page === "dictation" && !tool;
-  const place = tool ? `dictation${dictationSection}` : page === "chat" && chatSection === "memory" ? "chatmemory" : page;
+  const place = tool ? `dictation${dictationSection}` : page === "zeca" && chatSection === "memory" ? "chatmemory" : page;
   if (page === "activity") budget.relabel();
   const currentScroll = root.querySelector("main.page")?.scrollTop ?? 0;
   const sidebarScroll = root.querySelector(".sidebar")?.scrollTop ?? 0;
@@ -2339,6 +2683,14 @@ function render(): void {
   const content =
     page === "general"
       ? generalPage()
+      : page === "appearance"
+        ? appearancePage()
+      : page === "island"
+        ? islandPage()
+      : page === "sound"
+        ? soundPage()
+      : page === "shortcuts"
+        ? shortcutsPage()
       : page === "dictation"
         ? dictationPage()
       : page === "agents"
@@ -2351,18 +2703,24 @@ function render(): void {
               ? projectsPage()
             : page === "activity"
               ? [el("h1", { text: t("History and budget") }),
-                el("p", { class: "lede", text: t("Choose what stays on this computer. Recaps and records are in Activity.") }),
-                el("div", { class: "actions" }, button(t("Open Activity"), () => void Bridge.openNest("week"))),
+                el("p", { class: "lede", text: t("What Vults keeps on this computer, and how much it may spend a day.") }),
+                el("h2", { class: "settings-group-title", text: t("Budget") }),
                 budget.element,
-                historyCard(activity, { confirming: clearing }, activityActions)]
+                el("h2", { class: "settings-group-title", text: t("History") }),
+                historyCard(activity, { confirming: clearing }, activityActions),
+                el("div", { class: "actions" }, button(t("Open Activity"), () => void Bridge.openNest("week")))]
             : page === "connectors"
               ? connectorsPage()
             : page === "phone"
               ? phonePage()
               : page === "flock"
                 ? flockPage()
-                : aboutPage();
-  if (page !== "flock") window.clearInterval(previews);
+              : page === "zeca"
+                ? zecaPage()
+                : page === "labs"
+                  ? labsPage()
+                  : aboutPage();
+  if (page !== "zeca") window.clearInterval(previews);
   const navButton = (p: (typeof PAGES)[number]) => {
     const b = el(
       "button",
@@ -2426,7 +2784,7 @@ function render(): void {
     }
   }
   if (focusDestination) {
-    const destination = page === "chat" && chatSection === "memory" ? main.querySelector<HTMLElement>('[data-chat-section="memory"]') : null;
+    const destination = page === "zeca" && chatSection === "memory" ? main.querySelector<HTMLElement>('[data-chat-section="memory"]') : null;
     destination?.scrollIntoView?.({ block: "start" });
     (destination ?? main).focus({ preventScroll: true });
     focusDestination = false;
@@ -2444,7 +2802,7 @@ window.addEventListener("pointerdown", () => void Bridge.away().catch(() => {}),
 if (page === "activity") { void refreshActivity(); budget.refresh(); }
 if (page === "phone") void refreshPhone(renderPhone);
 Bridge.onPhone(phoneEvent);
-watchWidth(() => { if (page === "general") render(); });
+watchWidth(() => { if (page === "appearance") render(); });
 
 void Bridge.appSettings().then((s) => {
   dictationCaption = dictation.captions(s.dictationCaption, true);
@@ -2469,6 +2827,7 @@ void Bridge.appSettings().then((s) => {
   sounds = s.sounds;
   volume = savedVolume = s.volume;
   autostart = s.autostart;
+  keepAwake = s.keepAwake ?? true;
   // The nearest choice: the file may hold any number in range.
   foldAfter = FOLD_CHOICES.reduce((a, b) => (Math.abs(b - s.foldAfter) < Math.abs(a - s.foldAfter) ? b : a));
   openOnHover = s.openOnHover;
@@ -2496,6 +2855,7 @@ void Bridge.appSettings().then((s) => {
   memorySuggest = s.memorySuggest;
   sleep = s.sleep;
   antigravityApprovals = s.antigravityApprovals;
+  labs = s.labs ?? {};
   zecaSpecies = s.zecaSpecies;
   zecaLook = s.zecaLook;
   flock = s.flock;
@@ -2522,7 +2882,7 @@ const refreshMonitors = () =>
   Bridge.monitors()
     .then((m) => {
       monitors = m;
-      if (page === "general") render();
+      if (page === "island") render();
     })
     .catch(() => {});
 void refreshMonitors();
@@ -2537,6 +2897,7 @@ Bridge.onSettingsSection((section) => {
 });
 // The island's speaker button changes the sounds too: keep the toggle and the slider in step.
 Bridge.onSettings((s) => {
+  if (s.labs !== undefined) { labs = s.labs; if (page === "labs") render(); }
   if (s.questionAgents !== undefined) questionAgents.changed(s.questionAgents);
   cleanupSettings.update(s);
   meetingSettings.update(s);
@@ -2599,7 +2960,7 @@ Bridge.onSettings((s) => {
   }
   if (s.dndUntil !== undefined) {
     dndUntil = s.dndUntil;
-    if (page === "general") render();
+    if (page === "sound") render();
   }
   // A quick action on the island changed a project.
   if (s.projects !== undefined) {
