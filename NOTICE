@@ -70,3 +70,10 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 Some Lucide icons derive from Feather (https://feathericons.com), MIT License,
 Copyright (c) 2013-2023 Cole Bemis.
+
+---
+
+The provider and agent marks in ui/src/brands.ts come from Simple Icons (https://simpleicons.org),
+dedicated to the public domain under CC0 1.0, and from t3code (https://github.com/pingdotgg/t3code),
+MIT License, Copyright (c) 2026 T3 Tools Inc. (the OpenAI and Antigravity marks). Each mark is its
+owner's trademark, shown only to name that provider or agent.

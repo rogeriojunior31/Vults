@@ -3,6 +3,7 @@
 // session views re-render the island around it, and a streaming reply only touches its own
 // message. No Tauri here: the backend comes in.
 import { applyActivity, emptyActivity, readActivity } from "./chat-activity";
+import { brandMark } from "../brands";
 import type { AgentGithubGrant, AgentSnapshotGrant, SpecialistFiles, AgentDefaults, AgentProfileState, AgentProvider, ChatActivity, ChatActivityEvent } from "../bridge";
 import { Clock } from "../clock";
 import type { ChatDraft, ChatMention, UsageWindow, SessionView, ChatView } from "../bridge";
@@ -3268,7 +3269,7 @@ export class ChatPanel {
       // One control retains the engine, model and effort; Quick stacks its labels to save width.
       this.modelButton.classList.add("engine");
       this.modelButton.replaceChildren(
-        el("span", { class: `engine-dot ${this.agent()}` }),
+        brandMark(this.provider === "api" ? this.api.label : this.provider, this.engineName(this.provider), 16),
         el("span", { class: "engine-labels" },
           el("span", { class: "engine-name", text: this.engineName(this.provider) }),
           ...(api ? [] : [el("span", { class: "engine-model", text: label })]),
@@ -3304,7 +3305,7 @@ export class ChatPanel {
             this.changed();
           },
         },
-        el("span", { class: `engine-dot ${p === "api" ? "claude" : p.startsWith("acp:") ? "acp" : p}` }),
+        brandMark(p === "api" ? this.api.label : p, this.engineName(p), 16),
         el("span", { text: this.engineName(p) }),
         word ? el("span", { class: `engine-state${state === "missing" ? " off" : ""}`, text: word }) : null,
       );

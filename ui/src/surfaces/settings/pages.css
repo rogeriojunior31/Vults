@@ -828,14 +828,14 @@ code {
 @media (max-width: 700px) { .provider-pane { grid-template-columns: 1fr; } .provider-list { border-right: 0; border-bottom: 1px solid var(--border); } }
 .provider-group { margin: 8px 8px 4px; color: var(--fg-muted); font: 600 11px/1.4 var(--font); text-transform: none; }
 .provider-group:first-child { margin-top: 0; }
-.provider-item { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 8px; align-items: center; width: 100%; margin: 0; padding: 7px 8px; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--fg); font: inherit; text-align: left; cursor: pointer; transition: background-color 120ms ease-out; }
-.provider-item .status-dot { grid-row: 1 / 3; }
+.provider-item { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; column-gap: 10px; align-items: center; width: 100%; margin: 0; padding: 7px 8px; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--fg); font: inherit; text-align: left; cursor: pointer; transition: background-color 120ms ease-out; }
+.provider-text { display: flex; flex-direction: column; min-width: 0; }
 .provider-item:hover { background: color-mix(in srgb, var(--raised) 60%, transparent); }
 .provider-item.on { background: var(--raised); box-shadow: inset 0 0 0 1px var(--control-border); }
 .provider-item.on .provider-name { color: var(--fg-bright); }
 .provider-item:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 .provider-name { font: 600 var(--text-m)/1.3 var(--font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.provider-state { grid-column: 2; color: var(--fg-dim); font: 11px/1.35 var(--font); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.provider-state { color: var(--fg-dim); font: 11px/1.35 var(--font); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 700px) { .engine-row { grid-template-columns: 1fr; } }
 
 /* General > Appearance: each theme as a tile holding a small picture of Vults in its own colors
@@ -931,3 +931,12 @@ code {
 /* Voice models: what sets each apart, as tags under its name. */
 .model-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
 .model-tags .badge { font-size: 11px; }
+
+/* Brand marks: each provider's and agent's own logo beside its name (t3code's provider rows). */
+.brand-mark { flex: none; display: block; }
+.brand-initials { flex: none; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; background: var(--raised); color: var(--fg-dim); font: 700 9px/1 var(--font); letter-spacing: .02em; }
+.brand-title { display: flex; align-items: center; gap: 10px; }
+.engine-name { gap: 10px; }
+.engine-state { display: flex; align-items: center; gap: 8px; }
+.provider-detail-name { gap: 10px; }
+.provider-detail-name .status-dot { margin-left: 2px; }

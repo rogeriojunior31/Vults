@@ -35,6 +35,9 @@ this document defines how the UI presents them.
   `ui/src/island/icons.ts`; only the flock keeps the product's own drawing. Add an icon by
   taking Lucide's, never by drawing a second style. Reuse the font stack. Do not introduce a
   second icon set, downloaded font, component framework or theme for a prototype.
+- A provider, agent or connection is shown with its official mark beside its name
+  (`ui/src/brands.ts`, `brandMark()`), in the brand's color unless black or white, which take the
+  text's color; one without a mark gets its initials. A mark only names; status stays a dot and words.
 
 | Role | Production token | Current value |
 | --- | --- | --- |

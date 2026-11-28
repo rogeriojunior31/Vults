@@ -16,6 +16,7 @@ import { drawFrame, frameAt, type Frame } from "../../character/sprites";
 import { perchOf } from "../../character/zeca";
 import { AGENTS as REGISTRY } from "../../agents";
 import { acpSummary, apiSummary, dot, engineSummary } from "./provider-status";
+import { brandMark } from "../../brands";
 import { LABS, labOn } from "../../labs";
 import { CONNECTORS, connectorError } from "../../connectors";
 import { el } from "../../dom";
@@ -855,7 +856,7 @@ function agentCard(kind: InstallAgent, name: string, found = true): HTMLElement 
   return el(
     "section",
     { class: "card" },
-    el("div", { class: "card-head" }, el("div", { class: "card-title", text: name }), agentStatus(s)),
+    el("div", { class: "card-head" }, el("div", { class: "card-title brand-title" }, brandMark(kind, name, 20), el("span", { text: name })), agentStatus(s)),
     el("div", { class: "path", text: s.configPath }),
     s.hookReady ? null : el("p", { class: "note error", text: t("The hook relay is missing at {path}.", { path: s.hookPath }) }),
     s.error ? el("p", { class: "note error", text: s.error }) : null,
@@ -1026,7 +1027,7 @@ function connectorsPage(): HTMLElement[] {
         el(
           "div",
           { class: "card-head" },
-          el("div", { class: "card-title", text: c.name }),
+          el("div", { class: "card-title brand-title" }, brandMark(c.id, c.name, 20), el("span", { text: c.name })),
           el(
             "div",
             { class: "head-right" },
@@ -1857,8 +1858,8 @@ function enginesCard(): HTMLElement {
         })
       : null;
     return el("div", { class: "row engine-row" },
-      el("div", { class: "engine-name" }, dot(summary.dot), el("span", { class: "row-title", text: name })),
-      el("div", { class: "row-about", text: summary.headline }),
+      el("div", { class: "engine-name" }, brandMark(id, name, 18), el("span", { class: "row-title", text: name })),
+      el("div", { class: "row-about engine-state" }, dot(summary.dot), el("span", { text: summary.headline })),
       signIn ? el("div", { class: "engine-actions" }, signIn) : null);
   };
   const rows: (HTMLElement | null)[] = engines
@@ -1892,7 +1893,7 @@ function providerList(): HTMLElement {
       apiMessage = null;
       render();
       void Bridge.apiProviderSet(x.id).then(() => refreshApi());
-    } }, dot(s.dot), el("span", { class: "provider-name", text: x.label }), el("span", { class: "provider-state", text: s.headline }));
+    } }, brandMark(x.id, x.label, 18), el("span", { class: "provider-text" }, el("span", { class: "provider-name", text: x.label }), el("span", { class: "provider-state", text: s.headline })), dot(s.dot));
     b.setAttribute("role", "radio");
     b.setAttribute("aria-checked", String(x.id === apiSelected));
     return b;
@@ -1927,7 +1928,7 @@ function chatPage(): HTMLElement[] {
   const detail = p
     ? el("div", { class: "provider-detail" },
         el("div", { class: "provider-detail-head" },
-          el("div", { class: "provider-detail-name" }, dot(summary!.dot), el("span", { text: p.label }))),
+          el("div", { class: "provider-detail-name" }, brandMark(p.id, p.label, 22), el("span", { text: p.label }), dot(summary!.dot))),
         el("div", { class: "rows" }, row(...keyRow(p, done)), row(...modelRow(p))),
         message)
     : el("div", { class: "provider-detail" }, el("p", { class: "note", text: t("Choose a provider on the left.") }));
