@@ -192,3 +192,42 @@ forwarded with `ssh -R`, stamps the host, and keeps local rules and *Always* awa
 9. Read-only remote diffs and listing, bounded. S-M
 10. Tailscale discovery from the local CLI. S
 11. Later: WSL as a host, Windows and macOS. L
+
+## 7. Threads: conversations that look after themselves
+
+t3code: Settings → Threads (`SettingsPanels.tsx:1935`), the thread menu (`threadActionMenu.logic.ts`),
+fork from a reply (`TimelineAssistantRows.tsx:163`), the command palette searching every thread.
+
+What Vults already has: a list of conversations in Quick and the Nest, **Rename** and **Delete**
+(`chat_rename`, `chat_delete`), **Ctrl+F** inside one, kept nodes, ↑/↓ history, the queue mid-turn,
+a lost session resumed by handoff. Settings has nothing for them yet.
+
+| Step | What | Where | Size |
+|---|---|---|---|
+| T1 | A **Conversations** section in Settings → Chat & voice: the engine and model a new one starts with, and who answers its cards (moves there) | `settings/main.ts`, `app/src/settings.rs` | S |
+| T2 | **Pin** and **Archive** in each conversation's menu; archived ones in a list with **Unarchive**; Delete asks first (setting, on) | `crates/store` migration, `app/src/chat.rs`, `chat.ts` | M |
+| T3 | **Titles by a model**: the first turn names the conversation, **Regenerate title** in its menu; off without an engine; Claude/Codex CLI or the API provider, through the gate | `crates/chat`, `app/src/chat.rs` | M |
+| T4 | **Fork from this reply**: a new conversation with the turns up to it (handoff text, as `lost_session`) | `crates/chat/src/lib.rs`, `chat.ts` | M |
+| T5 | **Search every conversation** from the Nest (titles and text, from the store) | `crates/store`, `nest/` | M |
+| T6 | **Copy conversation** as Markdown, and its id | `chat.ts` | S |
+| T7 | **After a usage limit**: wait and resume when it resets (the agent's reset time, never guessed); **settle** idle ones after N days | `app/src/chat.rs`, Labs first | L |
+
+## 8. Browser: what agents open
+
+t3code: Settings → Browser (`IntegrationsSettings.tsx:1695`) and a built-in preview browser the agent
+drives (`apps/server/src/mcp/toolkits/preview/tools.ts`: navigate, snapshot, act, record), with
+profiles, a mini-player and local servers found by port.
+
+What Vults already has: links open in the system browser (`app/src/runtime.rs:1383`); Zeca's web
+(search engine choice: Brave, Tavily or your SearXNG, and page reads, through the gate, 200 a day).
+
+| Step | What | Where | Size |
+|---|---|---|---|
+| B1 | **Open links in**: the system browser (now) or a Vults window; Ctrl+click always the system one | `app/src/runtime.rs`, Settings → General | S |
+| B2 | **Local servers**: a session's `localhost:port` shown on its card, **Open** in a preview window | `crates/core` (from tool output), `ui/` | M |
+| B3 | **Preview window**: a Tauri webview with address bar, back/forward, reload, open in system browser, screenshot into the chat | `app/`, `ui/src/surfaces/preview/` | L |
+| B4 | **Agent access to the preview** (off by default, per project): navigate, snapshot, click, type, through the `vults-zeca` MCP; each act a card unless a policy covers it | `crates/zeca`, MCP, Labs first | L |
+| B5 | Profiles, recording, device sizes, cookie import | after B4, only if asked | — |
+
+Rules for both: nothing leaves the computer for a title or a search unless its feature is on; a
+browser the agent drives is a Lab first, never on by default, and never answers a permission.

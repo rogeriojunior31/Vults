@@ -105,6 +105,10 @@ CHANGELOG line. Every config write follows rule 3.
 - [ ] Z8 · Warn on a fetch's own card before the call · P2 · S
 - [ ] M7f · The broader `vults-zeca` MCP for Codex through the installer · P2 · M
 - [ ] Z6f · OpenAI Responses API with native compaction, once testable with a key · P3 · M
+- [ ] T1-T6 · Conversations like t3code's Threads: new-conversation defaults in Settings, pin and archive, titles by a model, fork from a reply, search every conversation, copy as Markdown (docs/dev/t3-parity.md §7) · P2 · M
+- [ ] T7 · Resume after a usage limit resets; settle idle conversations (Lab first) · P3 · L
+- [ ] B1-B2 · Open links in the system browser or a Vults window; a session's local server on its card with Open (t3-parity §8) · P2 · S-M
+- [ ] B3-B4 · A preview window, then agent access to it through the `vults-zeca` MCP, each act a card (Lab first) · P3 · L
 - [ ] LATER · Each needs a design pass first: routines (K4), proposals from repeated denials (K5), skills (K6), Zeca as an ACP agent (K10), Studio library (UX9), scoped investigations (UX10) · P3
 
 ## Dictation
