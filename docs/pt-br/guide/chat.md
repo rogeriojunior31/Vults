@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: efb613c9658e -->
+<!-- source: aa456ba7a2e0 -->
 
 Os painéis laterais redimensionáveis seguem o ponteiro que iniciou o arraste, ignoram toques adicionais e encerram o arraste quando a janela perde o foco. O cancelamento preserva a largura atual e mantém os rascunhos. Quando o espaço limita um painel, o arraste e o redimensionamento pelo teclado partem da largura visível; reduzir apenas o espaço disponível não sobrescreve a largura salva. Os controles de redimensionar e recolher usam a mesma cor de foco de teclado que o restante do tema selecionado.
 
@@ -96,6 +96,15 @@ vínculos informados pelo desktop.
 Antes da primeira mensagem, a pasta (*in vults ▾*, no topo no Nest, embaixo do campo na ilha) diz onde a conversa vai trabalhar: a
 pasta da sessão em primeiro plano, a menos que você escolha outra das sessões no fio, ou uma pasta
 vazia só dela. Depois que a conversa começa, ela fica lá até **New**.
+
+O menu dela lista as pastas onde seus agentes trabalham agora, depois **Recentes** (as pastas onde
+conversas anteriores trabalharam e que ainda existem), um campo para digitar ou colar o caminho de
+uma pasta (`~/` é a sua pasta pessoal; uma que não existe avisa), **Escolher uma pasta…** (o seletor
+do sistema) e *An empty folder*. Uma única pasta arrastada para um chat que ainda não começou vira o
+lugar onde ele trabalha; depois que começou, uma pasta arrastada vai para o rascunho pelo caminho. No
+**By project** do Nest, *Conversar aqui* ao lado de um repositório ou worktree abre o chat ali (uma
+conversa nova, se a atual já começou). Uma pasta que não existe mais na hora de enviar para a
+mensagem com um aviso, em vez de trabalhar em outro lugar.
 
 ![O Chat na ilha em Quick: a saudação do Zeca, o campo de mensagem e os seletores de modelo, pasta e acesso](../../assets/island-chat.png)
 

@@ -40,6 +40,8 @@ export interface RoostsBackend {
   apply(key: string, file: string, fingerprint: string): Promise<void>;
   /** A GitHub card's row, by its item: the core opens its link, if it has a safe one. */
   open(item: string): void;
+  /** The chat working in this folder (a tree of the roost). */
+  chatHere?: (path: string) => void;
   /** This week's activity, for the time each project took; null when history is off or unread. */
   week(): Promise<WeekView | null>;
   /** Puts a session in front, on the Flock. */
@@ -126,6 +128,9 @@ function roost(r: RoostView, backend: RoostsBackend, done: () => void, hold: (on
         { class: "roost-tree" },
         el("span", { class: "roost-path", text: tree.path }),
         el("span", { class: "roost-branch", text: tree.branch ?? t("detached") }),
+        backend.chatHere
+          ? el("button", { class: "btn small roost-chat", text: t("Chat here"), onclick: () => backend.chatHere!(tree.path) })
+          : null,
       ),
     ),
     section(

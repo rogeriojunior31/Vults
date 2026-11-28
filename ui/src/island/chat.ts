@@ -85,6 +85,10 @@ export interface ChatBackend {
   setAccess?: (access: ChatAccess) => Promise<void>;
   /** Settings' Chat page, where more access is given. */
   openSettings?: () => void;
+  /** Where the chat works: the system's folder chooser, a typed path checked, the recent ones. */
+  pickFolder?: (title: string) => Promise<string | null>;
+  checkFolder?: (path: string) => Promise<string>;
+  recentFolders?: () => Promise<string[]>;
   /** A no with the user's own words, for the card waiting: why not, or what they chose. */
   reply?: (id: string, text: string) => Promise<void>;
   /** Writes something pasted (an image, long text) to the inbox; its copy's path. */
@@ -131,6 +135,8 @@ const MEMORY_SAID = new Set([
 ]);
 
 const REFERENCE_ERRORS = new Set([
+  tk("That folder doesn't exist."),
+  tk("That folder no longer exists. Choose another one."),
   tk("This Codex conversation belongs to another login or its local runtime is missing. Start a new conversation."),
   tk("Sign in to Codex with ChatGPT in your terminal, then try again."),
   tk("Could not use the Codex subscription in the isolated runtime. Sign in again in your terminal."),
@@ -454,6 +460,13 @@ export class ChatPanel {
   private readonly activityNodes = new WeakMap<ActivityMessage, { node: HTMLDetailsElement; summary: HTMLElement; reasoning: HTMLElement; tools: HTMLElement; decisions: HTMLElement; warning: HTMLElement; plan: HTMLElement; toolNodes: Map<string, ToolNode> }>();
   /** Each message's node, kept while what it shows stays the same: a repaint rebuilds none of them. */
   private rendered = new WeakMap<Message, { key: string; node: HTMLElement }>();
+  /** Where a new conversation asked for from outside (a project's *Chat here*) works. */
+  private pendingPlace: string | null = null;
+  /** The folders the chat last worked in, read when the place menu opens. */
+  private recentFolders: string[] = [];
+  /** What the place menu's path field says went wrong, until the next try. */
+  private placeError = "";
+  private readonly placeInput = el("input", { class: "place-input" }) as HTMLInputElement;
   /** How full the model's context is, as its engine last said; the meter beside Send. */
   private context: { used?: number; window?: number } = {};
   private readonly contextMeter = el("span", { class: "context-meter" });
@@ -684,10 +697,27 @@ export class ChatPanel {
     this.input.addEventListener("compositionend", () => this.findMentions());
     this.input.addEventListener("click", () => this.findMentions());
     this.input.addEventListener("keyup", (e) => { if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) this.findMentions(); });
+    this.placeInput.addEventListener("keydown", event => {
+      if (event.isComposing || event.keyCode === 229 || event.key !== "Enter") return;
+      event.preventDefault();
+      event.stopPropagation();
+      const typed = this.placeInput.value.trim();
+      if (!typed || !this.backend.checkFolder) return;
+      void this.backend.checkFolder(typed).then(
+        folder => { this.placeInput.value = ""; this.setPlace(folder); },
+        error => { this.placeError = String(error); this.paintHead(); this.changed(); },
+      );
+    });
+    this.placeInput.addEventListener("input", () => { if (this.placeError) { this.placeError = ""; this.paintHead(); } });
     this.place.addEventListener("click", () => {
       if (this.navigating || this.started || this.provider === "api") return;
       this.setupOpen = false;
       this.menuOpen = !this.menuOpen;
+      this.placeError = "";
+      if (this.menuOpen) void this.backend.recentFolders?.().then(folders => {
+        this.recentFolders = folders;
+        if (this.menuOpen) { this.paintHead(); this.changed(); }
+      }, () => {});
       this.modelOpen = this.accessOpen = this.historyOpen = false;
       this.paintHead();
       this.changed();
@@ -1496,6 +1526,18 @@ export class ChatPanel {
     this.ask("new");
   }
 
+  /** The chat in `folder`: this one if nothing was said yet, else a new conversation there.
+   *  False while a reply comes (nothing changes then). */
+  workIn(folder: string): boolean {
+    if (this.busy || this.navigating || this.opts.specialist) return false;
+    if (this.started || this.messages.length) {
+      this.pendingPlace = folder;
+      this.ask("new");
+    } else this.setPlace(folder);
+    this.input.focus();
+    return true;
+  }
+
   /** External questions keep the recipient and any draft typed while preparation was pending. */
   async askZeca(text?: string): Promise<boolean> {
     if (!this.enabled || !this.backend.prepareZeca) return false;
@@ -1574,6 +1616,18 @@ export class ChatPanel {
   findPaths(query: string): Promise<{ path: string; dir: boolean }[]> {
     if (!this.folder || !this.backend.paths) return Promise.resolve([]);
     return this.backend.paths(this.folder, query);
+  }
+
+  /** Where the chat works, chosen: kept with the draft, and the menu closes. */
+  private setPlace(cwd: string | null): void {
+    if (this.started) return;
+    this.folder = cwd;
+    this.picked = true;
+    this.menuOpen = false;
+    this.placeError = "";
+    this.keepDraft();
+    this.paintHead();
+    this.changed();
   }
 
   /** A path into the draft at the caret, as @ puts it: plain text the agent opens in the folder. */
@@ -1756,7 +1810,12 @@ export class ChatPanel {
   attach(paths: string[], refused: Refused[] = [], folders: string[] = []): void {
     this.setDragOver(false);
     this.paintDrop();
-    // A dropped folder goes into the draft by its path, for the agent to look in.
+    // A folder dropped on a chat that hasn't started is where it works; on one going, it goes into
+    // the draft by its path, for the agent to look in.
+    if (folders.length === 1 && !paths.length && !this.started && !this.messages.length && !this.opts.specialist && this.provider !== "api") {
+      this.setPlace(folders[0]);
+      folders = [];
+    }
     if (folders.length && !this.opts.specialist) {
       const refs = folders.map(f => /[\s"]/u.test(f) ? `@${JSON.stringify(f)}` : `@${f}`).join(" ");
       this.input.value = this.input.value ? `${this.input.value.replace(/\s+$/u, "")} ${refs} ` : `${refs} `;
@@ -2320,6 +2379,7 @@ export class ChatPanel {
     this.native = this.nativeSetting;
     this.picked = false;
     if (this.opts.specialist) { this.folder = null; this.opts.specialist.choice = null; }
+    if (this.pendingPlace) { this.folder = this.pendingPlace; this.picked = true; this.pendingPlace = null; }
     this.specialistChoiceRequest++;this.specialistChoiceSaving=false;
     this.specialistChoiceDraft=null;this.specialistChoiceError="";
     if (draft) this.restoreDraft(draft);
@@ -3509,28 +3569,34 @@ export class ChatPanel {
     this.place.title = this.started
       ? t("{folder}. A conversation stays in its folder; New starts another.", { folder: this.folder ?? t("An empty folder") })
       : (this.folder ?? "A folder of its own, empty");
-    const choices: (string | null)[] = [
-      ...new Set(this.folders.map((f) => f.cwd)),
-      null,
-    ];
+    const live = [...new Set(this.folders.map((f) => f.cwd))];
+    const recent = this.recentFolders.filter(f => !live.includes(f));
     this.menu.classList.toggle("on", this.menuOpen && !this.started && !api);
+    const folderButton = (cwd: string | null) => {
+      const button = el("button", {
+        class: `menu-item${cwd === this.folder ? " on" : ""}`,
+        text: cwd ? folderName(cwd) : t("An empty folder"),
+        onclick: () => this.setPlace(cwd),
+      });
+      button.title = cwd ?? t("An empty folder");
+      return this.choice(button, `folder:${cwd ?? "empty"}`, cwd === this.folder);
+    };
+    this.placeInput.placeholder = t("Type or paste a folder's path");
+    this.placeInput.setAttribute("aria-label", this.placeInput.placeholder);
+    const choose = this.backend.pickFolder
+      ? el("button", { class: "menu-item place-choose", onclick: () => {
+          this.menuOpen = false;
+          this.paintHead();
+          void this.backend.pickFolder!(t("Choose where the chat works")).then(folder => { if (folder) this.setPlace(folder); }, () => {});
+        } }, icon("folder", 13), el("span", { text: t("Choose a folder…") }))
+      : null;
     this.menu.replaceChildren(
-      ...choices.map((cwd) => {
-        const button = el("button", {
-          class: `menu-item${cwd === this.folder ? " on" : ""}`,
-          text: cwd ? folderName(cwd) : t("An empty folder"),
-          onclick: () => {
-            this.folder = cwd;
-            this.keepDraft();
-            this.picked = true;
-            this.menuOpen = false;
-            this.paintHead();
-            this.changed();
-          },
-        });
-        button.title = cwd ?? t("An empty folder");
-        return this.choice(button, `folder:${cwd ?? "empty"}`, cwd === this.folder);
-      }),
+      ...(live.length ? [el("span", { class: "menu-label", text: t("Where your agents work now") }), ...live.map(folderButton)] : []),
+      ...(recent.length ? [el("span", { class: "menu-label", text: t("Recent") }), ...recent.map(folderButton)] : []),
+      ...(this.backend.checkFolder ? [this.placeInput] : []),
+      ...(this.placeError ? [el("p", { class: "menu-hint place-error", text: t(this.placeError) })] : []),
+      ...(choose ? [choose] : []),
+      folderButton(null),
     );
     this.paintHistory();
     for (const { id, menu, trigger, name } of this.menuPanels()) {

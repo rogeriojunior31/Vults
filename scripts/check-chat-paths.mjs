@@ -64,6 +64,9 @@ const panel = new ChatPanel({
   models: async () => [], pick: async () => ({}), saveDraft: async () => {}, keyboard() {},
   paste: async (name, bytes) => { pastes.push([name, bytes.length]); return `/inbox/${name}`; },
   paths: async (folder, query) => { asked.push([folder, query]); return [{ path: "src/auth", dir: true }, { path: "src/auth token.rs", dir: false }]; },
+  checkFolder: async path => { if (path === "/nowhere") throw "That folder doesn't exist."; return path.replace(/\/$/, ""); },
+  recentFolders: async () => ["/work/site", "/work/api"],
+  pickFolder: async () => "/work/picked",
 }, () => {});
 await tick();
 panel.toggle(true);
@@ -86,7 +89,34 @@ panel.folder = null;
 const before = asked.length;
 await typeAt("@src");
 assert.equal(asked.length, before);
-// A folder dropped on the chat goes into the draft by its path, never copied.
+// One folder dropped on a chat that hasn't started is where it works.
+panel.attach([], [], ["/work/dropped"]);
+assert.equal(panel.folder, "/work/dropped", "a single folder dropped first sets the place");
+assert.equal(input.value, "@src", "and goes nowhere in the draft");
+// The place menu: recent folders, a typed path checked, the chooser.
+const place = panel.place;
+place.listeners.click({});
+await tick(); await tick();
+const placeMenu = () => nodes(panel.element).filter(n => n.tag === "button" && n.className.includes("menu-item"));
+assert.ok(placeMenu().some(b => b.textContent.includes("site")), `a recent folder is offered (${placeMenu().map(b => b.textContent)})`);
+const field = nodes(panel.element).find(n => n.className === "place-input");
+field.value = "/nowhere"; field.listeners.keydown({ key: "Enter", preventDefault() {}, stopPropagation() {} });
+await tick(); await tick();
+assert.ok(panel.element.textContent.includes("That folder doesn't exist."), "a wrong path says so");
+field.value = "/work/typed/"; field.listeners.keydown({ key: "Enter", preventDefault() {}, stopPropagation() {} });
+await tick(); await tick();
+assert.equal(panel.folder, "/work/typed", "a typed path, checked, is the place");
+place.listeners.click({}); await tick();
+placeMenu().find(b => b.textContent.includes("Choose a folder")).listeners.click({});
+await tick(); await tick();
+assert.equal(panel.folder, "/work/picked", "the chooser's folder is the place");
+// A project's Chat here: the chat that hasn't started works there.
+assert.equal(panel.workIn("/work/roost"), true);
+assert.equal(panel.folder, "/work/roost");
+panel.folder = null;
+input.value = "";
+// Once a conversation has words, a folder dropped on the chat goes into the draft by its path, never copied.
+panel.messages.push({ who: "you", text: "hi", files: [] });
 input.value = "Review";
 panel.attach([], [], ["/work/api/src", "C:\Users\me\My Repo"]);
 assert.equal(input.value, 'Review @/work/api/src @"C:\Users\me\My Repo" ');
@@ -115,4 +145,4 @@ assert.equal(prevented, false, "a short paste is left to the draft");
 input.listeners.paste({ clipboardData: { files: [{ type: "image/png", name: "shot.png", arrayBuffer: async () => new ArrayBuffer(3) }], getData: () => "" }, preventDefault() {} });
 await tick(); await tick(); await tick();
 assert.deepEqual(pastes.at(-1), ["shot.png", 3]);
-console.log("check-chat-paths: @ lists the conversation folder's files and folders and puts the chosen path in the draft; a dropped folder goes in by its path; / lists the chat's commands; long pastes and images attach");
+console.log("check-chat-paths: @ lists the conversation folder's files and folders and puts the chosen path in the draft; a folder dropped first sets the place, later it goes in by its path; the place menu offers recent folders, a checked typed path and the chooser; / lists the chat's commands; long pastes and images attach");

@@ -244,7 +244,7 @@ export function createNest(
   const parts: Record<Sub, { element: HTMLElement; refresh: () => void; flush?: () => Promise<void> }> = {
     week: createWeek(backend.week),
     "dictation-statistics": createDictationStatistics(backend.dictation.statistics, () => backend.settings("dictation")),
-    projects: createRoosts(backend.roosts),
+    projects: createRoosts({ ...backend.roosts, chatHere: (path) => { void chatIn(path); } }),
     history: createHistory(backend.records.history, backend.records.query),
     cost: (() => {
       const usage = createUsage(backend.records.usage);
@@ -542,6 +542,15 @@ export function createNest(
         restoreRecipientFocus(returnFocus);
       }
     }
+  }
+
+  /** Zeca's chat working in `folder`: a project's *Chat here*. */
+  async function chatIn(folder: string): Promise<void> {
+    if (!zecaOn) return;
+    const selected = await selectRecipient(null);
+    if (!selected || chat !== companionChat) return;
+    show("chat");
+    companionChat.workIn(folder);
   }
 
   async function askCompanion(text: string): Promise<void> {

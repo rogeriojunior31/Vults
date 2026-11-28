@@ -3213,3 +3213,4 @@ button.touched-row:hover,
 .workspace-file:hover, .workspace-file:focus-visible { background: var(--raised); }
 .workspace-file span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .workspace-file svg { flex: none; color: var(--fg-dim); }
+.roost-tree .roost-chat { margin-left: auto; flex: none; }

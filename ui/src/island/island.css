@@ -3517,6 +3517,9 @@ body.still #island .inner:has(.main > .chat) .need-strip.top { animation: none; 
 .msg.you { position: relative; }
 .msg.you > .msg-tools { position: absolute; top: -22px; right: 0; opacity: 0; transition: opacity .12s; }
 .msg.you:hover > .msg-tools, .msg.you:focus-within > .msg-tools { opacity: 1; }
+.place-input { margin: 4px 6px; padding: 5px 8px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--bg-deep); color: var(--fg); font: var(--text-s)/1.4 var(--font); min-width: 0; }
+.place-error { color: var(--danger, #e06c6c); margin: 0 8px 4px; }
+.place-choose { display: flex; align-items: center; gap: 8px; }
 .context-meter { display: inline-flex; align-items: center; gap: 5px; padding: 0 4px; color: var(--fg-dim); font: 600 10px/1 var(--mono, monospace); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .context-meter[hidden] { display: none; }
 .context-meter::before { content: ""; width: 12px; height: 12px; border-radius: 50%; background: conic-gradient(currentColor calc(var(--share, 0) * 360deg), color-mix(in srgb, currentColor 22%, transparent) 0); }

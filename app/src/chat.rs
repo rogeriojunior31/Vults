@@ -1047,6 +1047,14 @@ async fn send(
     // Ignored once the conversation has started: it stays where it began. None is the chat's own
     // folder, so a pick made for it (and shown) is the one that runs.
     if companion {
+        // A folder chosen but gone since (moved, deleted): said, never swapped for another.
+        if !chat.started()
+            && let Some(f) = folder.as_deref()
+            && Path::new(f).is_absolute()
+            && !Path::new(f).is_dir()
+        {
+            return Err("That folder no longer exists. Choose another one.".into());
+        }
         let dir = folder
             .map(PathBuf::from)
             .filter(|d| d.is_absolute())
@@ -3510,6 +3518,73 @@ pub fn on_drop(app: &AppHandle, dropped: &[PathBuf], to: &'static str) {
 /// A file chooser is open (the paperclip's).
 static PICKING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
+/// A folder for the chat to work in: absolute (`~/` is the home), there, and spelled as the
+/// system resolves it.
+pub(crate) fn checked_folder(path: &str) -> Result<String, String> {
+    let path = path.trim().trim_matches('"');
+    let path = match path.strip_prefix("~/").or_else(|| path.strip_prefix("~\\")) {
+        Some(rest) => paths::home().join(rest),
+        None if path == "~" => paths::home(),
+        None => PathBuf::from(path),
+    };
+    if !path.is_absolute() || !path.is_dir() {
+        return Err("That folder doesn't exist.".into());
+    }
+    let real = std::fs::canonicalize(&path).map_err(|_| "That folder doesn't exist.")?;
+    Ok(paths::simplified(real).to_string_lossy().into_owned())
+}
+
+/// A typed or pasted folder, checked before the chat takes it.
+#[tauri::command]
+pub fn chat_check_folder(path: String) -> Result<String, String> {
+    checked_folder(&path)
+}
+
+/// The system's folder chooser, for where the chat works; none when cancelled.
+#[tauri::command]
+pub async fn chat_pick_folder(
+    app: AppHandle,
+    window: tauri::Webview,
+    title: String,
+) -> Result<Option<String>, String> {
+    use std::sync::atomic::Ordering;
+    use tauri_plugin_dialog::DialogExt;
+    if !crate::runtime::card_host(&window) {
+        return Err("The folder chooser belongs to the chat.".into());
+    }
+    // One chooser at a time, shared with the file chooser.
+    if PICKING.swap(true, Ordering::SeqCst) {
+        return Ok(None);
+    }
+    let title: String = title.chars().filter(|c| !c.is_control()).take(80).collect();
+    let picked = tauri::async_runtime::spawn_blocking(move || {
+        app.dialog().file().set_title(title).blocking_pick_folder()
+    })
+    .await
+    .ok()
+    .flatten();
+    PICKING.store(false, Ordering::SeqCst);
+    Ok(picked
+        .and_then(|p| p.into_path().ok())
+        .and_then(|p| checked_folder(&p.to_string_lossy()).ok()))
+}
+
+/// The folders the chat last worked in, newest first, those still there.
+#[tauri::command]
+pub async fn chat_recent_folders() -> Result<Vec<String>, String> {
+    let saved = store(|s| s.conversations(200)).await?;
+    let mut seen = std::collections::HashSet::new();
+    let chat_dir = paths::chat_dir();
+    Ok(saved
+        .into_iter()
+        .map(|c| c.folder)
+        .filter(|f| {
+            !f.is_empty() && Path::new(f) != chat_dir && seen.insert(f.clone()) && Path::new(f).is_dir()
+        })
+        .take(10)
+        .collect())
+}
+
 /// The chat's paperclip: the system's file chooser, and what it picks goes the way of a drop (the
 /// inbox copy, then Zeca swallows it). Only files the user picked; nothing is read before that.
 #[tauri::command]
@@ -3801,6 +3876,15 @@ pub fn clean_inbox() {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_chosen_folder_must_be_there() {
+        let dir = std::env::temp_dir();
+        assert!(super::checked_folder(&dir.to_string_lossy()).is_ok());
+        assert!(super::checked_folder("relative/folder").is_err());
+        assert!(super::checked_folder(&dir.join("vults-no-such-folder-9").to_string_lossy()).is_err());
+        assert!(super::checked_folder("~").is_ok(), "the home is a folder");
+    }
+
     #[test]
     fn a_turn_saves_its_activity_and_words_in_the_order_they_came() {
         use super::Live;

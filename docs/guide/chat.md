@@ -95,6 +95,15 @@ Before the first message, the folder (*in vults ▾*, at the top in the Nest, un
 will work: the folder of the session in front, unless you pick another one of the sessions on the
 wire, or an empty folder of its own. Once the conversation starts it stays there until **New**.
 
+Its menu lists the folders your agents work in now, then **Recent** (the folders earlier
+conversations worked in that are still there), a field to type or paste a folder's path (`~/`
+is your home; one that doesn't exist says so), **Choose a folder…** (the system's chooser) and
+*An empty folder*. A single folder dropped on a chat that hasn't started becomes where it works;
+once it has, a dropped folder goes into the draft by its path. In the Nest's **By project**, *Chat
+here* beside a repository or worktree opens the chat there (a new conversation, if the current one
+already started). A folder that no longer exists when you send stops the message with a note
+instead of working somewhere else.
+
 ![Chat on the island in Quick: Zeca's greeting, the composer, and the model, folder and access pickers](../assets/island-chat.png)
 
 ## Model and effort

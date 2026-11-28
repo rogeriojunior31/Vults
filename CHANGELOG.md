@@ -6,6 +6,8 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Fixed
 
+- **Zeca's chat**: a folder that no longer exists stops the message with a note, instead of the chat quietly working elsewhere.
+
 - **Zeca's chat, ACP agents**: OpenCode's edit asked with a relative name is no longer refused; Antigravity's commands and file paths show; a crash says why (its last line); a session resumes without replaying (`session/resume`), and an agent that wants its login is told to use it.
 - **Linux**: CLIs that only a shell profile puts on the PATH (mise's shims, `~/.local/bin`, `~/.bun/bin`, `~/.cargo/bin`) are found when Vults starts from the desktop.
 
@@ -35,6 +37,8 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 - **Quick chat**: no name, greeting or explanation; *Ask anything…* in the draft. Once a conversation runs, the portrait gives its room to the messages, and long code, diffs and tool output scroll in their own shorter blocks.
 
 ### Added
+
+- **Zeca's chat, where it works**: the folder menu lists recent folders, takes a typed or pasted path, and opens the system's chooser; a folder dropped on a chat that hasn't started becomes where it works; **Chat here** on each project in the Nest's **By project**.
 
 - **Settings → Labs**: beta features, each off until you turn it on there. The first are Qwen Code, Copilot CLI and Kimi Code as chat engines, until each is checked with a live turn.
 

@@ -879,6 +879,12 @@ export const Bridge = {
   chatStop: () => invoke<void>("chat_stop"),
   chatReset: (provider: ChatProvider | null, generation?: number) => invoke<{ provider: ChatProvider; generation: number }>("chat_reset", { provider, generation }),
   chatReply: (id: string, text: string) => invoke<void>("chat_reply", { id, text }),
+  /** The system's folder chooser for where the chat works; null when cancelled. */
+  chatPickFolder: (title: string) => invoke<string | null>("chat_pick_folder", { title }),
+  /** A typed or pasted folder, as the system resolves it; refused when it isn't one. */
+  chatCheckFolder: (path: string) => invoke<string>("chat_check_folder", { path }),
+  /** The folders the chat last worked in that are still there, newest first. */
+  chatRecentFolders: () => invoke<string[]>("chat_recent_folders"),
   chatPaste: (name: string, bytes: number[]) => invoke<string>("chat_paste", { name, bytes }),
   chatPaths: (folder: string | null, query: string) => invoke<{ path: string; dir: boolean }[]>("chat_paths", { folder, query }),
   chatSignIn: (provider: ChatProvider) => invoke<void>("chat_sign_in", { provider }),
