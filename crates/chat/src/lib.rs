@@ -687,6 +687,63 @@ pub fn output_tail(text: &str) -> Option<String> {
     Some(vults_core::redact::secrets(&tail))
 }
 
+/// The start of a change the chat shows: a long rewrite is cut, never the session.
+pub const DIFF_MAX: usize = 12_000;
+
+/// Lines of context kept around a change.
+const DIFF_CONTEXT: usize = 2;
+
+/// `old` turned into `new`, as the lines the chat colors: `-` gone, `+` added, ` ` kept around
+/// them. The lines both share at the start and the end are left out but for a little context.
+/// Without `old` every line is new. None when nothing changes.
+pub fn edit_diff(path: &str, old: &str, new: &str) -> Option<String> {
+    if old == new {
+        return None;
+    }
+    let a: Vec<&str> = old.lines().collect();
+    let b: Vec<&str> = new.lines().collect();
+    let head = a.iter().zip(&b).take_while(|(x, y)| x == y).count();
+    let tail = a[head..]
+        .iter()
+        .rev()
+        .zip(b[head..].iter().rev())
+        .take_while(|(x, y)| x == y)
+        .count();
+    let mut out = String::new();
+    if !path.is_empty() {
+        out.push_str(&format!("@@ {path}\n"));
+    }
+    let mut line = |mark: char, text: &str| {
+        out.push(mark);
+        out.push_str(text);
+        out.push('\n');
+    };
+    a[head.saturating_sub(DIFF_CONTEXT)..head]
+        .iter()
+        .for_each(|l| line(' ', l));
+    a[head..a.len() - tail].iter().for_each(|l| line('-', l));
+    b[head..b.len() - tail].iter().for_each(|l| line('+', l));
+    let after = a.len() - tail;
+    a[after..(after + DIFF_CONTEXT).min(a.len())]
+        .iter()
+        .for_each(|l| line(' ', l));
+    diff_bounded(&out)
+}
+
+/// A diff the chat shows: its first [`DIFF_MAX`] characters, secrets redacted; none when empty.
+pub fn diff_bounded(diff: &str) -> Option<String> {
+    let diff = diff.trim_end();
+    if diff.trim().is_empty() {
+        return None;
+    }
+    let cut: String = if diff.chars().count() > DIFF_MAX {
+        format!("{}\n…", diff.chars().take(DIFF_MAX).collect::<String>())
+    } else {
+        diff.to_string()
+    };
+    Some(vults_core::redact::secrets(&cut))
+}
+
 /// Characters of conversation a handoff carries (about 12k tokens): the first message and the
 /// latest ones that fit; a single line longer than [`HANDOFF_LINE`] is cut.
 pub const HANDOFF_BUDGET: usize = 48_000;
@@ -816,6 +873,15 @@ impl Sink for TurnSink<'_> {
                         return;
                     }
                     Delta::ToolState { active: true }
+                }
+                Event::ToolDiff { id, diff } => {
+                    let _ = self
+                        .out
+                        .send(Delta::Activity {
+                            event: activity::Event::Diff { id, diff },
+                        })
+                        .await;
+                    return;
                 }
                 Event::ToolOutput { id, output } => {
                     let _ = self
@@ -1648,6 +1714,28 @@ fn target(tool: &str, detail: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn an_edit_diff_keeps_a_little_context_around_the_change() {
+        let old = "a\nb\nc\nd\ne\nf\n";
+        let new = "a\nb\nc\nD\ne\nf\n";
+        assert_eq!(
+            edit_diff("x.rs", old, new).unwrap(),
+            "@@ x.rs\n b\n c\n-d\n+D\n e\n f"
+        );
+        assert_eq!(edit_diff("x.rs", "same", "same"), None);
+        assert_eq!(edit_diff("", "", "new\nfile").unwrap(), "+new\n+file");
+    }
+
+    #[test]
+    fn a_long_diff_is_cut_and_its_secrets_redacted() {
+        let long = "x\n".repeat(DIFF_MAX);
+        let cut = edit_diff("", "", &long).unwrap();
+        assert!(cut.ends_with('…'));
+        assert!(cut.chars().count() <= DIFF_MAX + 2);
+        let key = edit_diff("", "", "token = ghp_abcdefghijklmnopqrstuvwxyz0123456789").unwrap();
+        assert!(!key.contains("ghp_abcdefghijklmnopqrstuvwxyz0123456789"));
+    }
 
     #[test]
     fn sse_events_wait_for_a_whole_character() {

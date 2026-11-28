@@ -229,6 +229,11 @@ pub enum Event {
         id: String,
         output: String,
     },
+    /// The change an editing tool makes, as diff lines (`-`, `+`, ` `, `@@ path`): to read only.
+    ToolDiff {
+        id: String,
+        diff: String,
+    },
     /// The turn is over: the last event of every turn that started.
     TurnEnd(EndReason),
 }

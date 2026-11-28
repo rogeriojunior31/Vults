@@ -224,23 +224,29 @@ pub(crate) fn parse(raw: &str) -> Line {
                     output.into_iter().chain(event_of(b))
                 })
                 .collect();
-            fn event_of(b: &Value) -> Option<Event> {
+            fn event_of(b: &Value) -> Vec<Event> {
                 match b["type"].as_str() {
                     Some("tool_use") => {
                         let tool = b["name"].as_str().unwrap_or("tool");
                         let detail = detail(tool, &b["input"]).unwrap_or_default();
-                        Some(Event::ToolStart {
-                            id: b["id"].as_str().unwrap_or_default().to_string(),
+                        let id = b["id"].as_str().unwrap_or_default().to_string();
+                        // An edit's change, right after it starts: what it does to the file.
+                        let diff =
+                            change(tool, &b["input"]).map(|diff| Event::ToolDiff { id: id.clone(), diff });
+                        std::iter::once(Event::ToolStart {
+                            id,
                             tool: tool.to_string(),
                             target: target(tool, &detail),
                             detail,
                         })
+                        .chain(diff)
+                        .collect()
                     }
-                    Some("tool_result") => Some(Event::ToolEnd {
+                    Some("tool_result") => vec![Event::ToolEnd {
                         id: b["tool_use_id"].as_str().unwrap_or_default().to_string(),
                         ok: b["is_error"] != true,
-                    }),
-                    _ => None,
+                    }],
+                    _ => vec![],
                 }
             }
             if events.is_empty() {
@@ -320,6 +326,26 @@ fn usage_of(v: &Value) -> Option<Reported> {
         },
         total: usage,
     })
+}
+
+/// The change Claude Code's editing tools make: Edit's and MultiEdit's replacements, Write's
+/// whole content.
+fn change(tool: &str, input: &Value) -> Option<String> {
+    let path = input["file_path"].as_str().unwrap_or_default();
+    let s = |v: &Value, k: &str| v[k].as_str().unwrap_or_default().to_string();
+    match tool {
+        "Edit" => crate::edit_diff(path, &s(input, "old_string"), &s(input, "new_string")),
+        "Write" => crate::edit_diff(path, "", &s(input, "content")),
+        "MultiEdit" => {
+            let parts: Vec<String> = input["edits"]
+                .as_array()?
+                .iter()
+                .filter_map(|e| crate::edit_diff(path, &s(e, "old_string"), &s(e, "new_string")))
+                .collect();
+            crate::diff_bounded(&parts.join("\n"))
+        }
+        _ => None,
+    }
 }
 
 /// A tool result's text (a string, or the text blocks of a list), its last [`OUTPUT_TAIL`]
@@ -554,6 +580,22 @@ async fn write(stdin: &mut tokio::process::ChildStdin, msg: &Value) -> Result<()
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn an_edit_brings_its_change_after_its_start() {
+        let line = r#"{"type":"assistant","message":{"content":[{"type":"tool_use","id":"t2","name":"Edit","input":{"file_path":"/w/a.txt","old_string":"old","new_string":"new"}}]}}"#;
+        let Line::Tools(events) = parse(line) else {
+            panic!("tools")
+        };
+        assert!(matches!(&events[0], Event::ToolStart { id, .. } if id == "t2"));
+        assert_eq!(
+            events[1],
+            Event::ToolDiff {
+                id: "t2".into(),
+                diff: "@@ /w/a.txt\n-old\n+new".into()
+            }
+        );
+    }
 
     #[test]
     fn a_tool_result_brings_its_output_before_its_end() {

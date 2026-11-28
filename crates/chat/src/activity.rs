@@ -22,6 +22,11 @@ pub enum Event {
         id: String,
         text: String,
     },
+    /// The change an editing tool makes, as diff lines, for the user to read.
+    Diff {
+        id: String,
+        diff: String,
+    },
     Decision {
         tool: String,
         target: String,
@@ -46,6 +51,8 @@ pub struct Tool {
     pub ok: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub output: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub diff: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -83,6 +90,7 @@ impl Activity {
                     detail: bounded(detail, 16_384),
                     ok: None,
                     output: None,
+                    diff: None,
                 });
             }
             Event::End { id, ok } => {
@@ -93,6 +101,11 @@ impl Activity {
             Event::Output { id, text } => {
                 if let Some(t) = self.tools.iter_mut().find(|t| t.id == *id) {
                     t.output = Some(bounded(text, 4_096));
+                }
+            }
+            Event::Diff { id, diff } => {
+                if let Some(t) = self.tools.iter_mut().find(|t| t.id == *id) {
+                    t.diff = Some(bounded(diff, 16_384));
                 }
             }
             Event::Decision {

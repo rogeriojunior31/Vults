@@ -218,6 +218,30 @@ pub(crate) fn classify(raw: &str) -> Msg {
     }
 }
 
+/// A file change item's diffs, each under its path: Codex sends them unified, headers aside.
+/// A new file's diff may be its bare content: every line is then added.
+fn change_diff(changes: &Value) -> Option<String> {
+    let parts: Vec<String> = changes
+        .as_array()?
+        .iter()
+        .filter_map(|c| {
+            let diff = c["diff"].as_str()?;
+            let marked = diff.lines().any(|l| l.starts_with(['+', '-', '@']));
+            let body: Vec<String> = diff
+                .lines()
+                .filter(|l| !l.starts_with("+++ ") && !l.starts_with("--- "))
+                .map(|l| if marked { l.to_string() } else { format!("+{l}") })
+                .collect();
+            Some(format!(
+                "@@ {}\n{}",
+                c["path"].as_str().unwrap_or_default(),
+                body.join("\n")
+            ))
+        })
+        .collect();
+    crate::diff_bounded(&parts.join("\n"))
+}
+
 /// A tool item's id, tool and target, as the island names them; none for other items (the
 /// user's message, the reply, reasoning).
 /// A tool item's id, tool, card target and whole detail.
@@ -592,6 +616,13 @@ impl AppServer {
                         detail,
                     })
                     .await;
+                    if let Some(diff) = change_diff(&changes) {
+                        sink.event(Event::ToolDiff {
+                            id: item.clone(),
+                            diff,
+                        })
+                        .await;
+                    }
                     self.changes.insert(item, (paths, changes));
                 }
                 Msg::ApproveCommand {
@@ -791,6 +822,18 @@ fn config_overrides(spec: &Spec) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_file_change_diff_drops_its_headers_and_marks_a_new_file() {
+        let changes = serde_json::json!([
+            {"path": "a.rs", "diff": "--- a/a.rs\n+++ b/a.rs\n@@ -1 +1 @@\n-x\n+y"},
+            {"path": "new.txt", "diff": "hello"}
+        ]);
+        assert_eq!(
+            change_diff(&changes).unwrap(),
+            "@@ a.rs\n@@ -1 +1 @@\n-x\n+y\n@@ new.txt\n+hello"
+        );
+    }
 
     #[test]
     fn a_command_brings_the_tail_of_its_output() {
