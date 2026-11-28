@@ -549,6 +549,11 @@ pub enum Delta {
     /// (never shown in the chat: it can't even be serialized for the view by mistake).
     #[serde(skip_serializing)]
     Usage(Usage),
+    /// How full the model's context is, for the chat's meter; each part when the engine says.
+    Context {
+        used: Option<u64>,
+        window: Option<u64>,
+    },
     /// The user stopped the turn.
     Stopped,
     Error {
@@ -846,6 +851,7 @@ impl Sink for TurnSink<'_> {
                     event: activity::Event::Reasoning { text },
                 },
                 Event::Usage(usage) => Delta::Usage(usage),
+                Event::Context { used, window } => Delta::Context { used, window },
                 // A call that reads outside taints the conversation once it ran: a denied or failed
                 // fetch brought nothing in. The detail is the whole command, never the card's cut.
                 Event::ToolStart { id, tool, detail, .. } => {

@@ -438,6 +438,9 @@ export class ChatPanel {
   private readonly activityNodes = new WeakMap<ActivityMessage, { node: HTMLDetailsElement; summary: HTMLElement; reasoning: HTMLElement; tools: HTMLElement; decisions: HTMLElement; warning: HTMLElement; toolNodes: Map<string, ToolNode> }>();
   /** Each message's node, kept while what it shows stays the same: a repaint rebuilds none of them. */
   private rendered = new WeakMap<Message, { key: string; node: HTMLElement }>();
+  /** How full the model's context is, as its engine last said; the meter beside Send. */
+  private context: { used?: number; window?: number } = {};
+  private readonly contextMeter = el("span", { class: "context-meter" });
   /** Where ↑ and ↓ are in the user's earlier messages; none while writing a new one. */
   private recallAt: number | null = null;
   /** Find in the conversation: its words, and which match is current. */
@@ -857,7 +860,7 @@ export class ChatPanel {
         this.queueBox,
         this.chips,
         el("div", { class: "composer-row" }, this.opts.specialist && !this.backend.chooseFiles ? null : this.attachButton(), this.input, this.wave,
-          el("div", { class: "composer-tools" }, this.mic, this.send)),
+          el("div", { class: "composer-tools" }, this.contextMeter, this.mic, this.send)),
       ),
       compact ? null : this.composerHint,
       compact ? el("div", { class: "chat-foot" }, el("div", { class: "model-box engine-box" }, this.modelButton, this.modelMenu), el("div", { class: "place-box" }, this.place, this.menu), el("div", { class: "access-box" }, this.accessButton, this.accessMenu), this.setupBox) : null,
@@ -873,6 +876,7 @@ export class ChatPanel {
   relabel(): void {
     this.askNodes = new WeakMap();
     this.rendered = new WeakMap();
+    this.paintContext();
     this.findInput.placeholder = t("Find in conversation");
     this.findInput.setAttribute("aria-label", this.findInput.placeholder);
     this.input.placeholder = this.opts.specialist ? t("Message {name}…", { name: this.recipientName() }) : t("Ask Zeca…");
@@ -1727,6 +1731,12 @@ export class ChatPanel {
       }, STREAM_MS);
       return;
     }
+    if (d.kind === "context") {
+      if (d.used !== null) this.context.used = d.used;
+      if (d.window !== null) this.context.window = d.window;
+      this.paintContext();
+      return;
+    }
     if (d.kind === "toolstate") {
       this.clearReaction();
       this.searching = d.active;
@@ -2198,6 +2208,8 @@ export class ChatPanel {
 
   /** A new conversation with `provider`, here or (synced) in the other window. */
   private cleared(provider: ChatProvider, draft?: ChatDraft | null): void {
+    this.context = {};
+    this.paintContext();
     this.queued = [];
     this.paintQueue();
     this.setupOpen = false;
@@ -2713,6 +2725,7 @@ export class ChatPanel {
 
   /** Shows a saved conversation, as it was: opened here, in the other window, or the Nest's start. */
   load(c: OpenedConversation, clearDraft = false, preserveLive = false): void {
+    if (!preserveLive) { this.context = {}; this.paintContext(); }
     if (!preserveLive) this.setupOpen = false;
     if (!preserveLive) this.clearAnnouncement();
     this.historyRead++; this.historyPending = null; this.historyError = this.historyReadError = ""; this.renaming = this.deleting = null; this.renameDraft = null;
@@ -3465,6 +3478,25 @@ export class ChatPanel {
     window.clearInterval(this.ticking);
     // Only its own words change: the island is not rendered again for a second going by.
     this.ticking = window.setInterval(tick, 1000);
+  }
+
+  /** The context meter: how much of the window the conversation fills, once the engine said. */
+  private paintContext(): void {
+    const { used, window } = this.context;
+    const meter = this.contextMeter;
+    meter.hidden = used === undefined;
+    if (used === undefined) return;
+    const tokens = (n: number) => n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1000 ? `${Math.round(n / 1000)}k` : String(n);
+    const share = window ? Math.min(1, used / window) : null;
+    meter.textContent = share === null ? tokens(used) : `${Math.round(share * 100)}%`;
+    meter.style.setProperty("--share", share === null ? "0" : String(share));
+    meter.classList.toggle("full", share !== null && share >= 0.8);
+    const label = window
+      ? t("Context: {used} of {window} tokens. Near the end, start a new conversation or let the engine compact it.", { used: tokens(used), window: tokens(window) })
+      : t("Context: {used} tokens", { used: tokens(used) });
+    meter.title = label;
+    meter.setAttribute("aria-label", label);
+    meter.setAttribute("role", "img");
   }
 
   /** What a message says, as find reads it. */

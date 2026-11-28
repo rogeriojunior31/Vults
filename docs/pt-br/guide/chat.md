@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 8756a79e8c0e -->
+<!-- source: ba46991431e9 -->
 
 Os painéis laterais redimensionáveis seguem o ponteiro que iniciou o arraste, ignoram toques adicionais e encerram o arraste quando a janela perde o foco. O cancelamento preserva a largura atual e mantém os rascunhos. Quando o espaço limita um painel, o arraste e o redimensionamento pelo teclado partem da largura visível; reduzir apenas o espaço disponível não sobrescreve a largura salva. Os controles de redimensionar e recolher usam a mesma cor de foco de teclado que o restante do tema selecionado.
 
@@ -260,6 +260,9 @@ Com a memória ligada, o que o Zeca lembra e o que ele recupera também entram: 
 - Enquanto um turno roda, a linha embaixo da conversa diz o que o agente está fazendo agora
   (*Executando cargo test…*, *Editando lib.rs…*), com quanto tempo o turno já rodou depois que ele
   passa de três segundos. Quando ele termina, a sua **Atividade** diz quanto tempo levou.
+- Ao lado de **Send**, um pequeno anel diz o quanto o contexto do modelo está cheio assim que o
+  motor informa (Claude Code e Codex): a fração da janela, ou só os tokens até a janela ser
+  conhecida. Ele fica âmbar depois de 80%: hora de uma conversa nova, ou de deixar o motor compactá-la.
 - **Ctrl+F** (**⌘F**) busca na conversa: conta as mensagens que batem, **Enter** e
   **Shift+Enter** passam por elas, **Escape** fecha.
 - No Nest a conversa é lida em uma coluna da largura do campo de texto, por mais larga que seja a

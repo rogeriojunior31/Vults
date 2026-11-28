@@ -469,6 +469,8 @@ export type ChatActivity = {
 
 export type ChatDelta =
   | { kind: "text"; text: string }
+  /** How full the model's context is: each part only when the engine says. */
+  | { kind: "context"; used: number | null; window: number | null }
   | { kind: "activity"; event: ChatActivityEvent }
   | {
       kind: "permission";

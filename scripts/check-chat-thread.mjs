@@ -135,4 +135,13 @@ find.value = "zzz"; find.listeners.input({});
 assert.equal(byClass("find-count")[0].textContent, "No matches");
 find.listeners.keydown({ key: "Escape", preventDefault() {}, stopPropagation() {} });
 assert.ok(!byClass("chat-find")[0].classList.contains("on"), "Escape closes it");
-console.log("check-chat-thread: edits show their diff and counts, the status line says what runs, turns say how long they ran, nodes are kept, ↑/↓ walk earlier messages, Edit puts the last back, Ctrl+F finds and steps");
+// The context meter: hidden until the engine says, a share once it gives the window too.
+const meter = byClass("context-meter")[0];
+assert.ok(meter.hidden, "no meter before the engine says");
+panel.receive({ kind: "context", used: 42000, window: null });
+assert.ok(!meter.hidden && meter.textContent === "42k", "tokens alone");
+panel.receive({ kind: "context", used: null, window: 200000 });
+assert.equal(meter.textContent, "21%");
+panel.receive({ kind: "context", used: 170000, window: null });
+assert.ok(meter.classList.contains("full"), "past 80% it warns");
+console.log("check-chat-thread: the context meter follows the engine; edits show their diff and counts, the status line says what runs, turns say how long they ran, nodes are kept, ↑/↓ walk earlier messages, Edit puts the last back, Ctrl+F finds and steps");

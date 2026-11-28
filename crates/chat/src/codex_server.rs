@@ -93,6 +93,7 @@ pub(crate) enum Msg {
     Usage {
         total: Usage,
         last: Usage,
+        window: Option<u64>,
     },
 }
 
@@ -206,6 +207,7 @@ pub(crate) fn classify(raw: &str) -> Msg {
             Msg::Usage {
                 total: usage(&t["total"]),
                 last: usage(&t["last"]),
+                window: t["modelContextWindow"].as_u64(),
             }
         }
         (None, Some("error")) if v["params"]["willRetry"] != true => Msg::Error(
@@ -586,7 +588,15 @@ impl AppServer {
                     }
                     sink.event(Event::ToolEnd { id, ok }).await
                 }
-                Msg::Usage { total, last } => {
+                Msg::Usage { total, last, window } => {
+                    // The last request's input is what the context holds now.
+                    if last.input > 0 || window.is_some() {
+                        sink.event(Event::Context {
+                            used: (last.input > 0).then_some(last.input),
+                            window,
+                        })
+                        .await;
+                    }
                     self.seen = Some(total.clone());
                     tokens.note(total, &last);
                 }
@@ -1108,6 +1118,7 @@ b.txt"
                     cache_read: 800,
                     ..Usage::default()
                 },
+                window: None,
             }
         );
     }

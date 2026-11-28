@@ -229,6 +229,12 @@ pub enum Event {
         id: String,
         output: String,
     },
+    /// How full the model's context is: the tokens its last request read, and its window, each
+    /// when the agent says.
+    Context {
+        used: Option<u64>,
+        window: Option<u64>,
+    },
     /// The change an editing tool makes, as diff lines (`-`, `+`, ` `, `@@ path`): to read only.
     ToolDiff {
         id: String,

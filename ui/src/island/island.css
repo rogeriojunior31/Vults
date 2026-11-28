@@ -3505,6 +3505,10 @@ body.still #island .inner:has(.main > .chat) .need-strip.top { animation: none; 
 .msg.you { position: relative; }
 .msg.you > .msg-tools { position: absolute; top: -22px; right: 0; opacity: 0; transition: opacity .12s; }
 .msg.you:hover > .msg-tools, .msg.you:focus-within > .msg-tools { opacity: 1; }
+.context-meter { display: inline-flex; align-items: center; gap: 5px; padding: 0 4px; color: var(--fg-dim); font: 600 10px/1 var(--mono, monospace); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.context-meter[hidden] { display: none; }
+.context-meter::before { content: ""; width: 12px; height: 12px; border-radius: 50%; background: conic-gradient(currentColor calc(var(--share, 0) * 360deg), color-mix(in srgb, currentColor 22%, transparent) 0); }
+.context-meter.full { color: var(--warn, #d9a441); }
 .chat-find { display: none; align-items: center; gap: 6px; padding: 6px 8px; border-bottom: 1px solid var(--line); background: var(--float); }
 .chat-find.on { display: flex; }
 .chat-find .find-input { flex: 1 1 auto; min-width: 0; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); font: var(--text-s)/1.4 var(--font); }

@@ -235,6 +235,9 @@ With the memory on, what Zeca remembers and recalls joins as well: see [Zeca's m
 - While a turn runs, the line under the conversation says what the agent is doing now (*Running
   cargo test…*, *Editing lib.rs…*), with how long the turn has run once it takes longer than three
   seconds. Once it ends, its **Activity** says how long it took.
+- Beside **Send**, a small ring says how full the model's context is once its engine reports it
+  (Claude Code and Codex): the share of its window, or the tokens alone until the window is known.
+  It turns amber past 80%: time for a new conversation, or to let the engine compact it.
 - **Ctrl+F** (**⌘F**) finds in the conversation: it counts the messages that match, **Enter** and
   **Shift+Enter** step through them, **Escape** closes it.
 - In the Nest the conversation reads in one column as wide as the composer, however wide the window.

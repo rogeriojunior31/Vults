@@ -298,6 +298,36 @@ pub(crate) fn share(r: &Reported, seen: Option<&Usage>, fresh: bool) -> Usage {
     u
 }
 
+/// How full the context is: each request's start says what it read (the main thread's, not a
+/// subagent's), the turn's result the model's window.
+fn context(raw: &str) -> Option<Event> {
+    if !raw.contains("message_start") && !raw.contains("contextWindow") {
+        return None;
+    }
+    let v: Value = serde_json::from_str(raw).ok()?;
+    match v["type"].as_str()? {
+        "stream_event" if v["event"]["type"] == "message_start" && v["parent_tool_use_id"].is_null() => {
+            let u = &v["event"]["message"]["usage"];
+            let n = |k: &str| u[k].as_u64().unwrap_or(0);
+            let used = n("input_tokens") + n("cache_read_input_tokens") + n("cache_creation_input_tokens");
+            (used > 0).then_some(Event::Context {
+                used: Some(used),
+                window: None,
+            })
+        }
+        "result" => v["modelUsage"]
+            .as_object()?
+            .values()
+            .filter_map(|m| m["contextWindow"].as_u64())
+            .max()
+            .map(|window| Event::Context {
+                used: None,
+                window: Some(window),
+            }),
+        _ => None,
+    }
+}
+
 /// A `result` line's usage, if it reports any.
 fn usage_of(v: &Value) -> Option<Reported> {
     let turn = Usage::anthropic(&v["usage"]);
@@ -468,6 +498,9 @@ async fn run(
                 EndReason::Done
             };
         };
+        if let Some(context) = context(&raw) {
+            sink.event(context).await;
+        }
         match parse(&raw) {
             Line::Session(s) => {
                 *id = Some(s.clone());
@@ -580,6 +613,29 @@ async fn write(stdin: &mut tokio::process::ChildStdin, msg: &Value) -> Result<()
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_request_start_says_how_full_the_context_is_and_the_result_its_window() {
+        let start = r#"{"type":"stream_event","parent_tool_use_id":null,"event":{"type":"message_start","message":{"usage":{"input_tokens":5,"cache_read_input_tokens":40000,"cache_creation_input_tokens":2000}}}}"#;
+        assert_eq!(
+            context(start),
+            Some(Event::Context {
+                used: Some(42005),
+                window: None
+            })
+        );
+        let sub = start.replace("null", "\"t1\"");
+        assert_eq!(context(&sub), None, "a subagent's request is its own context");
+        let result =
+            r#"{"type":"result","modelUsage":{"claude-x":{"inputTokens":1,"contextWindow":200000}}}"#;
+        assert_eq!(
+            context(result),
+            Some(Event::Context {
+                used: None,
+                window: Some(200000)
+            })
+        );
+    }
 
     #[test]
     fn an_edit_brings_its_change_after_its_start() {
