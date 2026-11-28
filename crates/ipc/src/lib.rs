@@ -701,7 +701,7 @@ mod tests {
 }
 
 #[cfg(test)]
-mod tests {
+mod decision_tests {
     #![allow(clippy::unwrap_used)]
     use super::*;
 
