@@ -290,8 +290,10 @@ with their project, executor and time below the title; the current conversation 
 conversations past the initial 30. **Show more** reveals the rest. The search stays on this
 computer when the Nest closes and reopens. **+ New conversation** and switching to another
 conversation wait while Zeca replies. A failed update keeps the last list and offers **Try again**.
-The right button opens **Memory**, what Zeca remembers, beside the conversation: what waits for
-your yes, the files and their history ([Zeca's memory](memory.md)). Before anything is said, the
+The right button opens the **Side panel** beside the conversation. **Memory** is what Zeca
+remembers: what waits for your yes, the files and their history ([Zeca's memory](memory.md)).
+**Changes** lists the files the agent changed in this conversation with their diffs, and **Files**
+finds files and folders in its folder; a click in either puts the path in the draft. Before anything is said, the
 composer waits in the middle with a few questions to start. Without Zeca there is no Chat tab.
 
 ## Activity

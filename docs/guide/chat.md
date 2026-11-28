@@ -152,8 +152,10 @@ reference's readable text; reselect it if you bring that text back into a new dr
 
 The arrow at the top of the island's chat opens the [Nest](nest.md), Vults' own window. Its
 **Chat** tab is the same conversation, wide, with replies in full Markdown; its cards are answered
-there too. **Memory**, beside it, shows what Zeca
-remembers.
+there too. The **Side panel** beside it has three tabs: **Memory** shows what Zeca remembers;
+**Changes** lists each file the agent changed in this conversation, with its lines added and
+removed and its diffs; **Files** finds files and folders in the conversation's folder. In
+Changes and Files a click puts the path in the draft, as **@** does.
 
 An empty Nest Chat centres Zeca's original 3x portrait above **Ask Zeca** and a vertical list
 of suggestions. Once messages arrive, the same scene uses a smaller 2x perch above the

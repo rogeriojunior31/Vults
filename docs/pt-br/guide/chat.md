@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: b6031a7949f5 -->
+<!-- source: 3a4ed938c00b -->
 
 Os painéis laterais redimensionáveis seguem o ponteiro que iniciou o arraste, ignoram toques adicionais e encerram o arraste quando a janela perde o foco. O cancelamento preserva a largura atual e mantém os rascunhos. Quando o espaço limita um painel, o arraste e o redimensionamento pelo teclado partem da largura visível; reduzir apenas o espaço disponível não sobrescreve a largura salva. Os controles de redimensionar e recolher usam a mesma cor de foco de teclado que o restante do tema selecionado.
 
@@ -168,7 +168,10 @@ enviar, começar ou abrir outra conversa, ou sair do Vults.
 
 A seta no topo do chat da ilha abre o [Nest](nest.md), a janela do próprio Vults. A aba **Chat**
 dele é a mesma conversa, larga, com respostas em Markdown completo; os cards dela são respondidos
-ali também. **Memory**, ao lado, mostra o que o Zeca lembra.
+ali também. O **Painel lateral** ao lado tem três abas: **Memory** mostra o que o Zeca lembra;
+**Changes** lista cada arquivo que o agente mudou nesta conversa, com as linhas adicionadas e
+removidas e os seus diffs; **Files** acha arquivos e pastas na pasta da conversa. Em Changes e
+Files um clique põe o caminho no rascunho, como o **@** faz.
 
 O Chat vazio no Nest centraliza o retrato original do Zeca em 3x acima de **Perguntar ao Zeca**
 e de uma lista vertical de sugestões. Quando chegam mensagens, a mesma cena usa um poleiro

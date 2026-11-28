@@ -168,6 +168,15 @@ const tail = log.children.slice(-4).map(n => n.classList.contains("chat-activity
 assert.deepEqual(tail, ["activity", "found", "activity", "fixed"], `in order (${tail})`);
 assert.ok(order >= 3);
 
+// The side pane's Changes: each file the agent changed, with its counts and diffs.
+const changes = panel.changes();
+const lib = changes.find(c => c.path.endsWith("lib.rs"));
+assert.ok(lib && lib.added === 2 && lib.removed === 1 && lib.diffs.length === 1, `changes (${JSON.stringify(changes)})`);
+input.value = "look at"; input.setSelectionRange(7, 7);
+panel.reference("src/my file.rs");
+assert.equal(input.value, 'look at @"src/my file.rs" ', "a path goes in as @ puts it");
+input.value = ""; input.listeners.input({});
+
 // The context meter: hidden until the engine says, a share once it gives the window too.
 const meter = byClass("context-meter")[0];
 assert.ok(meter.hidden, "no meter before the engine says");

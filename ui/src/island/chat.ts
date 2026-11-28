@@ -1513,6 +1513,65 @@ export class ChatPanel {
 
   /** Puts words in the composer for the user to finish or send (the Nest's *Ask Zeca*); after
    *  what was already typed there, never over it. */
+  /** The files this conversation's agent changed, from its edits' diffs: each with its lines
+   *  added and removed, relative to the folder, in the order first changed. */
+  changes(): { path: string; added: number; removed: number; diffs: string[] }[] {
+    const by = new Map<string, { path: string; added: number; removed: number; diffs: string[] }>();
+    const relative = (path: string) => {
+      const folder = this.folder?.replace(/[\\/]+$/, "");
+      const p = path.replace(/\\/g, "/");
+      const f = folder?.replace(/\\/g, "/");
+      return f && p.toLowerCase().startsWith(`${f.toLowerCase()}/`) ? p.slice(f.length + 1) : p;
+    };
+    for (const m of this.messages) {
+      if (m.who !== "activity") continue;
+      for (const tool of m.data.tools) {
+        if (!tool.diff) continue;
+        // A diff may hold several files, each under its `@@ path` (a hunk's `@@ -1 +1 @@` is not one).
+        let path = relative(brief(tool.detail, 4096).split(", ")[0] ?? tool.tool);
+        let lines: string[] = [];
+        const flush = () => {
+          if (!lines.length) return;
+          const entry = by.get(path) ?? { path, added: 0, removed: 0, diffs: [] };
+          entry.added += lines.filter(l => l.startsWith("+")).length;
+          entry.removed += lines.filter(l => l.startsWith("-")).length;
+          entry.diffs.push(lines.join("\n"));
+          by.set(path, entry);
+          lines = [];
+        };
+        for (const line of tool.diff.split("\n")) {
+          if (line.startsWith("@@ ") && !/^@@ -\d/.test(line)) { flush(); path = relative(line.slice(3).trim()); continue; }
+          lines.push(line);
+        }
+        flush();
+      }
+    }
+    return [...by.values()];
+  }
+
+  /** The conversation's folder, where its agent works. */
+  workFolder(): string | null {
+    return this.folder;
+  }
+
+  /** Files and folders in the conversation's folder that match, as @ lists them. */
+  findPaths(query: string): Promise<{ path: string; dir: boolean }[]> {
+    if (!this.folder || !this.backend.paths) return Promise.resolve([]);
+    return this.backend.paths(this.folder, query);
+  }
+
+  /** A path into the draft at the caret, as @ puts it: plain text the agent opens in the folder. */
+  reference(path: string): void {
+    const token = /[\s"]/u.test(path) ? `@${JSON.stringify(path)}` : `@${path}`;
+    const at = this.input.selectionStart ?? this.input.value.length;
+    const before = this.input.value.slice(0, at);
+    const inserted = `${before && !/\s$/.test(before) ? " " : ""}${token} `;
+    this.input.value = before + inserted + this.input.value.slice(this.input.selectionEnd ?? at);
+    const caret = at + inserted.length;
+    this.input.setSelectionRange(caret, caret);
+    this.grow(); this.paintSend(); this.keepDraft(); this.input.focus();
+  }
+
   draft(text: string): void {
     const typed = this.input.value.trim();
     this.input.value = typed ? `${typed}\n\n${text}` : text;

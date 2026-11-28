@@ -4,6 +4,7 @@ import { DICTATION_WORK_PAGES } from "./dictation/navigation";
 import { createDictationArea, type DictationAreaBackend } from "./dictation/area";
 import { createDictationStatistics } from "./dictation/statistics";
 import { sidePanel } from "./panels";
+import { createWorkspace } from "./workspace";
 // The Nest's page takes its backend: four tabs and the gear (ADR 0006). Chat keeps
 // Memory beside it; Activity holds Week, By project, History, Cost, Traces and Audit.
 // Specialist recipients remain available with Zeca off.
@@ -176,10 +177,13 @@ export function createNest(
   const portrait = new Scene(FOCUS_SCENE);
   portrait.setActive(false);
   let mounted = false;
+  // The side pane's Changes follow the conversation; it is made further down.
+  let workspaceChanged = () => {};
   // A change in the conversation (a message, New, another one opened) may change Recent.
   let recentTimer: number | undefined;
   const chatChanged = () => {
     if (mounted) paintPortrait();
+    workspaceChanged();
     window.clearTimeout(recentTimer);
     recentTimer = window.setTimeout(() => refreshRecent(), 400);
   };
@@ -252,10 +256,12 @@ export function createNest(
 
   // Chat: the conversation, and Zeca's memory beside it when asked for.
   const memoryBack = el("button", { class: "nest-memory-back", text: t("Back to Chat") });
-  const memoryPane = el("aside", { class: "nest-memory" }, memoryBack, memory.element);
-  const memoryPanel = sidePanel(memoryPane, "memory", "Memory", 340, "right", 220, 440);
+  // The side pane: Memory, the conversation's Changes, and its folder's Files.
+  const workspace = createWorkspace(memory.element, () => chat);
+  const memoryPane = el("aside", { class: "nest-memory" }, memoryBack, workspace.element);
+  const memoryPanel = sidePanel(memoryPane, "memory", "Side panel", 340, "right", 220, 440);
   memoryPane.hidden = true;
-  const memoryLabel = el("span", { class: "nest-memory-label", text: t("Memory") });
+  const memoryLabel = el("span", { class: "nest-memory-label", text: t("Side panel") });
   const memoryButton = el(
     "button",
     { class: "chat-ico nest-memory-toggle" },
@@ -277,6 +283,7 @@ export function createNest(
     } else if (returnFocus) memoryButton.focus();
     if (mounted) paintPortrait();
   };
+  workspaceChanged = () => workspace.changed();
   memoryButton.addEventListener("click", () => { setMemory(memoryPane.hasAttribute("hidden")); closeChatOptions(false); });
   memoryBack.addEventListener("click", () => setMemory(false, true));
   memoryButton.setAttribute("aria-pressed", "false");
@@ -749,11 +756,11 @@ export function createNest(
     for (const b of subButtons) b.textContent = subWords[b.dataset.sub as Sub];
     memoryButton.title = t("Memory");
     memoryButton.setAttribute("aria-label", t("Memory"));
-    memoryLabel.textContent = t("Memory");
+    memoryLabel.textContent = t("Side panel");
     memoryBack.textContent = t("Back to Chat");
     recentButton.title = t("Recent");
     recentButton.setAttribute("aria-label", t("Recent"));
-    memoryPanel.relabel(); recentPanel.relabel();
+    memoryPanel.relabel(); recentPanel.relabel(); workspace.relabel();
     foot.relabel();
     head.relabel();
     companionChat.relabel();
