@@ -12,7 +12,7 @@ import { NAME_BY_ID } from "../../agents";
 import { el } from "../../dom";
 import { locale, t, tk } from "../../i18n";
 import { duration } from "../settings/activity";
-import { money, usageLabel, usageLevel, usageWindowName } from "../../cost";
+import { money, pace, paceLabel, tokens, usageLabel, usageLevel, usageWindowName } from "../../cost";
 import { viewState } from "./view-state";
 import { day } from "../../day";
 import { icon } from "../../island/icons";
@@ -89,8 +89,6 @@ const when = (ms: number) =>
     minute: "2-digit",
   });
 
-const tokens = (n: number) =>
-  n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n.toLocaleString("en-US");
 
 function line(parts: (HTMLElement | null)[], cls = ""): HTMLElement {
   return el(
@@ -238,6 +236,7 @@ function usageBody(u: UsageView): HTMLElement[] {
           bar(w.used_percent, usageLevel(w.used_percent)),
           span(`${w.used_percent}%`, "record-meta"),
           span(usageLabel(w.used_percent), `usage-status ${usageLevel(w.used_percent)}`),
+          ...(pace(w) ? [span(paceLabel(pace(w)!), `usage-pace ${pace(w)}`)] : []),
         ]),
       )
     : [

@@ -152,6 +152,7 @@ node scripts/check-chat-queue.mjs  # messages written mid-turn queue, go after i
 node scripts/check-chat-paths.mjs  # @ lists the folder's files and folders; a dropped folder goes in by path
 node scripts/check-chat-asks.mjs  # an agent's question gets options; typing while a card waits answers it
 node scripts/check-chat-thread.mjs  # edits show their diff, the status line says what runs, ↑/↓ history, Ctrl+F, kept nodes
+node scripts/check-usage-format.mjs  # tokens as 1.25K or 1M, a plan window's pace
 cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace

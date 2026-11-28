@@ -55,6 +55,8 @@
 .usage-status { color: var(--fg-dim); font-size: 11px; }
 .usage-status.warning { color: var(--warn); }
 .usage-status.critical { color: var(--error-text); }
+.usage-pace { color: var(--fg-muted); font-size: 11px; }
+.usage-pace.ahead { color: var(--warn); }
 @media (max-width: 600px) {
   .record { gap: 8px; padding: 12px; }
   .record-title { align-items: flex-start; }

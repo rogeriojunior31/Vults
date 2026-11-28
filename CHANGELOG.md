@@ -34,6 +34,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Added
 
+- **Tokens and pace like t3code's**: tokens read 1.25K, 12.5K or 1.2M everywhere; each plan window says whether it is ahead of, on or under pace (Records, the chat's usage tooltip).
 - **Quitting mid-turn asks first**: from the tray, while a turn runs in any chat.
 - **Copy as Markdown** in the chat's Conversations menu: the open conversation, its title and each message under who said it.
 - **Keep the computer awake while agents work** (Settings → General, on): a logind sleep inhibitor while a session or a chat turn works; the screen still locks.

@@ -20,7 +20,7 @@ import { clickOnly, refuseAllowKey } from "./allow-key";
 import { renderFull } from "./markdown";
 import { copyTextButton } from "../clipboard";
 import { locale, t, tk } from "../i18n";
-import { usageLabel, usageLevel, usageWindowName } from "../cost";
+import { pace, paceLabel, tokens, usageLabel, usageLevel, usageWindowName } from "../cost";
 
 const GITHUB_CONTROL_EFFECT: Record<string, string> = {
   "github_pull_request_merge": tk("Merge the exact commit below using the selected method and all branch rules. A required merge queue is not a completed merge. Keep the branch."),
@@ -1052,7 +1052,8 @@ export class ChatPanel {
         ? t("{window}: {percent}% used", vars)
         : t("{window}: {percent}% used. Resets {when}.", { ...vars, when: new Date(w.resets_at * 1000).toLocaleString(locale(), { weekday: "short", hour: "2-digit", minute: "2-digit" }) });
     });
-    this.modelButton.title = [hint, summary, ...windows].filter(Boolean).join("\n");
+    const p = pace(fullest);
+    this.modelButton.title = [hint, summary, ...windows, p ? paceLabel(p) : ""].filter(Boolean).join("\n");
     const next = Math.min(...live.flatMap(w => w.resets_at === null ? [] : [w.resets_at]));
     if (Number.isFinite(next) && this.enabled && this.open && !document.hidden) {
       this.usageTimer = window.setTimeout(() => this.paintUsage(), Math.min(2_147_483_647, Math.max(1, (next - now) * 1000)));
@@ -3684,7 +3685,6 @@ export class ChatPanel {
     const meter = this.contextMeter;
     meter.hidden = used === undefined;
     if (used === undefined) return;
-    const tokens = (n: number) => n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1000 ? `${Math.round(n / 1000)}k` : String(n);
     const share = window ? Math.min(1, used / window) : null;
     meter.textContent = share === null ? tokens(used) : `${Math.round(share * 100)}%`;
     meter.style.setProperty("--share", share === null ? "0" : String(share));
