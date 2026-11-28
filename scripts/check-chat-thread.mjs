@@ -200,7 +200,7 @@ panel.receive({ kind: "done" }); await tick();
 const meter = byClass("context-meter")[0];
 assert.ok(meter.hidden, "no meter before the engine says");
 panel.receive({ kind: "context", used: 42000, window: null });
-assert.ok(!meter.hidden && meter.textContent === "42k", "tokens alone");
+assert.ok(!meter.hidden && meter.textContent === "42K", "tokens alone");
 panel.receive({ kind: "context", used: null, window: 200000 });
 assert.equal(meter.textContent, "21%");
 panel.receive({ kind: "context", used: 170000, window: null });
