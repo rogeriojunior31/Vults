@@ -169,6 +169,10 @@ impl AgentDriver for ClaudeDriver {
     fn session(&self) -> Option<&str> {
         self.session.as_deref()
     }
+
+    fn forget_session(&mut self) {
+        self.session = None;
+    }
 }
 
 #[derive(Debug)]
@@ -230,6 +234,11 @@ impl AgentDriver for CodexDriver {
 
     fn session(&self) -> Option<&str> {
         self.session.as_deref()
+    }
+
+    fn forget_session(&mut self) {
+        self.server = None;
+        self.session = None;
     }
 }
 

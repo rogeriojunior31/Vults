@@ -647,8 +647,8 @@ export class ChatPanel {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         void this.submit();
-      } else if (e.key === "ArrowUp" && !e.altKey && (!this.input.value || this.recallAt !== null) && this.recallStep(-1)) e.preventDefault();
-      else if (e.key === "ArrowDown" && !e.altKey && this.recallAt !== null && this.recallStep(1)) e.preventDefault();
+      } else if (e.key === "ArrowUp" && !e.altKey && (!this.input.value || (this.recallAt !== null && !this.input.value.slice(0, this.input.selectionStart ?? 0).includes("\n"))) && this.recallStep(-1)) e.preventDefault();
+      else if (e.key === "ArrowDown" && !e.altKey && this.recallAt !== null && !this.input.value.slice(this.input.selectionEnd ?? this.input.value.length).includes("\n") && this.recallStep(1)) e.preventDefault();
     });
     this.input.addEventListener("input", (event) => {
       this.recallAt = null;
@@ -778,6 +778,7 @@ export class ChatPanel {
       findButton(t("Close search"), "×", () => this.closeFind()));
     this.findInput.addEventListener("input", () => { this.findAt = 0; this.paintFind(true); });
     this.findInput.addEventListener("keydown", event => {
+      if (event.isComposing || event.keyCode === 229) return;
       if (event.key === "Enter") { event.preventDefault(); step(event.shiftKey ? -1 : 1)(); }
       else if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); this.closeFind(); }
     });
@@ -1728,6 +1729,7 @@ export class ChatPanel {
       const owner = event.type === "end" || event.type === "output" || event.type === "diff"
         ? [...this.messages].reverse().find((m): m is ActivityMessage => m.who === "activity" && m.data.tools.some(tool => tool.id === event.id))
         : undefined;
+      if (!owner && (event.type === "end" || event.type === "output" || event.type === "diff")) return;
       const activity = owner ?? this.turnActivity();
       if (d.event.type === "start") this.replyBreak = true;
       applyActivity(activity.data, d.event);
@@ -2357,7 +2359,8 @@ export class ChatPanel {
     const last = m === this.messages[this.messages.length - 1];
     if (m.who === "zeca") {
       const signed = this.opts.window === "nest" && this.messages[this.messages.indexOf(m) - 1]?.who !== "zeca";
-      return JSON.stringify([m.text, !!m.error, !!m.retry, last, last && this.busy, signed]);
+      const signature = signed ? [this.recipientName(), this.opts.specialist ? this.specialistEngineLabel() : this.name(this.provider)] : null;
+      return JSON.stringify([m.text, !!m.error, !!m.retry, last, last && this.busy, signature]);
     }
     if (m.who === "you") return JSON.stringify([m.text, m.files, m === this.lastYou() && !this.busy]);
     if (m.who === "note") return m.text;
@@ -3477,19 +3480,24 @@ export class ChatPanel {
       this.thinking = null;
       return;
     }
-    const words = el("span", { class: "typing-words" });
-    const time = el("span", { class: "typing-time" });
+    // One line for the turn, its words changed in place: a repaint keeps the log's nodes, and a
+    // selection in them.
+    if (!this.thinking) {
+      this.thinking = el("div", { class: "typing" }, el("span", { class: "typing-dots" }, el("i", {}), el("i", {}), el("i", {})),
+        el("span", { class: "typing-words" }), el("span", { class: "typing-time" }));
+    }
+    const [, words, time] = Array.from(this.thinking.children) as HTMLElement[];
     const running = this.runningTool();
-    words.textContent = running ? doing(running.tool, running.detail) : this.searching ? t("Using tools…") : t("Working…");
+    const said = running ? doing(running.tool, running.detail) : this.searching ? t("Using tools…") : t("Working…");
+    if (words.textContent !== said) words.textContent = said;
     const tick = () => {
       const ms = Clock.now() - this.turnSince;
-      time.textContent = ms < SHOW_ELAPSED_MS ? "" : duration(ms);
+      const shown = ms < SHOW_ELAPSED_MS ? "" : duration(ms);
+      if (time.textContent !== shown) time.textContent = shown;
     };
     tick();
-    this.thinking = el("div", { class: "typing" }, el("span", { class: "typing-dots" }, el("i", {}), el("i", {}), el("i", {})), words, time);
-    window.clearInterval(this.ticking);
     // Only its own words change: the island is not rendered again for a second going by.
-    this.ticking = window.setInterval(tick, 1000);
+    if (this.ticking === undefined) this.ticking = window.setInterval(tick, 1000);
   }
 
   /** The context meter: how much of the window the conversation fills, once the engine said. */
@@ -3544,7 +3552,10 @@ export class ChatPanel {
       for (const i of hits) {
         const walker = document.createTreeWalker(this.nodes[i], NodeFilter.SHOW_TEXT);
         for (let text = walker.nextNode(); text; text = walker.nextNode()) {
-          const value = (text.textContent ?? "").toLowerCase();
+          const raw = text.textContent ?? "";
+          const value = raw.toLowerCase();
+          // Lowercasing that changes the length (İ) would put the ranges off: such text is marked by its message only.
+          if (value.length !== raw.length) continue;
           for (let at = value.indexOf(query); at >= 0; at = value.indexOf(query, at + query.length)) {
             const range = document.createRange();
             range.setStart(text, at);
@@ -3567,7 +3578,8 @@ export class ChatPanel {
     for (let i = this.messages.length - 1; i >= 0; i--) {
       const m = this.messages[i];
       if (m.who === "you") return undefined;
-      if (m.who === "activity") return [...m.data.tools].reverse().find(tool => tool.ok === null);
+      const running = m.who === "activity" ? [...m.data.tools].reverse().find(tool => tool.ok === null) : undefined;
+      if (running) return running;
     }
     return undefined;
   }

@@ -249,7 +249,11 @@ impl Live {
             }
             return;
         }
-        if self.segments.last().is_none_or(|(_, text)| !text.is_empty()) {
+        if self
+            .segments
+            .last()
+            .is_none_or(|(_, text)| !text.trim().is_empty())
+        {
             self.segments.push(Default::default());
         }
         if let Some((activity, _)) = self.segments.last_mut() {
@@ -274,7 +278,7 @@ impl Live {
                     .then(|| serde_json::to_string(&activity.for_history()).ok())
                     .flatten()
                     .map(|a| ("activity", a));
-                let text = (!text.is_empty()).then(|| ("zeca", text.clone()));
+                let text = (!text.trim().is_empty()).then(|| ("zeca", text.clone()));
                 activity.into_iter().chain(text)
             })
             .collect()
@@ -1292,7 +1296,14 @@ async fn send(
         let lines = store(move |s| s.conversation_messages(id))
             .await
             .unwrap_or_default();
-        let said: Vec<(String, String)> = lines.iter().map(|l| (l.who.clone(), l.text.clone())).collect();
+        let mut said: Vec<(String, String)> = lines.iter().map(|l| (l.who.clone(), l.text.clone())).collect();
+        // This turn's own message may be saved already: it goes as the turn, not twice.
+        if said
+            .last()
+            .is_some_and(|(who, said)| who == "you" && *said == text)
+        {
+            said.pop();
+        }
         chat.set_fallback(vults_chat::handoff(&from, &said, vults_chat::HANDOFF_BUDGET));
     }
     chat.send(Turn { text, files, context }, tx, approver, stop).await;

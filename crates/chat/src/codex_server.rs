@@ -228,7 +228,9 @@ fn change_diff(changes: &Value) -> Option<String> {
         .iter()
         .filter_map(|c| {
             let diff = c["diff"].as_str()?;
-            let marked = diff.lines().any(|l| l.starts_with(['+', '-', '@']));
+            // A new file is every line added, whatever its lines start with.
+            let added = c["kind"]["type"] == "add" || c["kind"] == "add";
+            let marked = !added && diff.lines().any(|l| l.starts_with("@@"));
             let body: Vec<String> = diff
                 .lines()
                 .filter(|l| !l.starts_with("+++ ") && !l.starts_with("--- "))

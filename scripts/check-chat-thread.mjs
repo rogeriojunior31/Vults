@@ -79,6 +79,14 @@ await send("Rename the field");
 panel.receive({ kind: "activity", event: { type: "start", id: "e1", tool: "Bash", detail: "cargo test --workspace" } });
 panel.paint();
 assert.ok(panel.element.textContent.includes("Running cargo test --workspace…"), "the status line says what runs now");
+// The status line is one node for the turn: a repaint keeps the log's children (and a selection).
+const kids = () => nodes(panel.element).find(n => n.classList.contains("log")).children.slice();
+const before1 = kids(); panel.paint(); const after1 = kids();
+assert.ok(before1.length === after1.length && before1.every((n, i) => n === after1[i]), "a repaint mid-turn keeps every node");
+// An end for a tool no stretch holds is dropped, not a new empty stretch.
+const stretches1 = nodes(panel.element).filter(n => n.classList.contains("chat-activity")).length;
+panel.receive({ kind: "activity", event: { type: "end", id: "nobody", ok: true } }); panel.paint();
+assert.equal(nodes(panel.element).filter(n => n.classList.contains("chat-activity")).length, stretches1);
 panel.receive({ kind: "activity", event: { type: "end", id: "e1", ok: true } });
 panel.receive({ kind: "activity", event: { type: "start", id: "e2", tool: "Edit", detail: "/w/src/lib.rs" } });
 panel.receive({ kind: "activity", event: { type: "diff", id: "e2", diff: "@@ /w/src/lib.rs\n keep\n-old name\n+new name\n+one more" } });
@@ -111,12 +119,23 @@ press("ArrowUp"); assert.equal(input.value, "Rename the field");
 press("ArrowUp"); assert.equal(input.value, "Rename the field", "the oldest stays");
 press("ArrowDown"); assert.equal(input.value, "Second question");
 press("ArrowDown"); assert.equal(input.value, "", "past the newest, an empty composer");
+// A recalled message of several lines: ↑ moves the caret until it is on the first line.
+await send("line one\nline two");
+panel.receive({ kind: "text", text: "ok" }); panel.receive({ kind: "done" }); await tick();
+press("ArrowUp"); assert.equal(input.value, "line one\nline two");
+input.selectionStart = input.selectionEnd = input.value.length;
+let moved = false;
+input.listeners.keydown({ key: "ArrowUp", preventDefault() { moved = true; }, stopPropagation() {} });
+assert.ok(!moved && input.value === "line one\nline two", "on the last line, ↑ moves the caret");
+input.selectionStart = input.selectionEnd = 0;
+press("ArrowUp"); assert.equal(input.value, "Second question", "on the first line, ↑ goes back");
+press("ArrowDown"); press("ArrowDown"); assert.equal(input.value, "");
 
 // The last message offers Edit and send again; it puts the words back.
 const edit = nodes(panel.element).find(n => n.tag === "button" && n.textContent === "Edit and send again");
 assert.ok(edit, "the last message can be edited");
 edit.click();
-assert.equal(input.value, "Second question");
+assert.equal(input.value, "line one\nline two");
 input.value = ""; input.listeners.input({});
 
 // Ctrl+F finds in the conversation and steps through the matches.

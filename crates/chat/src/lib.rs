@@ -738,16 +738,19 @@ pub fn edit_diff(path: &str, old: &str, new: &str) -> Option<String> {
 
 /// A diff the chat shows: its first [`DIFF_MAX`] characters, secrets redacted; none when empty.
 pub fn diff_bounded(diff: &str) -> Option<String> {
-    let diff = diff.trim_end();
-    if diff.trim().is_empty() {
+    let diff = vults_core::redact::secrets(diff.trim_end());
+    // Only a header, or nothing: no line changed that the chat could show.
+    if !diff
+        .lines()
+        .any(|l| l.starts_with(['+', '-']) && !l.starts_with("+++") && !l.starts_with("---"))
+    {
         return None;
     }
-    let cut: String = if diff.chars().count() > DIFF_MAX {
+    Some(if diff.chars().count() > DIFF_MAX {
         format!("{}\n…", diff.chars().take(DIFF_MAX).collect::<String>())
     } else {
-        diff.to_string()
-    };
-    Some(vults_core::redact::secrets(&cut))
+        diff
+    })
 }
 
 /// Characters of conversation a handoff carries (about 12k tokens): the first message and the
@@ -1606,11 +1609,8 @@ impl Chat {
                 // The session to resume is gone: a fresh one goes on from what was said, once.
                 match (result, fallback) {
                     (Err(e), Some(said)) if driver.session().is_some() && lost_session(&e) => {
-                        let spec = self.spec.clone();
-                        let Some(fresh) = drivers::for_cli(self.provider, spec) else {
-                            return Err(e);
-                        };
-                        *driver = fresh;
+                        // The same driver, so Stop still reaches it.
+                        driver.forget_session();
                         let again = Turn {
                             context: Some(match &turn.context {
                                 Some(context) => format!("{said}\n{context}"),

@@ -320,6 +320,8 @@ pub trait AgentDriver: Send + std::fmt::Debug {
     fn send<'a>(&'a mut self, input: &'a Input, sink: &'a dyn Sink) -> BoxFuture<'a, Result<(), String>>;
     /// The agent's id for the conversation, once it has one.
     fn session(&self) -> Option<&str>;
+    /// Forgets the session its agent lost: the next turn starts a fresh one, with the same Stop.
+    fn forget_session(&mut self) {}
 }
 
 #[cfg(test)]
