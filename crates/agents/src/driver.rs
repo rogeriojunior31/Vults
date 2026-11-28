@@ -229,6 +229,11 @@ pub enum Event {
         id: String,
         output: String,
     },
+    /// A tool the agent ran without asking, as its own settings allow: told, never a stop.
+    Unasked {
+        tool: String,
+        target: String,
+    },
     /// How full the model's context is: the tokens its last request read, and its window, each
     /// when the agent says.
     Context {

@@ -33,7 +33,7 @@ fn main() {
     // SAFETY: process entry, before the MCP server, Tauri, GTK or application worker threads.
     unsafe { std::env::set_var("ORT_DISABLE_TELEMETRY", "1") };
     // SAFETY: as above, no other thread exists yet.
-    #[cfg(windows)]
+    #[cfg(any(windows, unix))]
     unsafe {
         vults_app::widen_cli_path()
     };

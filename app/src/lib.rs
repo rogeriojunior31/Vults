@@ -128,7 +128,7 @@ fn layer_spec(label: &str) -> Option<vults_platform::linux::LayerSpec> {
 ///
 /// # Safety
 /// Call first thing in `main`, before any other thread exists.
-#[cfg(windows)]
+#[cfg(any(windows, unix))]
 pub unsafe fn widen_cli_path() {
     // SAFETY: forwarded from the caller.
     unsafe { paths::widen_cli_path() }

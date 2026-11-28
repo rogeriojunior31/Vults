@@ -92,7 +92,7 @@ export interface ChatBackend {
   /** Files and folders of the conversation's folder matching `query`, by relative path. */
   paths?: (folder: string | null, query: string) => Promise<{ path: string; dir: boolean }[]>;
   /** Opens a terminal running the engine's own sign-in. */
-  signIn?: (provider: "claude" | "codex") => Promise<void>;
+  signIn?: (provider: ChatProvider) => Promise<void>;
   /** The environment new conversations start in: the user's own setup, or a clean one. */
   setNative?: (on: boolean) => Promise<void>;
   /** Whether each CLI engine is installed and signed in, for the engine menu. */
@@ -277,6 +277,9 @@ type Message =
 /** How a CLI engine stands, as its menu row says it. */
 /** The agents the flock draws by name; any other ACP agent is drawn as "other". */
 const AGENT_KINDS = ["claude", "codex", "opencode", "qwen", "copilot"] as const;
+
+/** The ACP agents whose own sign-in the engine menu opens, and the command it runs. */
+const ACP_SIGN_IN: Partial<Record<string, string>> = { "acp:antigravity": "agy acp --login", "acp:opencode": "opencode auth login" };
 
 const ENGINE_STATE = { "signed-in": tk("Signed in"), installed: tk("Installed"), missing: tk("Not installed") } as const;
 
@@ -2583,6 +2586,7 @@ export class ChatPanel {
     if (kept.tools.children.length !== toolNodes.length) kept.tools.replaceChildren(...toolNodes);
     kept.decisions.replaceChildren(...data.decisions.map(d => {
       const text = d.by === "full-access" ? t("Ran with full access: {target}", { target: d.target })
+        : d.by === "agent" ? t("Ran by the agent's own settings, without asking: {target}", { target: d.target })
         : d.by === "policy" ? (d.answer === "deny" ? t("Denied by your policy: {target}", { target: d.target }) : t("Allowed by your policy: {target}", { target: d.target }))
         : d.by === "conversation" || d.answer === "always" ? t("Allowed for this conversation: {target}", { target: d.target })
         : d.answer === "deny" ? t("You denied: {target}", { target: d.target }) : t("You allowed: {target}", { target: d.target });
@@ -3220,14 +3224,16 @@ export class ChatPanel {
         b.title = t("{provider} through its API. It only talks: no commands, no edits. Change it in Settings → Chat & voice.", { provider: this.api.label });
       const chosen = this.choice(b, `engine:${p}`, p === this.provider);
       // Installed but not signed in: its own sign-in opens in a terminal, between the user and the CLI.
-      if (state === "installed" && (p === "claude" || p === "codex") && this.backend.signIn) {
+      // An ACP agent says nothing of its login before a turn: its own sign-in is always at hand.
+      const acpSignIn = ACP_SIGN_IN[p];
+      if (((state === "installed" && (p === "claude" || p === "codex")) || acpSignIn) && this.backend.signIn) {
         const signIn = el("button", {
           class: "menu-item engine-sign-in",
           text: t("Sign in"),
           onclick: () => {
             this.backend.signIn?.(p).then(
               () => { this.engines = null; },
-              () => { this.messages.push({ who: "note", text: t("Could not open a terminal. Run {command} in your own terminal.", { command: p === "claude" ? "claude auth login" : "codex login" }) }); this.paint(); },
+              () => { this.messages.push({ who: "note", text: t("Could not open a terminal. Run {command} in your own terminal.", { command: acpSignIn ?? (p === "claude" ? "claude auth login" : "codex login") }) }); this.paint(); },
             );
           },
         });

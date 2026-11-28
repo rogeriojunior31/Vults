@@ -3276,6 +3276,9 @@ pub fn chat_sign_in(provider: Provider) -> Result<(), String> {
     let command: &[&str] = match provider {
         Provider::Claude => &["claude", "auth", "login"],
         Provider::Codex => &["codex", "login"],
+        // Each agent's own sign-in, in a terminal: Google for Antigravity, a provider for OpenCode.
+        Provider::Acp("antigravity") => &["agy", "acp", "--login"],
+        Provider::Acp("opencode") => &["opencode", "auth", "login"],
         _ => return Err("This engine signs in elsewhere.".into()),
     };
     vults_platform::terminal::run(command)

@@ -143,6 +143,47 @@ pub unsafe fn widen_cli_path() {
     }
 }
 
+/// Started from the desktop, the app has the session's PATH: a CLI that only a shell profile adds
+/// (`mise activate`, `~/.local/bin` from `.bashrc`) is missing. mise's shims and the usual per-user
+/// CLI folders that exist go at the end, so the user's own PATH still wins.
+///
+/// # Safety
+/// Call first thing in `main`, before any other thread exists.
+#[cfg(unix)]
+pub unsafe fn widen_cli_path() {
+    let var = |name: &str| {
+        std::env::var_os(name)
+            .filter(|v| !v.is_empty())
+            .map(PathBuf::from)
+    };
+    let Some(home) = var("HOME") else { return };
+    let data = var("XDG_DATA_HOME").unwrap_or_else(|| home.join(".local").join("share"));
+    let extra = [
+        home.join(".local").join("bin"),
+        var("MISE_DATA_DIR")
+            .unwrap_or_else(|| data.join("mise"))
+            .join("shims"),
+        home.join(".bun").join("bin"),
+        home.join(".cargo").join("bin"),
+        home.join(".npm-global").join("bin"),
+    ];
+    let mut dirs: Vec<PathBuf> = std::env::var_os("PATH")
+        .map(|p| std::env::split_paths(&p).collect())
+        .unwrap_or_default();
+    let before = dirs.len();
+    for dir in extra.into_iter().filter(|d| d.is_dir()) {
+        if !dirs.contains(&dir) {
+            dirs.push(dir);
+        }
+    }
+    if dirs.len() > before
+        && let Ok(path) = std::env::join_paths(dirs)
+    {
+        // SAFETY: the caller runs this before any other thread exists.
+        unsafe { std::env::set_var("PATH", path) };
+    }
+}
+
 /// `path` with each of `extra` it lacks appended; none when nothing changes.
 #[cfg(windows)]
 fn with_cli_dirs(

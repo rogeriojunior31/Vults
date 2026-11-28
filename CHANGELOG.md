@@ -6,6 +6,11 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Fixed
 
+- **Zeca's chat, ACP agents**: OpenCode's edit asked with a relative name is no longer refused; Antigravity's commands and file paths show; a crash says why (its last line); a session resumes without replaying (`session/resume`), and an agent that wants its login is told to use it.
+- **Linux**: CLIs that only a shell profile puts on the PATH (mise's shims, `~/.local/bin`, `~/.bun/bin`, `~/.cargo/bin`) are found when Vults starts from the desktop.
+
+- **Windows**: OpenCode, Antigravity and the other ACP agents installed as `.exe` or npm `.cmd` are found, so the chat's engine menu offers them.
+
 - **Zeca's chat**: a long task no longer ends after ten minutes with *took too long to answer*; a turn runs as long as it keeps reporting, and only one silent for 15 minutes stops.
 
 - **Zeca's chat**: a saved conversation whose Claude Code session or Codex thread is gone (history cleared, another computer) goes on in a fresh one from what was said, instead of failing with *No conversation found*.
@@ -23,9 +28,13 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Changed
 
+- **Zeca's chat, ACP agents**: an agent follows its own permission settings, as in its terminal: what it asks is a card, and what its settings allow it runs, said in the turn's **Activity**, instead of the turn being stopped.
+
 - **Quick chat**: no name, greeting or explanation; *Ask anything…* in the draft. Once a conversation runs, the portrait gives its room to the messages, and long code, diffs and tool output scroll in their own shorter blocks.
 
 ### Added
+
+- **Zeca's chat**: Antigravity runs the chat (`agy acp`, its telemetry off, asking before edits and commands), with **Sign in** for it and for OpenCode; ACP agents' edits show their diffs, and their context fills the meter.
 
 - **Zeca's chat**: an edit in a turn's **Activity** shows its change as colored lines, with the lines added and removed on its row (Claude Code and Codex).
 - **Zeca's chat**: the line under the conversation says what the agent is doing now (*Running cargo test…*, *Editing lib.rs…*) and for how long; a finished turn's **Activity** says how long it took.

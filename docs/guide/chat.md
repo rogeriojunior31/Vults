@@ -35,8 +35,12 @@ setup** (the Claude Code and Codex CLIs, each *Signed in*, *Installed* or *Not i
 asks the CLI itself, `claude auth status` or `codex login status`, and reads only whether it is
 signed in, falling back to whether its login file is there; **Sign in** beside one that is not opens
 a terminal with that CLI's own sign-in, which Vults never sees; then every agent that speaks
-ACP and is installed here, such as OpenCode, Qwen Code, Copilot CLI or Kimi Code, which uses its
-own model and asks a card before each tool that writes or runs) and **Vults harness** (the
+ACP and is installed here, such as Antigravity (`agy acp`, its telemetry off), OpenCode, Qwen Code,
+Copilot CLI or Kimi Code, which uses its own model and its own permission settings, as in its
+terminal: what it asks for is a card, and what its settings allow it runs, with the turn's
+**Activity** saying *Ran by the agent's own settings, without asking*; Antigravity and OpenCode also have **Sign in**, which opens `agy acp --login` or
+`opencode auth login` in a terminal. Their edits show their diffs, and Antigravity's context fills
+the meter beside **Send**) and **Vults harness** (the
 API, *Ready* with a key or a local model), with **Engines in Settings ›** under them. **New** (**+** on the island) starts a fresh conversation; the one before stays in the list (see
 [Conversations](#conversations)). Picking another engine in an empty chat starts with it; in a
 conversation already going, the other engine takes it over: the lines stay, a note says who goes

@@ -856,6 +856,15 @@ impl Sink for TurnSink<'_> {
                 },
                 Event::Usage(usage) => Delta::Usage(usage),
                 Event::Context { used, window } => Delta::Context { used, window },
+                // The agent's own settings ran it: the activity says so, on the agent's word.
+                Event::Unasked { tool, target } => Delta::Activity {
+                    event: activity::Event::Decision {
+                        tool,
+                        target,
+                        answer: "allow".into(),
+                        by: "agent".into(),
+                    },
+                },
                 // A call that reads outside taints the conversation once it ran: a denied or failed
                 // fetch brought nothing in. The detail is the whole command, never the card's cut.
                 Event::ToolStart { id, tool, detail, .. } => {

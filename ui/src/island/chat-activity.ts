@@ -41,7 +41,7 @@ export function readActivity(text: string): ChatActivity {
       if (typeof tool.ok === "boolean") applyActivity(result, { type: "end", id: tool.id, ok: tool.ok });
     }
     if (Array.isArray(data.decisions)) for (const d of data.decisions.slice(0, 128)) {
-      if ([d.tool, d.target, d.answer, d.by].every(value => typeof value === "string") && ["allow", "deny", "always"].includes(d.answer) && ["human", "policy", "full-access", "conversation"].includes(d.by)) applyActivity(result, { type: "decision", tool: d.tool, target: d.target, answer: d.answer, by: d.by });
+      if ([d.tool, d.target, d.answer, d.by].every(value => typeof value === "string") && ["allow", "deny", "always"].includes(d.answer) && ["human", "policy", "full-access", "conversation", "agent"].includes(d.by)) applyActivity(result, { type: "decision", tool: d.tool, target: d.target, answer: d.answer, by: d.by });
     }
     result.truncated ||= data.truncated === true;
   } catch { result.truncated = true; }

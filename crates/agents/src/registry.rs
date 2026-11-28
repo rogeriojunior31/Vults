@@ -128,7 +128,14 @@ pub static ALL: [Entry; 11] = [
         command: "agy",
         wire: Wire::Named,
         setup: Setup::Hooks(&crate::Antigravity),
-        run: Run::No,
+        // Its ACP server, its own telemetry off; the default mode asks before edits and
+        // commands, whatever the user's settings start it in.
+        run: Run::Acp(Acp {
+            program: "agy",
+            args: &["acp", "--disable-telemetry"],
+            env: &[],
+            mode: Some("default"),
+        }),
         caps: Some(Caps {
             permissions: Permissions::Terminal,
             questions: Questions::Terminal,
