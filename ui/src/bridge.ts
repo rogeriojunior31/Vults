@@ -158,6 +158,9 @@ export interface UsageWindow {
   used_percent: number;
   /** Epoch seconds. */
   resets_at: number | null;
+  /** Not the whole plan: a model's weekly allowance (its name), "spend" (a monthly spend cap) or
+   *  "credits" (Codex's monthly credit limit). */
+  scope?: string;
 }
 
 /** Who the chat talks through: a CLI, or a provider's API with the user's key (or a local model). */

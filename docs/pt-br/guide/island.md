@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: dc93780b57c4 -->
+<!-- source: 41195836d108 -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -323,7 +323,10 @@ ponto de cada agente: *7d 12%* é 12% da janela semanal. Fica âmbar em 70% e ve
 ponteiro para ver quando reinicia. Nenhum token seu é lido: cada número vem da CLI em que você fez
 login. A dica de uso do chat e **Ninho → Records** também dizem o ritmo de cada janela: *Acima do
 ritmo* quando mais de 5 pontos dela foram usados além da parte do tempo que passou, *Abaixo do ritmo*
-quando 5 abaixo, senão *No ritmo*. Tokens aparecem como 950, 1.25K, 12.5K ou 1.2M.
+quando 5 abaixo, senão *No ritmo*. Tokens aparecem como 950, 1.25K, 12.5K ou 1.2M. Ao lado das janelas de 5 horas e semanal, Records
+lista o que as mesmas respostas também trazem: a cota semanal própria de um modelo (*Opus, semanal*),
+o *Gasto mensal* do Claude quando o uso extra está ligado, a janela mensal do Codex num plano Free ou
+Go e o *Limite mensal de créditos* do Codex.
 
 - **Codex**: com **Settings → General → Codex usage** ligado, consultado a cada 5 minutos, só
   leitura, nunca com a tela bloqueada. Chega à OpenAI pelo seu codex, então fica desligado numa

@@ -20,7 +20,7 @@ import { clickOnly, refuseAllowKey } from "./allow-key";
 import { renderFull } from "./markdown";
 import { copyTextButton } from "../clipboard";
 import { locale, t, tk } from "../i18n";
-import { pace, paceLabel, tokens, usageLabel, usageLevel, usageWindowName } from "../cost";
+import { pace, paceLabel, tokens, usageLabel, usageLevel, usageWindowLabel } from "../cost";
 
 const GITHUB_CONTROL_EFFECT: Record<string, string> = {
   "github_pull_request_merge": tk("Merge the exact commit below using the selected method and all branch rules. A required merge queue is not a completed merge. Keep the branch."),
@@ -1031,7 +1031,7 @@ export class ChatPanel {
     const live = this.usage.filter(w => this.provider !== "api" && w.agent === this.provider
       && Number.isFinite(w.used_percent) && w.used_percent >= 0 && w.used_percent <= 100
       && (w.resets_at === null || w.resets_at > now));
-    const fullest = live.reduce<UsageWindow | null>((a, w) => !a || w.used_percent > a.used_percent ? w : a, null);
+    const fullest = live.filter(w => w.scope !== "spend").reduce<UsageWindow | null>((a, w) => !a || w.used_percent > a.used_percent ? w : a, null);
     this.planUsage.hidden = !fullest;
     const hint = this.compact ? "" : this.started
       ? t("A conversation keeps its model; New starts another.")
@@ -1047,7 +1047,7 @@ export class ChatPanel {
     this.planUsage.replaceChildren(ring, el("span", { text: `${percent}%` }));
     this.modelButton.setAttribute("aria-label", t("{selection}. {usage}", { selection: this.selectionLabel, usage: summary }));
     const windows = live.map(w => {
-      const vars = { window: usageWindowName(w.minutes), percent: w.used_percent };
+      const vars = { window: usageWindowLabel(w), percent: w.used_percent };
       return w.resets_at === null
         ? t("{window}: {percent}% used", vars)
         : t("{window}: {percent}% used. Resets {when}.", { ...vars, when: new Date(w.resets_at * 1000).toLocaleString(locale(), { weekday: "short", hour: "2-digit", minute: "2-digit" }) });

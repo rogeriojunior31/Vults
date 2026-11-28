@@ -291,7 +291,9 @@ dot: *7d 12%* is 12% of the weekly window. It turns amber at 70% and red at 90%;
 resets. No token of yours is read: each number comes from the CLI you logged into.
 The chat's usage hint and **Nest → Records** also say each window's pace: *Ahead of pace* when more
 than 5 points of it are used beyond the share of time gone, *Under pace* when 5 below, else *On pace*.
-Tokens read as 950, 1.25K, 12.5K or 1.2M.
+Tokens read as 950, 1.25K, 12.5K or 1.2M. Beside the 5-hour and weekly windows, Records lists what
+the same answers also carry: a model's own weekly allowance (*Opus, weekly*), Claude's *Monthly spend*
+when extra usage is on, a Free or Go plan's monthly Codex window and Codex's *Monthly credit limit*.
 
 - **Codex**: with **Settings → General → Codex usage** on, asked every 5 minutes, read-only, never
   while the screen is locked. It reaches OpenAI through your codex, so it is off on a new install.

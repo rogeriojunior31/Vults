@@ -37,6 +37,14 @@ export function spentLine(today: SpendToday, plan = true): string {
   return line;
 }
 
+/** A plan window as its row names it: its length, or what it counts when it is not the whole plan. */
+export function usageWindowLabel(w: Pick<UsageWindow, "minutes" | "scope">): string {
+  if (w.scope === "spend") return t("Monthly spend");
+  if (w.scope === "credits") return t("Monthly credit limit");
+  if (w.scope) return t("{model}, weekly", { model: w.scope });
+  return usageWindowName(w.minutes);
+}
+
 /** A plan window's length, in words. */
 export function usageWindowName(minutes: number): string {
   if (minutes === 300) return t("5 hours");

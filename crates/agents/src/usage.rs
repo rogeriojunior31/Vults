@@ -15,7 +15,18 @@ pub struct Window {
     pub used_percent: u8,
     /// Epoch seconds.
     pub resets_at: Option<i64>,
+    /// What the window counts when it is not the whole plan: a model's own weekly allowance (its
+    /// name), [`SPEND`] for a monthly spend cap, [`CREDITS`] for Codex's monthly credit limit.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub scope: Option<String>,
 }
+
+/// The scope of a monthly spend cap (Claude's extra usage).
+pub const SPEND: &str = "spend";
+/// The scope of Codex's monthly credit limit.
+pub const CREDITS: &str = "credits";
+/// A month, for windows the CLI gives no length.
+const MONTH: u32 = 30 * 1440;
 
 /// A garbled payload (a ratio sent as a percentage, milliseconds sent as seconds) shows nothing
 /// rather than a wrong gauge: a little over 100 is real overuse, far over it is not a percentage.
@@ -33,6 +44,14 @@ fn window(agent: AgentKind, minutes: u32, used: f64, resets_at: Option<i64>, now
         minutes,
         used_percent: used.round().min(100.0) as u8,
         resets_at: resets_at.filter(|t| *t <= now + MAX_RESET_AHEAD),
+        scope: None,
+    })
+}
+
+fn scoped(w: Option<Window>, scope: &str) -> Option<Window> {
+    w.map(|w| Window {
+        scope: Some(scope.to_owned()),
+        ..w
     })
 }
 
@@ -45,20 +64,38 @@ pub fn codex(result: &Value, now: i64) -> Vec<Window> {
         .get("rateLimitsByLimitId")
         .and_then(|all| all.get("codex"))
         .unwrap_or(&result["rateLimits"]);
-    let mut windows: Vec<Window> = ["primary", "secondary"]
+    let monthly_plan = matches!(limits["planType"].as_str(), Some("free" | "go"));
+    let mut windows: Vec<Window> = [("primary", monthly_plan.then_some(MONTH)), ("secondary", None)]
         .iter()
-        .filter_map(|slot| {
+        .filter_map(|(slot, fallback)| {
             let w = &limits[*slot];
+            let minutes = match w["windowDurationMins"].as_u64() {
+                Some(m) => u32::try_from(m).ok()?,
+                None => (*fallback)?,
+            };
             window(
                 AgentKind::Codex,
-                u32::try_from(w["windowDurationMins"].as_u64()?).ok()?,
+                minutes,
                 w["usedPercent"].as_f64()?,
                 w["resetsAt"].as_i64(),
                 now,
             )
         })
         .collect();
-    windows.sort_by_key(|w| w.minutes);
+    let credit = &limits["individualLimit"];
+    if let Some(left) = credit["remainingPercent"].as_f64() {
+        windows.extend(scoped(
+            window(
+                AgentKind::Codex,
+                MONTH,
+                100.0 - left,
+                credit["resetsAt"].as_i64(),
+                now,
+            ),
+            CREDITS,
+        ));
+    }
+    windows.sort_by_key(|w| (w.minutes, w.scope.is_some()));
     windows
 }
 
@@ -106,10 +143,11 @@ pub fn claude_account(payload: &Value, now: i64) -> Vec<Window> {
     if payload["rate_limits_available"] != true {
         return Vec::new();
     }
-    [("five_hour", 300), ("seven_day", 10080)]
+    let limits = &payload["rate_limits"];
+    let mut windows: Vec<Window> = [("five_hour", 300), ("seven_day", 10080)]
         .into_iter()
         .filter_map(|(key, minutes)| {
-            let value = &payload["rate_limits"][key];
+            let value = &limits[key];
             window(
                 AgentKind::Claude,
                 minutes,
@@ -118,7 +156,36 @@ pub fn claude_account(payload: &Value, now: i64) -> Vec<Window> {
                 now,
             )
         })
-        .collect()
+        .collect();
+    // A model's own weekly allowance, named as the CLI names it.
+    for entry in limits["model_scoped"].as_array().into_iter().flatten() {
+        let Some(name) = entry["display_name"].as_str().filter(|n| !n.trim().is_empty()) else {
+            continue;
+        };
+        let Some(used) = entry["utilization"].as_f64() else {
+            continue;
+        };
+        let resets = entry["resets_at"].as_str().and_then(reset_seconds);
+        windows.extend(scoped(
+            window(AgentKind::Claude, 10080, used, resets, now),
+            name.trim(),
+        ));
+    }
+    if let Some(used) = spend_percent(&limits["extra_usage"]) {
+        windows.extend(scoped(window(AgentKind::Claude, MONTH, used, None, now), SPEND));
+    }
+    windows
+}
+
+/// How much of the monthly spend cap is used, when extra usage is on and has a cap.
+fn spend_percent(extra: &Value) -> Option<f64> {
+    if extra["is_enabled"] != true {
+        return None;
+    }
+    match (extra["used_credits"].as_f64(), extra["monthly_limit"].as_f64()) {
+        (Some(used), Some(limit)) if limit > 0.0 => Some(used / limit * 100.0),
+        _ => extra["utilization"].as_f64(),
+    }
 }
 
 pub(crate) fn reset_seconds(raw: &str) -> Option<i64> {
@@ -241,13 +308,15 @@ mod tests {
                     agent: AgentKind::Claude,
                     minutes: 300,
                     used_percent: 23,
-                    resets_at: Some(1790993400)
+                    resets_at: Some(1790993400),
+                    scope: None
                 },
                 Window {
                     agent: AgentKind::Claude,
                     minutes: 10080,
                     used_percent: 12,
-                    resets_at: Some(1791493200)
+                    resets_at: Some(1791493200),
+                    scope: None
                 },
             ]
         );
@@ -268,6 +337,7 @@ mod tests {
                 minutes: 10080,
                 used_percent: 0,
                 resets_at: Some(1791580268),
+                scope: None
             }]
         );
     }
@@ -284,5 +354,54 @@ mod tests {
         assert_eq!(got[0].resets_at, None);
         assert!(codex(&json!({ "rateLimits": null }), NOW).is_empty());
         assert!(codex(&json!({}), NOW).is_empty());
+    }
+
+    #[test]
+    fn claude_account_reads_model_rows_and_the_spend_cap() {
+        let payload = json!({ "rate_limits_available": true, "rate_limits": {
+            "five_hour": { "utilization": 10.0, "resets_at": null },
+            "model_scoped": [
+                { "display_name": "Opus", "utilization": 64.4, "resets_at": null },
+                { "display_name": " ", "utilization": 5.0 },
+                { "display_name": "Fable" },
+            ],
+            "extra_usage": { "is_enabled": true, "used_credits": 25.0, "monthly_limit": 100.0 },
+        }});
+        let got = claude_account(&payload, NOW);
+        let rows: Vec<_> = got
+            .iter()
+            .map(|w| (w.minutes, w.used_percent, w.scope.as_deref()))
+            .collect();
+        assert_eq!(
+            rows,
+            [
+                (300, 10, None),
+                (10080, 64, Some("Opus")),
+                (MONTH, 25, Some(SPEND))
+            ]
+        );
+        let off = json!({ "rate_limits_available": true, "rate_limits": {
+            "extra_usage": { "is_enabled": false, "utilization": 90.0 } } });
+        assert!(
+            claude_account(&off, NOW).is_empty(),
+            "a cap that is off is no window"
+        );
+    }
+
+    #[test]
+    fn codex_reads_monthly_plans_and_the_credit_limit() {
+        let free = json!({ "rateLimits": { "planType": "free",
+            "primary": { "usedPercent": 30 },
+            "individualLimit": { "remainingPercent": 75.0, "resetsAt": 2 } } });
+        let rows: Vec<_> = codex(&free, NOW)
+            .iter()
+            .map(|w| (w.minutes, w.used_percent, w.scope.clone()))
+            .collect();
+        assert_eq!(rows, [(MONTH, 30, None), (MONTH, 25, Some(CREDITS.to_owned()))]);
+        let paid = json!({ "rateLimits": { "planType": "pro", "primary": { "usedPercent": 30 } } });
+        assert!(
+            codex(&paid, NOW).is_empty(),
+            "a paid plan's slot without a length is not guessed"
+        );
     }
 }
