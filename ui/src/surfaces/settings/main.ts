@@ -15,6 +15,7 @@ import { LOOK_GROUPS, dress } from "../../character/looks";
 import { drawFrame, frameAt, type Frame } from "../../character/sprites";
 import { perchOf } from "../../character/zeca";
 import { AGENTS as REGISTRY } from "../../agents";
+import { acpSummary, apiSummary, dot, engineSummary } from "./provider-status";
 import { LABS, labOn } from "../../labs";
 import { CONNECTORS, connectorError } from "../../connectors";
 import { el } from "../../dom";
@@ -356,6 +357,11 @@ function readState(failed: boolean, reading: string, failure: string, retry: () 
   return card;
 }
 let apiProviders: ApiProvider[] = [];
+/** The chat's engines as last checked, and when; read when Chat & voice opens, again on request. */
+let engines: import("../../bridge").ChatEngines | null = null;
+let enginesAt = 0;
+let enginesLoading = false;
+let enginesNote: string | null = null;
 let apiSelected = "";
 /** Provider id → its live model list, or why it couldn't be had. */
 const apiModels = new Map<string, { models: string[] } | { error: string }>();
@@ -1662,6 +1668,87 @@ function dictationPage(): HTMLElement[] {
 
 // ── Chat ─────────────────────────────────────────────────────────────────────
 
+/** Asks the engines how they stand (each CLI's own word on its login). */
+function checkEngines(): void {
+  if (enginesLoading) return;
+  enginesLoading = true;
+  Bridge.chatEngines().then(
+    e => { engines = e; enginesAt = Date.now(); enginesNote = null; },
+    e => { enginesNote = failure(t("Could not check the engines."), e); },
+  ).finally(() => { enginesLoading = false; if (page === "chat") render(); });
+}
+
+/** Each engine of the chat: how it stands in one line, and its own sign-in when it has one. */
+function enginesCard(): HTMLElement {
+  if (!engines && !enginesLoading && !enginesNote) checkEngines();
+  const SIGN_IN: Record<string, string> = { claude: "claude", codex: "codex", "acp:antigravity": "acp:antigravity", "acp:opencode": "acp:opencode" };
+  const line = (id: string, name: string, summary: { dot: "ok" | "warn" | "off"; headline: string }, canSignIn: boolean) => {
+    const signIn = canSignIn && SIGN_IN[id]
+      ? button(t("Sign in"), () => {
+          Bridge.chatSignIn(id as import("../../bridge").ChatProvider).then(
+            () => { enginesNote = t("Finish signing in in the terminal that opened, then check again."); render(); },
+            e => { enginesNote = failure(t("Could not open a terminal."), e); render(); },
+          );
+        })
+      : null;
+    return el("div", { class: "row engine-row" },
+      el("div", { class: "engine-name" }, dot(summary.dot), el("span", { class: "row-title", text: name })),
+      el("div", { class: "row-about", text: summary.headline }),
+      signIn ? el("div", { class: "engine-actions" }, signIn) : null);
+  };
+  const rows: (HTMLElement | null)[] = engines
+    ? [
+        line("claude", "Claude Code", engineSummary(engines.claude), engines.claude === "installed"),
+        line("codex", "Codex", engineSummary(engines.codex), engines.codex === "installed"),
+        ...(engines.acp ?? []).map(a => line(a.id, a.title, acpSummary(), true)),
+      ]
+    : [el("p", { class: "note", text: enginesLoading ? t("Checking the engines…") : t("The engines have not been checked yet.") })];
+  const checked = enginesAt
+    ? t("Checked at {time}.", { time: new Date(enginesAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) })
+    : "";
+  return el("section", { class: "card rows engines" },
+    ...rows,
+    el("div", { class: "row engine-foot" },
+      el("span", { class: "note", text: checked }),
+      button(enginesLoading ? t("Checking…") : t("Check again"), () => checkEngines())),
+    enginesNote ? el("p", { class: "note", text: enginesNote }) : null);
+}
+
+/** The API providers as one list: each with its dot and how it stands, the chosen one marked. */
+function providerList(): HTMLElement {
+  const list = el("div", { class: "provider-list" });
+  list.setAttribute("role", "radiogroup");
+  list.setAttribute("aria-label", t("Provider"));
+  const item = (x: ApiProvider) => {
+    const s = apiSummary(x);
+    const b = el("button", { class: `provider-item${x.id === apiSelected ? " on" : ""}`, onclick: () => {
+      if (x.id === apiSelected) return;
+      apiSelected = x.id;
+      apiMessage = null;
+      render();
+      void Bridge.apiProviderSet(x.id).then(() => refreshApi());
+    } }, dot(s.dot), el("span", { class: "provider-name", text: x.label }), el("span", { class: "provider-state", text: s.headline }));
+    b.setAttribute("role", "radio");
+    b.setAttribute("aria-checked", String(x.id === apiSelected));
+    return b;
+  };
+  const group = (label: string, local: boolean) => {
+    const items = apiProviders.filter(x => x.local === local).map(item);
+    return items.length ? [el("span", { class: "provider-group", text: label }), ...items] : [];
+  };
+  list.append(...group(t("Cloud, with your key"), false), ...group(t("On this machine"), true));
+  // Arrows move through the list, as a radio group does.
+  list.addEventListener("keydown", event => {
+    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+    const items = [...list.querySelectorAll<HTMLButtonElement>(".provider-item")];
+    const at = items.indexOf(document.activeElement as HTMLButtonElement);
+    const next = event.key === "Home" ? 0 : event.key === "End" ? items.length - 1 : (at + (event.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
+    event.preventDefault();
+    items[next]?.focus();
+  });
+  return list;
+}
+
 function chatPage(): HTMLElement[] {
   const p = apiProviders.find((x) => x.id === apiSelected);
   const message = apiMessage ? el("p", { class: `note${apiMessage.error ? " error" : " ok"}`, text: apiMessage.text }) : null;
@@ -1670,26 +1757,8 @@ function chatPage(): HTMLElement[] {
     void refreshApi();
   };
 
-  const select = document.createElement("select");
-  select.className = "field select";
-  const group = (label: string, local: boolean) => {
-    const g = document.createElement("optgroup");
-    g.label = label;
-    for (const x of apiProviders.filter((x) => x.local === local)) {
-      const o = new Option(x.hasKey ? t("{name} · key saved", { name: x.label }) : x.label, x.id, false, x.id === apiSelected);
-      g.append(o);
-    }
-    return g;
-  };
-  select.append(group(t("Cloud, with your key"), false), group(t("On this machine"), true));
-  select.addEventListener("change", () => {
-    apiSelected = select.value;
-    apiMessage = null;
-    void Bridge.apiProviderSet(select.value).then(() => refreshApi());
-  });
-
   const rows: (HTMLElement | null)[] = [
-    row(t("Provider"), t("API messages go to this provider. This mode cannot run commands or edit files."), select, t("The API chat can't run commands, edit files or open your project. It reads the files you drop on the island and, when a question needs it, what the island shows (your sessions, the cards waiting, usage, your GitHub card), which then goes to the provider with the conversation. Keys are kept in the system keyring, never in a file, and only ever sent to their own provider.")),
+    row(t("Provider"), t("API messages go to this provider. This mode cannot run commands or edit files."), providerList(), t("The API chat can't run commands, edit files or open your project. It reads the files you drop on the island and, when a question needs it, what the island shows (your sessions, the cards waiting, usage, your GitHub card), which then goes to the provider with the conversation. Keys are kept in the system keyring, never in a file, and only ever sent to their own provider.")),
   ];
   if (p) {
     rows.push(row(...keyRow(p, done)));
@@ -1722,7 +1791,7 @@ function chatPage(): HTMLElement[] {
       ),
       row(
         t("Who answers Zeca's cards"),
-        t("Choose who approves commands and edits. Destructive commands always ask; every answer is audited."),
+        t("Choose who approves commands and edits. Every answer is audited."),
         segmented<ChatAccess>(
           [
             { value: "ask", label: t("Asks first") },
@@ -1747,7 +1816,7 @@ function chatPage(): HTMLElement[] {
             return false;
           },
         ),
-        t("Asks first: a card before every command or edit. Your policies: the policies you accepted in Approvals answer what they cover, and the rest asks. Full access: everything runs without a card, but destructive commands and what a policy denies or asks first; once a conversation reads from outside (a web page, a fetch, an MCP tool), its cards ask again. Every answer is in the audit log. Holds at once."),
+        t("Asks first: a card before every command or edit. Your policies: the policies you accepted in Approvals answer what they cover, and the rest asks. Full access: everything runs without a card; only what a policy denies is refused. Every answer is in the audit log. Holds at once."),
       ),
       ...(askingFull && chatAccess !== "full"
         ? [fullAccessConfirm(t("With full access Zeca runs commands, edits files and reaches the network without asking, destructive commands included. Add deny lines to a policy for anything that must never run."))]
@@ -1811,6 +1880,9 @@ function chatPage(): HTMLElement[] {
           ]
         : []),
     ),
+    el("h2", { text: t("Agent engines") }),
+    el("p", { class: "note", text: t("The CLIs that run Zeca's chat on this computer, each with its own login. Vults only asks each one whether it is signed in.") }),
+    enginesCard(),
     el("h2", { text: t("API") }),
     el("section", { class: "card rows" }, ...rows),
     ...(web ? [el("h2", { text: t("Web") }), el("section", { class: "card rows" }, ...webRows())] : []),

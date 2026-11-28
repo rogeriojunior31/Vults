@@ -437,7 +437,11 @@ See [Safety](../safety.md) for the rest.
 
 The chat can also use a provider's API with your own key, or a model running on your machine. In
 **Settings → Chat & voice**, pick the **Provider**, paste its key, and choose a **Model**; the provider's
-name then appears at the top of the chat, next to Claude and Codex.
+name then appears at the top of the chat, next to Claude and Codex. The providers are one list, each
+with a dot and how it stands (*Key saved in the system keyring.*, *No key yet.*, *Runs on this
+computer; no key needed.*). Above it, **Agent engines** lists Claude Code, Codex and each installed
+ACP agent the same way (*Signed in and ready.*, *Installed, not signed in.*, *Not installed on this
+computer.*), with **Sign in** where the engine has one, when they were checked and **Check again**.
 
 | Provider | Key | Notes |
 |---|---|---|

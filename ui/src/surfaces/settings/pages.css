@@ -808,3 +808,22 @@ code {
 .setting-feedback:empty { display: none; }
 .setting-feedback.error { color: var(--error-text); }
 [aria-busy="true"].toggle, [aria-busy="true"] .toggle { cursor: progress; }
+
+/* Engines and API providers: a dot and one line each (t3code's provider list). */
+.status-dot { display: inline-block; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--fg-dim); }
+.status-dot.ok { background: var(--ok); }
+.status-dot.warn { background: var(--warn); }
+.status-dot.off { background: color-mix(in srgb, var(--fg-dim) 50%, transparent); }
+.engine-row { display: grid; grid-template-columns: minmax(140px, 220px) minmax(0, 1fr) auto; align-items: center; gap: 12px; }
+.engine-name { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.engine-actions { display: flex; gap: 6px; }
+.engine-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.provider-list { display: flex; flex-direction: column; gap: 2px; min-width: min(100%, 320px); }
+.provider-group { margin: 6px 0 2px; color: var(--fg-dim); font: 600 var(--text-s)/1.4 var(--font); }
+.provider-item { display: grid; grid-template-columns: auto minmax(0, auto) minmax(0, 1fr); align-items: center; gap: 8px; padding: 6px 8px; border-radius: var(--radius-control); text-align: left; color: var(--fg); }
+.provider-item:hover { background: var(--raised); }
+.provider-item.on { background: var(--raised); box-shadow: inset 2px 0 0 var(--focus); }
+.provider-item:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.provider-name { font-weight: 600; white-space: nowrap; }
+.provider-state { color: var(--fg-dim); font-size: var(--text-s); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 700px) { .engine-row { grid-template-columns: 1fr; } }
