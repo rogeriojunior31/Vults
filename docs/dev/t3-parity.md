@@ -131,40 +131,90 @@ Changes tab reads only the agent's reported diffs.
 9. Commit, push and PR from Changes through `gh`, each a click after a preview, audited. M
 10. Later: the same prompt to several engines, each in its worktree, compared in the Nest. M
 
-## 5. Scheduled tasks
+## 5. Scheduled tasks: vultures that come, work and leave
 
-t3code: a task (title, prompt, schedule `interval` / `fixed_time` / `once`, project, model,
-permission mode, thread mode new or continue) in SQLite; a scheduler in the server ticking every 5 s,
-one run at a time; a fixed-time run over 10 minutes late is skipped as missed; a run is a thread
-whose message says a scheduled task sent it, with a badge in the timeline.
+**The idea.** You create a scheduled task and dress the vulture that does it. At its time the bird
+flies onto the island, works as any session does (working, a card if it needs you, done), sends a
+notification, and flies away. The run is a conversation in Specialists, marked so you know a schedule
+sent it, not you.
 
-Vults: Zeca's sleep is the scheduler pattern (`app/src/sleep.rs`: local time, waits while busy,
-records a day as done only after it succeeds); specialists have an access level each; the island
-already flies a bird in and out when a key appears in or leaves the flock (`ui/src/island/scene.ts`,
-`ui/src/character/director.ts`).
+**What t3code does** (studied at `61808c68cf`): a task has a title, a prompt, a schedule (`interval`,
+`fixed_time` or `once`), a project, a model, a permission mode and a thread mode (a new thread each
+run, or continue one). Tasks live in SQLite; a scheduler in the server ticks every 5 s and runs one at
+a time; a fixed-time run more than 10 minutes late is skipped as missed; a run is a thread whose first
+message says a scheduled task sent it, with a badge in the timeline. The editor
+(`apps/mobile/src/features/settings/scheduled-task-editor.tsx`, the web settings page) has presets
+for the time, a project picker, run now, pause and the last runs.
 
-The rule: a run unattended may use only what the user chose for that specialist beforehand: its
-access level (*asks first*, *your policies*, *full access*), never more; destructive actions and an
-agent's questions still wait for the user, the bird holding on the island and a notification; a
-card nobody answers by its deadline stops the run. Rule 2 says so in CLAUDE.md before the code
-lands.
+**What Vults already has for it:**
 
-1. Design written here and in CLAUDE.md rule 2 and 4: access, missed runs, the gate feature. S
-2. Store: `scheduled_tasks` (specialist, title, prompt, schedule, folder, new or continue, access,
-   enabled, next and last run, status, error, count) and a runs table. M
-3. Gate feature `ROUTINES`: switch, budget, trace. S
-4. A run with no window: `Origin::Scheduled(task)` in `app/src/chat.rs`, the specialist's runtime and
-   `settle_in_route` with its access capped; the prompt marked as sent by a scheduled task; no run
-   over another on the same specialist. L
-5. Scheduler `app/src/routines.rs` (from `sleep.rs`): about every 30 s, next run in local time, the
-   missed window, rows left running recovered at start, one run at a time. M
-6. On the island: a running task is a flock entry (working, approval, done) with the specialist's
-   species and look, so it flies in, works, notifies and flies out after a moment; looks for every
-   bird. M
-7. Notifications: started, needs you, finished or failed, *Open* to its conversation. S
-8. In Specialists: *Scheduled tasks* beside each specialist (list, create, edit, on/off, run now,
-   last status); a *Scheduled* mark on the run's message and conversation. M-L
-9. Docs. S
+- the scheduler pattern: Zeca's sleep (`app/src/sleep.rs`), in local time, waiting while busy, a day
+  done only after it succeeds;
+- Specialists (`ui/src/surfaces/nest/profiles.ts`, `specialist.ts`): profiles with their own chat,
+  conversations, access level, **species and look** (`profileSpecies`, `profileLook`);
+- the flight: a bird arrives from the left and leaves by the right edge (`director.ts`, `arrive()` and
+  `leave()`), used when a session joins or leaves the flock (`ui/src/island/scene.ts`);
+- looks for every species (`crates/core/src/looks.rs`), notifications (`crates/core/src/notify.rs`),
+  the audit log and the network gate.
+
+What is missing: a specialist's run is not on the wire yet (UX8-PROJ), so it has no bird on the
+island; nothing runs without a window; there is no task, schedule or run in the store.
+
+### How it works for the person
+
+1. **Specialists → Scheduled tasks** (a button beside the Specialists title, with a clock icon and the
+   count) opens the list: each task with its bird, title, next run in words (*Today at 18:00*,
+   *Every Monday at 09:00*), last result (dot and one line) and a switch.
+2. **New scheduled task** asks, in this order:
+   - **What**: title and the prompt (the composer the chat uses: @ for files, attachments);
+   - **When**: *Once*, *Every day*, *Weekdays*, *Every week on…*, *Every N hours*, at a time, local;
+   - **Who does it**: a specialist (its engine, model, folder and access come with it) or *Zeca*;
+   - **The vulture**: species and look, a name; the preview is the real sprite flying in place.
+     It starts as the specialist's own bird; changing it here changes only this task's;
+   - **Each run**: *a new conversation* (default) or *continue the last one*;
+   - **If it needs you**: the specialist's access, shown and capped (never more than it has); how long
+     a card waits before the run stops (15 min by default).
+3. **At its time** the bird flies in from the left with the task's name over it, takes a perch like a
+   session, and its state follows the session pattern: working (the tool it runs), a card if it asks,
+   done or failed. A notification says it started only when it needs you; at the end one says
+   *Daily review finished* (or *failed: reason*) with **Open**.
+4. **After it ends** the bird stays a few seconds as *done*, then flies off to the right. A failed run
+   stays until seen, like a session that needs you.
+5. **In the chat** the run is a conversation of that specialist with a **Scheduled** mark: a clock
+   badge on the conversation in the list and on its first message (*Sent by "Daily review", every day
+   at 18:00*), and **Edit task** from there. You can answer it like any conversation.
+
+### Rules
+
+- A run unattended uses only what was chosen for that specialist beforehand: its access (*asks
+  first*, *your policies*, *full access*), never more. Destructive actions and an agent's questions
+  still wait for a person; a card nobody answers by its deadline stops the run. CLAUDE.md rule 2 says
+  so before the code lands.
+- One run at a time per specialist; a run that would start over a running one waits for it.
+- A run more than 10 minutes late (computer asleep or off) is **missed**: recorded, notified once,
+  not run late. *Run now* runs it at once.
+- A run that reaches the network is a gate feature (`ROUTINES`): its own switch, budget and trace.
+  Off by default; the whole feature starts in Labs.
+- Every run is audited; the task, its prompt and its runs stay local (the store).
+
+### Steps
+
+| # | Step | Where | Size |
+|---|---|---|---|
+| S1 | Design here and in CLAUDE.md rule 2 and 4: access cap, card deadline, missed runs, gate feature | `CLAUDE.md`, this file | S |
+| S2 | A Lab `scheduled-tasks`, off | `crates/core/src/labs.rs` | S |
+| S3 | Store: `scheduled_tasks` (title, prompt, schedule, specialist, species, look, name, run mode, card deadline, enabled, next, last, status) and `scheduled_runs` (task, started, ended, outcome, conversation) | `crates/store` migration | M |
+| S4 | Gate feature `ROUTINES`: switch, budget, local trace | `app/src/gate.rs` | S |
+| S5 | A specialist's run on the wire with its identity (UX8-PROJ): the session it runs is a flock entry with the profile's species and look | `crates/core`, `app/src/chat.rs` | M |
+| S6 | A run with no window: `Origin::Scheduled(task)`, the specialist's runtime, access capped, the first message marked; card deadline stops it | `app/src/chat.rs` | L |
+| S7 | The scheduler `app/src/routines.rs` (from `sleep.rs`): every 30 s, next run in local time, missed window, rows left running recovered at start | `app/src/routines.rs` | M |
+| S8 | On the island: the run's entry arrives flying with its name, perches, follows the session states, stays done a few seconds, leaves flying; failed stays until seen | `ui/src/island/scene.ts`, `director.ts` | M |
+| S9 | Notifications: needs you, finished, failed, missed; **Open** goes to its conversation | `crates/core/src/notify.rs` | S |
+| S10 | Specialists → **Scheduled tasks**: the list, the editor (what, when, who, the vulture with a live preview, each run, if it needs you), run now, pause, last runs | `ui/src/surfaces/nest/` | L |
+| S11 | The **Scheduled** mark: clock badge on the conversation and its first message, *Edit task* | `ui/src/island/chat.ts`, `nest/` | S |
+| S12 | Docs (guide in English and Portuguese), checks for the scheduler and the flight | `docs/guide/`, `scripts/` | M |
+
+Order: S1-S4, then S5 (it also closes UX8-PROJ), S6-S7, S8-S9, S10-S11, S12.
 
 ## 6. Environments
 
