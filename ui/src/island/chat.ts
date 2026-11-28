@@ -254,6 +254,19 @@ function doing(tool: string, detail: string): string {
   return t("Using {tool}…", { tool: name });
 }
 
+/** When a message was said: the time today, the day and time before; its whole date on hover. */
+function stamp(at: number | undefined): HTMLElement | null {
+  if (!at) return null;
+  const when = new Date(at);
+  const today = new Date().toDateString() === when.toDateString();
+  const time = el("time", { class: "msg-time", text: today
+    ? when.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    : when.toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) });
+  time.setAttribute("datetime", when.toISOString());
+  time.title = when.toLocaleString();
+  return time;
+}
+
 /** A diff's lines, colored: added, removed, a file or hunk header, context. */
 function diffNode(diff: string): { node: HTMLElement; added: number; removed: number } {
   let added = 0, removed = 0;
@@ -268,8 +281,8 @@ function diffNode(diff: string): { node: HTMLElement; added: number; removed: nu
 
 type Message =
   | ActivityMessage
-  | { who: "you"; text: string; files: string[]; mentions?: ChatMention[] }
-  | { who: "zeca"; text: string; error?: boolean; retry?: boolean }
+  | { who: "you"; text: string; files: string[]; mentions?: ChatMention[]; at?: number }
+  | { who: "zeca"; text: string; error?: boolean; retry?: boolean; at?: number }
   | { who: "note"; text: string }
   | Ask;
 
@@ -1839,7 +1852,7 @@ export class ChatPanel {
         return;
       }
       this.replyBreak = false;
-      this.messages.push({ who: "zeca", text: d.text });
+      this.messages.push({ who: "zeca", text: d.text, at: Date.now() });
     } else if (d.kind === "permission") {
       this.clearReaction();
       const { id, tool, target, description, full, added, removed, always, outside } = d;
@@ -1932,7 +1945,7 @@ export class ChatPanel {
         this.picksSeq++;
         this.picks = { [s.provider]: { model: s.model, effort: s.effort } };
       }
-      this.messages.push({ who: "you", text: s.text, files: s.files, mentions: s.mentions });
+      this.messages.push({ who: "you", at: Date.now(), text: s.text, files: s.files, mentions: s.mentions });
       this.busy = true;
       this.turnSince = Clock.now();
       this.announce(t("{name} is replying.", { name: this.recipientName() }));
@@ -2164,7 +2177,7 @@ export class ChatPanel {
           this.input.value = "";
           this.keepDraft();
         }
-        this.messages.push({ who: "you", text, files: [] });
+        this.messages.push({ who: "you", at: Date.now(), text, files: [] });
         const said = MEMORY_SAID.has(answer.said) ? t(answer.said) : answer.said;
         this.messages.push({ who: "zeca", text: answer.detail ? `${said}\n${answer.detail}` : said });
         this.announceReply();
@@ -2175,7 +2188,7 @@ export class ChatPanel {
     }
     const mentions = this.mentions.filter(m => text.includes(m.token));
     const wasStarted = this.started;
-    this.messages.push({ who: "you", text, files, mentions });
+    this.messages.push({ who: "you", at: Date.now(), text, files, mentions });
     this.mentions = [];
     this.closeMentions();
     this.files = [];
@@ -2327,7 +2340,7 @@ export class ChatPanel {
       m.answer = undefined; m.replied = undefined; this.askNodes.delete(m);
       this.messages.push({ who: "note", text: String(error) }); this.paint(); this.changed();
     });
-    this.messages.push({ who: "you", text, files: [] });
+    this.messages.push({ who: "you", at: Date.now(), text, files: [] });
     this.paint();
     this.reviewApproval();
     this.changed();
@@ -2458,13 +2471,15 @@ export class ChatPanel {
       const b = el("div", { class: `msg zeca${last && !this.busy ? " settled" : ""}` });
       // In the Nest's wide column a turn's reply is signed, so each one reads apart from the next.
       if (this.opts.window === "nest" && this.messages[this.messages.indexOf(m) - 1]?.who !== "zeca") b.append(this.signature());
-      b.append((this.opts.render ?? renderFull)(m.text), el("div", { class: "msg-tools" }, this.copyButton(m.text)));
+      b.append((this.opts.render ?? renderFull)(m.text), el("div", { class: "msg-tools" }, this.copyButton(m.text), stamp(m.at)));
       if (last && !this.busy && m.text.trim()) b.append(this.replySuggestions);
       return b;
     }
     if (m.who === "note") return el("p", { class: "msg note", text: m.text });
     if (m.who === "you") {
       const tools = el("div", { class: "msg-tools" });
+      const time = stamp(m.at);
+      if (time) tools.append(time);
       if (m.text) {
         const copy = copyTextButton(m.text, "msg-tool", t("Copy message"));
         copy.prepend(icon("copy", 12, 2));
@@ -2848,11 +2863,11 @@ export class ChatPanel {
     this.picksSeq++;
     this.picks = { [c.provider]: { model: c.model, effort: c.effort } };
     const saved = c.lines.map((l): Message => {
-      if (l.who === "you") return { who: "you", text: l.text, files: l.files };
-      if (l.who === "error") return { who: "zeca", text: l.text, error: true };
+      if (l.who === "you") return { who: "you", text: l.text, files: l.files, at: l.ms };
+      if (l.who === "error") return { who: "zeca", text: l.text, error: true, at: l.ms };
       if (l.who === "activity") return { who: "activity", data: readActivity(l.text), ended: true };
       if (l.who === "stopped") return { who: "note", text: t("Stopped.") };
-      return { who: "zeca", text: l.text };
+      return { who: "zeca", text: l.text, at: l.ms };
     });
     for (const message of saved) this.appeared.add(message);
     if (preserveLive) {

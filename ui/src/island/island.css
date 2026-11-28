@@ -3545,6 +3545,7 @@ body.still #island .inner:has(.main > .chat) .need-strip.top { animation: none; 
 [data-theme="light"] .codeblock .tok-string { color: #3c7d2c; }
 [data-theme="light"] .codeblock .tok-keyword { color: #7b3fb5; }
 [data-theme="light"] .codeblock .tok-number { color: #a5561a; }
+.msg-time { align-self: center; padding: 0 4px; color: var(--fg-dim); font: 11px/1 var(--font); font-variant-numeric: tabular-nums; }
 .activity-plan { margin: 0 0 10px; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
 .activity-plan[hidden] { display: none; }
 .plan-step { display: flex; gap: 8px; align-items: baseline; color: var(--fg); font: var(--text-s)/1.5 var(--font); }

@@ -582,6 +582,11 @@ struct Conn {
     resume: bool,
     /// How it can sign in (`authMethods`), for a session it refuses until it does.
     auth: Vec<String>,
+    /// It can close a session (`sessionCapabilities.close`): a probe's leaves nothing behind.
+    close: bool,
+    /// The config option its session takes a model by (`configOptions`, category `model`):
+    /// newer agents' way (OpenCode); without it, `session/set_model`.
+    model_option: Option<String>,
     /// The end of what it said on stderr, for the error when it stops.
     said: Arc<std::sync::Mutex<String>>,
 }
@@ -661,6 +666,8 @@ impl Conn {
             load: false,
             resume: false,
             auth: Vec::new(),
+            close: false,
+            model_option: None,
             said,
         };
         let init = conn
@@ -682,6 +689,7 @@ impl Conn {
         }
         conn.load = init["agentCapabilities"]["loadSession"] == true;
         conn.resume = init["agentCapabilities"]["sessionCapabilities"]["resume"].is_object();
+        conn.close = init["agentCapabilities"]["sessionCapabilities"]["close"].is_object();
         conn.auth = init["authMethods"]
             .as_array()
             .into_iter()
@@ -689,6 +697,33 @@ impl Conn {
             .filter_map(|m| m["id"].as_str().map(str::to_string))
             .collect();
         Ok(conn)
+    }
+
+    /// Notes how a session it opened takes a model.
+    fn opened(&mut self, session: &Value) {
+        if let Some(id) = model_option(session) {
+            self.model_option = Some(id);
+        }
+    }
+
+    /// The session's model: by its config option when it has one, else `session/set_model`.
+    async fn set_model(&mut self, session: &str, model: &str) -> Result<(), String> {
+        match self.model_option.clone() {
+            Some(config) => self
+                .call(
+                    "session/set_config_option",
+                    json!({ "sessionId": session, "configId": config, "value": model }),
+                )
+                .await
+                .map(|_| ()),
+            None => self
+                .call(
+                    "session/set_model",
+                    json!({ "sessionId": session, "modelId": model }),
+                )
+                .await
+                .map(|_| ()),
+        }
     }
 
     /// Tells the agent to use the login it keeps (each method it offers, in order, until one
@@ -775,6 +810,60 @@ impl Conn {
     }
 }
 
+/// The models an agent offers, `(id, name)`, as a session it opens in `dir` lists them; that
+/// session is closed when the agent can, and its process goes with the call.
+pub async fn models(key: &str, dir: &Path) -> Result<Vec<(String, String)>, String> {
+    let agent = agent(key).ok_or("not an ACP agent")?;
+    let mut conn = Conn::spawn(agent, &Spec::in_dir(dir.to_path_buf())).await?;
+    let params = json!({ "cwd": dir.to_string_lossy(), "mcpServers": [] });
+    let mut made = conn.call("session/new", params.clone()).await;
+    if made.as_ref().is_err_and(|e| wants_sign_in(e)) && conn.sign_in().await {
+        made = conn.call("session/new", params).await;
+    }
+    let made = made.map_err(|e| format!("{}: {e}", agent.title))?;
+    let models = model_list(&made);
+    if conn.close
+        && let Some(id) = made["sessionId"].as_str()
+    {
+        let _ = conn.call("session/close", json!({ "sessionId": id })).await;
+    }
+    Ok(models)
+}
+
+/// The id of a session's model option (`configOptions`, category `model`), if it has one.
+fn model_option(session: &Value) -> Option<String> {
+    session["configOptions"]
+        .as_array()?
+        .iter()
+        .find(|o| o["category"] == "model")?["id"]
+        .as_str()
+        .map(str::to_string)
+}
+
+/// A new session's models, `(id, name)` each: its model option's choices (newer agents), else
+/// `models.availableModels`.
+fn model_list(made: &Value) -> Vec<(String, String)> {
+    let option = made["configOptions"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .find(|o| o["category"] == "model");
+    let (list, id, name) = match option {
+        Some(o) => (&o["options"], "value", "name"),
+        None => (&made["models"]["availableModels"], "modelId", "name"),
+    };
+    list.as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|m| {
+            let id = m[id].as_str()?.to_string();
+            let name = m[name].as_str().unwrap_or(&id).to_string();
+            Some((id, name))
+        })
+        .take(200)
+        .collect()
+}
+
 /// A driver for an ACP agent: one process for the conversation, its session resumed by a new
 /// process (`session/load`) when the old one is gone.
 #[derive(Debug)]
@@ -791,6 +880,8 @@ pub struct AcpDriver {
     fresh: bool,
     /// The session's running cost after the last turn.
     seen_cost: Option<f64>,
+    /// Another model was picked since the session took its own: told before the next prompt.
+    repick: bool,
 }
 
 impl AcpDriver {
@@ -805,6 +896,7 @@ impl AcpDriver {
             in_turn: false,
             fresh: false,
             seen_cost: None,
+            repick: false,
         }
     }
 
@@ -830,7 +922,7 @@ impl AcpDriver {
                     got = conn.call(method, params).await;
                 }
                 got.map_err(|e| format!("{} can't resume its session: {e}", self.agent.title))
-                    .map(|_| ())
+                    .map(|v| conn.opened(&v))
             }
             None => {
                 let params = json!({ "cwd": cwd, "mcpServers": [] });
@@ -849,6 +941,7 @@ impl AcpDriver {
                         format!("{}: {e}", self.agent.title)
                     }
                 })?;
+                conn.opened(&made);
                 let id = made["sessionId"]
                     .as_str()
                     .filter(|s| !s.is_empty())
@@ -867,12 +960,11 @@ impl AcpDriver {
                 .map_err(|e| format!("{}: {e}", self.agent.title))?;
         }
         if let (Some(model), Some(id)) = (self.spec.model.clone(), self.session.clone()) {
-            // Not every agent takes it (an unstable method): its own default then.
-            let _ = conn
-                .call("session/set_model", json!({ "sessionId": id, "modelId": model }))
-                .await;
+            // One it no longer has (removed since it was picked): its own default then.
+            let _ = conn.set_model(&id, &model).await;
         }
         self.conn = Some(conn);
+        self.repick = false;
         Ok(())
     }
 
@@ -885,6 +977,14 @@ impl AcpDriver {
             connected = self.connect() => connected?,
         }
         let session = self.session.clone().ok_or("no session")?;
+        // A model picked in the middle of the conversation: this session takes it now.
+        if std::mem::take(&mut self.repick)
+            && let (Some(model), Some(conn)) = (self.spec.model.clone(), self.conn.as_mut())
+        {
+            conn.set_model(&session, &model)
+                .await
+                .map_err(|e| format!("{} won't take that model: {e}", self.agent.title))?;
+        }
         let instructions = crate::instructions(&self.spec);
         let system = (!self.primed && !instructions.trim().is_empty()).then_some(instructions);
         let text = prompt(input, system.as_deref());
@@ -1094,6 +1194,14 @@ impl AgentDriver for AcpDriver {
     fn session(&self) -> Option<&str> {
         self.session.as_deref()
     }
+
+    fn set_pick(&mut self, model: Option<String>, effort: Option<vults_agents::driver::Effort>) {
+        if model.is_some() && model != self.spec.model {
+            self.repick = true;
+        }
+        self.spec.model = model;
+        self.spec.effort = effort;
+    }
 }
 
 /// Whether `path` is the folder's own: an absolute path inside it, never in a `.git` (its own, a
@@ -1167,6 +1275,27 @@ mod tests {
         assert!(wants_sign_in("Authentication required"));
         assert!(wants_sign_in("please log in with Google"));
         assert!(!wants_sign_in("session not found"));
+    }
+
+    #[test]
+    fn a_new_session_lists_its_models() {
+        let made = json!({"sessionId":"s","models":{"availableModels":[{"modelId":"gemini-4-hydrogen-high","name":"Gemini 4 Hydrogen (High)"},{"modelId":"bare"}],"currentModelId":"gemini-4-hydrogen-high"}});
+        let newer = json!({"configOptions":[{"id":"model","category":"model","options":[{"value":"opencode/big-pickle","name":"Big Pickle"}]}]});
+        assert_eq!(
+            model_list(&newer),
+            [("opencode/big-pickle".to_string(), "Big Pickle".to_string())]
+        );
+        assert_eq!(model_option(&newer).as_deref(), Some("model"));
+        assert_eq!(
+            model_list(&made),
+            [
+                (
+                    "gemini-4-hydrogen-high".to_string(),
+                    "Gemini 4 Hydrogen (High)".to_string()
+                ),
+                ("bare".to_string(), "bare".to_string())
+            ]
+        );
     }
 
     #[test]

@@ -268,6 +268,20 @@ pub struct ModelChoice {
     pub efforts: Vec<&'static str>,
 }
 
+/// The models an ACP agent offers, as a session it opens in `dir` lists them (no effort of ours:
+/// an agent names its own, Antigravity's `(High)` in its model).
+pub async fn acp_models(key: &str, dir: &std::path::Path) -> Result<Vec<ModelChoice>, String> {
+    Ok(acp::models(key, dir)
+        .await?
+        .into_iter()
+        .map(|(id, label)| ModelChoice {
+            id,
+            label,
+            efforts: Vec::new(),
+        })
+        .collect())
+}
+
 /// Claude Code's aliases for the latest of each model; `--model` takes them.
 pub fn claude_models() -> Vec<ModelChoice> {
     let all: Vec<&'static str> = Effort::ALL.iter().map(|e| e.name()).collect();

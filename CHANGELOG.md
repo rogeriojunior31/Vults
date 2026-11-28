@@ -34,6 +34,9 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Added
 
+- **Zeca's chat**: an ACP agent's own models are in the model menu (Antigravity's Gemini, Claude and GPT-OSS; OpenCode's providers), and a model picked mid-conversation applies from the next turn.
+- **Zeca's chat**: each message shows when it was said.
+
 - **Zeca's chat**: the agent's plan (Claude Code's todo list, Codex's plan, an ACP agent's plan) shows as a checklist in the turn's **Activity**, its step on the status line; ACP agents' thinking shows too.
 - **Zeca's chat**: code blocks are colored by their language.
 

@@ -420,7 +420,7 @@ export type OpenedConversation = {
   started: boolean;
   model: string | null;
   effort: string | null;
-  lines: { who: string; text: string; files: string[] }[];
+  lines: { who: string; text: string; files: string[]; ms?: number }[];
   profileTitle?: string;
   profileRevision?: number;
   profileSpecies?: string;

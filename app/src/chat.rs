@@ -1461,8 +1461,24 @@ pub async fn chat_models(provider: Provider) -> Result<Vec<vults_chat::ModelChoi
             }
             Ok(models)
         }
-        // An ACP agent picks its own model.
-        Provider::ClaudeApi | Provider::Acp(_) => Ok(Vec::new()),
+        // An ACP agent lists its own, from a session it opens in a folder of Vults' own; kept
+        // until the app quits.
+        Provider::Acp(key) => {
+            static KNOWN: std::sync::LazyLock<
+                std::sync::Mutex<HashMap<String, Vec<vults_chat::ModelChoice>>>,
+            > = std::sync::LazyLock::new(Default::default);
+            if let Some(known) = KNOWN.lock().ok().and_then(|m| m.get(key).cloned()) {
+                return Ok(known);
+            }
+            let dir = paths::chat_dir().join("acp-models");
+            std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+            let models = vults_chat::acp_models(key, &dir).await?;
+            if let Ok(mut m) = KNOWN.lock() {
+                m.insert(key.to_string(), models.clone());
+            }
+            Ok(models)
+        }
+        Provider::ClaudeApi => Ok(Vec::new()),
     }
 }
 
@@ -1870,6 +1886,7 @@ pub async fn chat_current(state: tauri::State<'_, ChatState>) -> Result<Option<O
                 who: "you".into(),
                 text,
                 files,
+                ms: None,
             });
         }
         opened.busy = true;
@@ -1959,6 +1976,9 @@ pub struct LineView {
     who: String,
     text: String,
     files: Vec<String>,
+    /// When it was said (Unix ms), for the time the chat shows beside it; none for a live line.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    ms: Option<i64>,
 }
 
 /// A saved conversation, opened: what the chat needs to go on with it.
@@ -2513,6 +2533,7 @@ pub async fn specialist_chat_current(
                 who: "you".into(),
                 text,
                 files,
+                ms: None,
             });
         }
         opened.busy = true;
@@ -3055,6 +3076,7 @@ fn opened_record(
                 who: l.who,
                 text: l.text,
                 files: l.files,
+                ms: Some(l.ms),
             })
             .collect(),
         profile_title: None,

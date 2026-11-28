@@ -38,7 +38,9 @@ a terminal with that CLI's own sign-in, which Vults never sees; then every agent
 ACP and is installed here, such as Antigravity (`agy acp`, its telemetry off), OpenCode, Qwen Code,
 Copilot CLI or Kimi Code, which uses its own model and its own permission settings, as in its
 terminal: what it asks for is a card, and what its settings allow it runs, with the turn's
-**Activity** saying *Ran by the agent's own settings, without asking*; Antigravity and OpenCode also have **Sign in**, which opens `agy acp --login` or
+**Activity** saying *Ran by the agent's own settings, without asking*; the model menu lists the agent's own models (asked once from a session it opens in a folder of
+Vults' own, then kept), and one picked mid-conversation applies from the next turn; Antigravity and
+OpenCode also have **Sign in**, which opens `agy acp --login` or
 `opencode auth login` in a terminal. Their edits show their diffs, and Antigravity's context fills
 the meter beside **Send**) and **Vults harness** (the
 API, *Ready* with a key or a local model), with **Engines in Settings ›** under them. **New** (**+** on the island) starts a fresh conversation; the one before stays in the list (see
@@ -239,6 +241,8 @@ With the memory on, what Zeca remembers and recalls joins as well: see [Zeca's m
   was waiting on is a no.
 - The reply streams in as it is written. Scroll up to read and it stays where you are, with a
   *↓ new text* button to jump back to the end.
+- Each message shows when it was said beside its actions: the time today, the day before that,
+  the whole date on hover.
 - **Copy** under the latest reply copies all of it, as the Markdown it was written in; an older
   reply shows it when the pointer is over it. A code block has its own **Copy**. A failed copy
   says so and can be retried.

@@ -177,6 +177,9 @@ panel.reference("src/my file.rs");
 assert.equal(input.value, 'look at @"src/my file.rs" ', "a path goes in as @ puts it");
 input.value = ""; input.listeners.input({});
 
+// Each message says when it was said.
+assert.ok(byClass("msg-time").length >= 2, "messages carry their time");
+
 // Code is colored: keywords, strings, comments; plain past its limit.
 panel.receive({ kind: "text", text: "\n\n```rust\nfn main() { let s = \"hi\"; } // done\n```" });
 panel.paint();

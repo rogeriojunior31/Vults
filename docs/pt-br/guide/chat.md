@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 95226b3cd05d -->
+<!-- source: 4577ecf49f8c -->
 
 Os painéis laterais redimensionáveis seguem o ponteiro que iniciou o arraste, ignoram toques adicionais e encerram o arraste quando a janela perde o foco. O cancelamento preserva a largura atual e mantém os rascunhos. Quando o espaço limita um painel, o arraste e o redimensionamento pelo teclado partem da largura visível; reduzir apenas o espaço disponível não sobrescreve a largura salva. Os controles de redimensionar e recolher usam a mesma cor de foco de teclado que o restante do tema selecionado.
 
@@ -38,7 +38,9 @@ terminal com o login do próprio CLI, que o Vults nunca vê; depois, cada agente
 instalado aqui, como Antigravity (`agy acp`, com a telemetria dele desligada), OpenCode, Qwen Code,
 Copilot CLI ou Kimi Code, que usa o próprio modelo e as próprias configurações de permissão, como
 no terminal dele: o que ele pede vira um card, e o que as configurações dele permitem ele roda, com a
-**Atividade** do turno dizendo *Rodou pelas configurações do próprio agente, sem perguntar*; Antigravity e OpenCode também têm **Sign in**, que abre `agy acp --login` ou
+**Atividade** do turno dizendo *Rodou pelas configurações do próprio agente, sem perguntar*; o menu de modelo lista os modelos do próprio agente (perguntados uma vez a uma sessão que ele abre
+numa pasta do próprio Vults, e então guardados), e um escolhido no meio da conversa vale a partir do
+próximo turno; Antigravity e OpenCode também têm **Sign in**, que abre `agy acp --login` ou
 `opencode auth login` num terminal. As edições deles mostram os diffs, e o contexto do Antigravity
 enche o medidor ao lado de **Send**) e **Vults harness** (a API, *Ready* com uma chave ou um modelo local),
 com **Engines in Settings ›** embaixo. **New** (**+** na ilha) começa uma conversa nova; a anterior fica na lista (veja
@@ -263,6 +265,8 @@ Com a memória ligada, o que o Zeca lembra e o que ele recupera também entram: 
   turno estava esperando vira um não.
 - A resposta chega à medida que é escrita. Role para cima para ler e ela fica onde você está, com um
   botão *↓ new text* para voltar ao fim.
+- Cada mensagem mostra quando foi dita ao lado das suas ações: a hora se foi hoje, o dia antes
+  disso, e a data inteira ao passar o ponteiro.
 - **Copy** embaixo da última resposta copia ela inteira, no Markdown em que foi escrita; uma resposta
   mais antiga mostra o botão quando o ponteiro passa sobre ela. Um bloco de código tem o seu próprio
   **Copy**. Se a cópia falhar, o botão avisa e permite tentar de novo.
