@@ -32,6 +32,8 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Changed
 
+- **Settings → Keyboard shortcuts**: Dictation's keys (its global shortcuts, recording mode and X11 keys) moved there from Dictation, shown once dictation has a voice model; Dictation keeps what is voice.
+
 - **Icons**: every surface draws Lucide's line icons, as t3code does (ISC; see NOTICE); the flock keeps its own drawing.
 
 - **Settings**: **Zeca, chat and agents** groups Zeca, Chat & voice and Agents. Chat & voice reads in sections (agent engines, permissions and setup, API, web, voice); the API providers are a list beside the chosen one's key and model; Agents lists what is connected, then what is here to set up.

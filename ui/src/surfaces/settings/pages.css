@@ -878,3 +878,6 @@ code {
 .species-family { margin: 14px 0 8px; color: var(--fg-dim); font: 600 var(--text-m)/1.3 var(--font); }
 @media (max-width: 560px) { .zeca-hero { grid-template-columns: 1fr; justify-items: start; } }
 @media (prefers-reduced-motion: reduce) { .provider-item { transition: none; } }
+
+/* Keyboard shortcuts: Dictation's keys in their own named parts. */
+.shortcut-subtitle { margin: 12px 0 8px; color: var(--fg-dim); font: 600 var(--text-m)/1.3 var(--font); }

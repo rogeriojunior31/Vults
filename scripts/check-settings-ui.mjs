@@ -116,7 +116,7 @@ globalThis.settingsTestBridge = new Proxy({}, { get: (_obj, name) => {
       case "apiProviders": return { selected: "example", providers: [{ id: "example", label: "Example", local: false, hasKey: false }] };
       case "webSettings": return { on: false, engine: "brave", hasKey: false };
       case "commandCheck": return { status: "parsed", actions: [{ action: "focus", target: "api", value: null, status: "recognized", candidates: [] }] };
-      case "voiceStatus": return { ready: false, models: [
+      case "voiceStatus": return { ready: globalThis.settingsTestVoiceReady ?? false, models: [
         {id:"base",label:"Base: fast, but weak outside English",size:60000000,installed:false},
         {id:"small",label:"Small: good in Portuguese and other languages",size:190000000,installed:false},
         {id:"turbo",label:"Large v3 Turbo: the most accurate; best with a GPU",size:574000000,installed:false}], downloading: [], language: null };
@@ -416,7 +416,9 @@ for (const [label, key, field] of [["Help the model with these words", "vocabula
   assert.equal(control().checked, true);
 }
 console.log("check-settings-ui: independent processing choices, late-bootstrap race, pending redraw, failure rollback and explicit retry");
-await dictationPage("keys");
+// Dictation's keys live in Keyboard shortcuts, once dictation is set up.
+globalThis.settingsTestVoiceReady = true;
+await go("Keyboard shortcuts"); await tick();
 const modeControl = () => rowNamed("Recording mode").querySelector("select");
 assert.equal(modeControl().dataset.savedValue, "1", "Late bootstrap cannot undo newer gesture choices");
 for (const name of ["Space locks recording", "Esc cancels dictation"]) {
@@ -527,7 +529,7 @@ events.onSettings({ dictationInsert: false }); assert.equal(deliveryMode(), "cli
 events.onSettings({ dictationInsert: true }); events.onDictationPermission("ready");
 assert.equal(writes.length, modeWrites, "Mode presentation never writes settings or requests keyboard access");
 events.onShortcutKeys({ talk: "Meta+V", "talk-again": "Meta+B", "talk-cancel": "Meta+X", "talk-command": "Meta+Z" });
-await dictationPage("keys");
+await go("Keyboard shortcuts"); await tick();
 assert.ok(page().textContent.includes("Meta+V") && page().textContent.includes("Meta+B") && page().textContent.includes("Meta+X"));
 assert.ok(rowNamed("Voice command").textContent.includes("Meta+Z"), "The shortcut page separates dictation and local commands");
 const x11Keys = () => page().querySelector('[data-setting="dictation-x11-keys"]');
@@ -537,7 +539,7 @@ assert.equal(x11Keys().open, true, "A settings repaint keeps the keyboard disclo
 await dictationPage("commands");
 assert.ok(rowNamed("Command key").textContent.includes("Meta+Z"), "Dictation shows the command key's actual desktop binding");
 assert.equal(page().querySelector(".voice-command-check"), null, "Command testing belongs to the work page, not preferences");
-await dictationPage("keys");
+await go("Keyboard shortcuts"); await tick();
 assert.equal(pendingShortcutOpens.length, 0, "Entering Settings never launches a desktop editor");
 button("Change in KDE…").fire("click");
 assert.equal(pendingShortcutOpens.length, 1);
@@ -548,7 +550,7 @@ button("Change in KDE…").fire("click");
 assert.equal(pendingShortcutOpens.length, 1, "Repainting cannot duplicate a pending launch");
 await go("General");
 pendingShortcutOpens[0].reject(new Error("Desktop entry missing")); await tick();
-await go("Dictation"); await dictationPage("keys");
+await go("Keyboard shortcuts"); await tick();
 assert.ok(page().querySelector('[role="alert"]').textContent.includes("Could not open KDE Shortcuts"));
 button("Change in KDE…").fire("click");
 assert.ok(!page().querySelectorAll('[role="alert"]').some(n => n.textContent.includes("Could not open KDE Shortcuts")), "Retry clears the previous shortcut failure");
@@ -591,7 +593,7 @@ assert.ok(root.querySelector(".settings-page-picker"), "Global Settings navigati
 await go("Keyboard shortcuts");
 assert.equal(rowNamed("Keep dictation history"), undefined, "General links to the single settings owner");
 assert.ok(root.querySelectorAll("button.nav").some(n=>n.textContent==="Dictation"),"Dictation settings are discoverable in the global Settings sidebar");
-button("Dictation settings").fire("click"); assert.equal(globalThis.settingsSelectedTab,"settings");
+await go("Dictation"); assert.equal(globalThis.settingsSelectedTab,"settings");
 await dictationPage("commands");
 assert.equal(writes.filter(write => write[0] === "dictationClear").length, 2);
 console.log("check-settings-ui: dedicated Dictation navigation/keys, shared model link, late-settings race, explicit portal retry and erase confirmation/failure/retry without duplicate writes");

@@ -1407,25 +1407,93 @@ function soundPage(): HTMLElement[] {
   ];
 }
 
+/** Dictation's keys, on the Keyboard shortcuts page once dictation is set up: the global
+ *  shortcuts, how the talk key records, and X11's recording keys. */
+function dictationShortcuts(): HTMLElement[] {
+  const shortcutEditor = button(t("Change in KDE…"), () => {
+    if (shortcutsOpening) return;
+    shortcutsOpening = true;
+    shortcutsOpenFailed = false;
+    render();
+    void Bridge.openShortcutSettings().catch(() => { shortcutsOpenFailed = true; }).finally(() => {
+      shortcutsOpening = false;
+      if (page === "shortcuts") render();
+    });
+  });
+  (shortcutEditor as HTMLButtonElement).disabled = shortcutsOpening;
+  const shortcutFeedback = el("p", { class: `note${shortcutsOpenFailed ? " error" : ""}`, text: shortcutsOpenFailed
+    ? t("Could not open KDE Shortcuts. Open your desktop's shortcut settings manually, or try again.")
+    : t("Opening KDE Shortcuts…") });
+  shortcutFeedback.setAttribute("role", shortcutsOpenFailed ? "alert" : "status");
+  return [
+      el("h3", { class: "shortcut-subtitle", text: t("Global shortcuts") }),
+      el("p", { class: "hint", text: t("Dictation and voice commands have separate shortcuts.") }),
+      el("section", { class: "card rows" },
+        row(t("Dictation"), t("Choose a local model in Settings > Dictation > Voice input. Hold to dictate into your current app. This shortcut never opens Chat."), el("span", { class: "kbd", text: boundKeys("talk") })),
+        row(t("Voice command"), t("Hold to control Vults, then release. Nothing is typed into another app."), el("span", { class: "kbd", text: boundKeys("talk-command") })),
+        row(t("Copy last dictation"), t("Copy the last successful dictation again. Paste it yourself; Vults does not submit anything."), el("span", { class: "kbd", text: boundKeys("talk-again") })),
+        row(t("Cancel voice"), t("Discard the current dictation or Chat recording."), el("span", { class: "kbd", text: boundKeys("talk-cancel") })),
+        windowsShortcuts.render(),
+        ...(windowsShortcuts.desktopEditor() ? [row(t("Desktop shortcut settings"), t("Opens KDE System Settings → Shortcuts. Other desktops manage global keys in their own settings."), shortcutEditor)] : []),
+        ...(shortcutsOpening || shortcutsOpenFailed ? [shortcutFeedback] : []),
+      ),
+      el("h3", { class: "shortcut-subtitle", text: t("Recording") }),
+      el("section", { class: "card rows" },
+        row(t("Recording mode"), t("Hold to dictate. Optionally double-tap to keep recording hands-free, then press the shortcut again to finish."),
+          dropdown([{ value: true, label: t("Hold + double tap") }, { value: false, label: t("Hold only") }], dictationDoubleTap, async on => {
+            await Bridge.setDictationGesture("doubleTap", on);
+            dictationDoubleTap = on; dictationDoubleTapChanged = true;
+          })),
+      ),
+      ...(windowsShortcuts.supported() ? [] : [(() => {
+        const keys = disclosure(t("X11 recording keys"),
+          row(t("Space locks recording"), t("X11 only. Space keeps recording after you release the talk shortcut. When off, Space behaves like other typing and can discard a held recording."), (() => {
+            const control = toggle(dictationSpaceLock, async on => {
+              await Bridge.setDictationGesture("spaceLock", on);
+              dictationSpaceLock = on; dictationSpaceLockChanged = true;
+            });
+            if (dictationWayland) control.setAttribute("disabled", "");
+            return control;
+          })()),
+          row(t("Esc cancels dictation"), t("X11 only. Esc discards recording or transcription. When off, Esc does not cancel dictation."), (() => {
+            const control = toggle(dictationEscapeCancel, async on => {
+              await Bridge.setDictationGesture("escapeCancel", on);
+              dictationEscapeCancel = on; dictationEscapeCancelChanged = true;
+            });
+            if (dictationWayland) control.setAttribute("disabled", "");
+            return control;
+          })()),
+        );
+        keys.dataset.setting = "dictation-x11-keys";
+        return keys;
+      })()]),
+  ];
+}
+
 /** Settings → Keyboard shortcuts. */
 function shortcutsPage(): HTMLElement[] {
+  // Dictation's keys join once it has a voice model: before, they would do nothing.
+  const dictation = voice?.ready
+    ? dictationShortcuts()
+    : [el("section", { class: "card rows" },
+        row(t("Dictation is not set up"), t("Its keys show here once dictation has a voice model."), button(t("Set up dictation"), () => chooseDictation("voice"))))];
   return [
     el("h1", { text: t("Keyboard shortcuts") }),
     el("p", { class: "lede", text: t("The keys that reach Vults from any app, and the ones inside its windows.") }),
+    el("h2", { class: "settings-group-title", text: "Vults" }),
     el(
       "section",
       { class: "card rows" },
       windowsShortcuts.render(),
       row(t("Allow / Deny from anywhere"), windowsShortcuts.supported() ? t("Use the Windows shortcut editor above to change these keys.") : t("Answer the visible permission card. Change global keys in System Settings → Shortcuts."), el("span", { class: "kbd", text: boundKeys("allow", "deny") })),
-      row(t("Dictation"), t("Choose a local model in Settings > Dictation > Voice input. Hold to dictate into your current app. This shortcut never opens Chat."), el("span", { class: "kbd", text: boundKeys("talk") })),
-      row(t("Voice command"), t("Hold to control Vults, then release. Nothing is typed into another app."), el("span", { class: "kbd", text: boundKeys("talk-command") })),
-      row(t("Dictation settings"), t("Configure dictation keys, feedback, insertion and history in its own page."), button(t("Dictation settings"), () => chooseDictation("voice"))),
       row(t("Next / previous session"), t("Move through the flock. A waiting permission keeps its session in front."), el("span", { class: "kbd", text: boundKeys("next", "previous") })),
       row(t("Open the island"), t("Open the island with keyboard control: ↑ ↓ sessions, Enter terminal, M actions, Y / N answer, C chat, Esc return."), el("span", { class: "kbd", text: boundKeys("open") })),
       row(t("Change size"), t("Switch to Mini, Quick or Room from anywhere."), el("span", { class: "kbd", text: boundKeys("mini", "quick", "room") })),
       row(t("Command palette"), t("Find a session, open a tab or prepare a chat command in Quick or Room."), el("span", { class: "kbd", text: "Ctrl+K" })),
       row(t("The Nest's tabs"), t("Choose Flock, Chat, Dictation, Connections or Activity. Esc leaves Full."), el("span", { class: "kbd", text: "Alt+1–5" })),
     ),
+    el("h2", { class: "settings-group-title", text: t("Dictation") }),
+    ...dictation,
   ];
 }
 
@@ -1482,21 +1550,6 @@ function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[]
         : t("Could not refresh microphones. The last list may be out of date. Refresh to try again.")
       : t("No microphones found. Connect one and refresh.") });
   microphoneFeedback.setAttribute("role", microphonesFailed ? "alert" : "status");
-  const shortcutEditor = button(t("Change in KDE…"), () => {
-    if (shortcutsOpening) return;
-    shortcutsOpening = true;
-    shortcutsOpenFailed = false;
-    render();
-    void Bridge.openShortcutSettings().catch(() => { shortcutsOpenFailed = true; }).finally(() => {
-      shortcutsOpening = false;
-      if (page === "dictation") render();
-    });
-  });
-  (shortcutEditor as HTMLButtonElement).disabled = shortcutsOpening;
-  const shortcutFeedback = el("p", { class: `note${shortcutsOpenFailed ? " error" : ""}`, text: shortcutsOpenFailed
-    ? t("Could not open KDE Shortcuts. Open your desktop's shortcut settings manually, or try again.")
-    : t("Opening KDE Shortcuts…") });
-  shortcutFeedback.setAttribute("role", shortcutsOpenFailed ? "alert" : "status");
   const requestErasure = button(t("Erase dictation history…"), () => {
     if (dictationErasing) return;
     dictationEraseConfirm = true; dictationEraseFailed = false; dictationErased = false; render();
@@ -1555,24 +1608,8 @@ function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[]
       el("p",{class:"hint",text:t("Windows supports Vults navigation, selected-player playback and linked app volume, optional computer audio commands and installed desktop or Microsoft Store apps. Dictation can pause compatible media.")}),
     ] : []),
     ...(dictationSection === "keys" ? [
-      el("h2", { text: t("Global shortcuts") }),
-      el("p", { class: "hint", text: t("Dictation and voice commands have separate shortcuts.") }),
-      el("section", { class: "card rows" },
-        row(t("Dictation"), t("Choose a local model in Settings > Dictation > Voice input. Hold to dictate into your current app. This shortcut never opens Chat."), el("span", { class: "kbd", text: boundKeys("talk") })),
-        row(t("Voice command"), t("Hold to control Vults, then release. Nothing is typed into another app."), el("span", { class: "kbd", text: boundKeys("talk-command") })),
-        row(t("Copy last dictation"), t("Copy the last successful dictation again. Paste it yourself; Vults does not submit anything."), el("span", { class: "kbd", text: boundKeys("talk-again") })),
-        row(t("Cancel voice"), t("Discard the current dictation or Chat recording."), el("span", { class: "kbd", text: boundKeys("talk-cancel") })),
-        windowsShortcuts.render(),
-        ...(windowsShortcuts.desktopEditor() ? [row(t("Desktop shortcut settings"), t("Opens KDE System Settings → Shortcuts. Other desktops manage global keys in their own settings."), shortcutEditor)] : []),
-        ...(shortcutsOpening || shortcutsOpenFailed ? [shortcutFeedback] : []),
-      ),
       el("h2", { text: t("Recording controls") }),
       el("section", { class: "card rows" },
-        row(t("Recording mode"), t("Hold to dictate. Optionally double-tap to keep recording hands-free, then press the shortcut again to finish."),
-          dropdown([{ value: true, label: t("Hold + double tap") }, { value: false, label: t("Hold only") }], dictationDoubleTap, async on => {
-            await Bridge.setDictationGesture("doubleTap", on);
-            dictationDoubleTap = on; dictationDoubleTapChanged = true;
-          })),
         row(t("Cancel by voice"), t("Say a cancel phrase by itself or at the end of the final transcript, such as “cancel” or “never mind”. Discards this dictation without copying, inserting or saving it."), toggle(dictationCancelByVoice, async on => {
           await Bridge.setDictationProcessing("cancelByVoice", on);
           dictationCancelByVoice = on; dictationCancelByVoiceChanged = true;
@@ -1583,28 +1620,6 @@ function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[]
           ? t("Changes apply to the next dictation. The global Cancel voice shortcut always works.")
           : t("Changes apply to the next dictation. The global Cancel voice shortcut always works. Space and Esc require an available X11 key listener.") }),
       ),
-      ...(windowsShortcuts.supported() ? [] : [(() => {
-        const keys = disclosure(t("X11 recording keys"),
-          row(t("Space locks recording"), t("X11 only. Space keeps recording after you release the talk shortcut. When off, Space behaves like other typing and can discard a held recording."), (() => {
-            const control = toggle(dictationSpaceLock, async on => {
-              await Bridge.setDictationGesture("spaceLock", on);
-              dictationSpaceLock = on; dictationSpaceLockChanged = true;
-            });
-            if (dictationWayland) control.setAttribute("disabled", "");
-            return control;
-          })()),
-          row(t("Esc cancels dictation"), t("X11 only. Esc discards recording or transcription. When off, Esc does not cancel dictation."), (() => {
-            const control = toggle(dictationEscapeCancel, async on => {
-              await Bridge.setDictationGesture("escapeCancel", on);
-              dictationEscapeCancel = on; dictationEscapeCancelChanged = true;
-            });
-            if (dictationWayland) control.setAttribute("disabled", "");
-            return control;
-          })()),
-        );
-        keys.dataset.setting = "dictation-x11-keys";
-        return keys;
-      })()]),
     ] : []),
     ...(dictationSection === "commands" ? [
       el("section", { class: "card rows" },
@@ -2526,6 +2541,8 @@ function chooseDictation(section: DictationSetting): void {
 
 function choosePage(next: Page, section?: "memory"): void {
   page = next;
+  // Dictation's keys show once it is set up: asked again each time the page opens.
+  if (next === "shortcuts") void refreshVoice().catch(() => {});
   chatSection = next === "zeca" ? section ?? null : null;
   navigated = true;
   location.hash = next === "dictation" ? `dictation${dictationSection}` : chatSection === "memory" ? "chatmemory" : next;
