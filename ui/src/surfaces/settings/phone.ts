@@ -183,7 +183,7 @@ export function phonePage(): HTMLElement[] {
   return [
     ...head,
     el("section", { class: "card rows" }, ...rows),
-    el("h2", { text: t("Paired phones") }),
+    el("h2", { class: "settings-group-title", text: t("Paired phones") }),
     el("section", { class: "card rows" }, ...devices),
     el(
       "section",

@@ -956,15 +956,21 @@ function agentCards(): HTMLElement[] {
   const found = listed.filter(here), others = listed.filter((a) => !here(a));
   const due = listed.filter((a) => panels.get(a.kind)?.status?.outdated).length;
   // As t3code lists its providers: what is connected first, then what is here to set up, then the rest.
-  const connected = found.filter((a) => panels.get(a.kind)?.status?.installed);
-  const toSetUp = found.filter((a) => !panels.get(a.kind)?.status?.installed);
+  const connected = found.filter((a) => !a.retired && panels.get(a.kind)?.status?.installed);
+  const toSetUp = found.filter((a) => !a.retired && !panels.get(a.kind)?.status?.installed);
+  const retired = found.filter((a) => a.retired);
   const section = (title: string, agents: typeof found) => agents.length
     ? [el("h2", { class: "settings-group-title", text: title }), ...agents.map((a) => agentCard(a.kind, a.name))]
     : [];
   return [
     ...(due ? [el("p", { class: "note warn with-icon" }, icon("warning", 14, 2), el("span", { text: due === 1 ? t("1 agent needs an update.") : t("{n} agents need an update.", { n: due }) }))] : []),
     ...(found.length
-      ? [...section(t("Connected to Vults"), connected), ...section(t("On this computer, not connected yet"), toSetUp)]
+      ? [
+          ...(!due && connected.length ? [el("p", { class: "note ok with-icon" }, icon("check", 14, 2), el("span", { text: t("All connected agents are up to date.") }))] : []),
+          ...section(t("Connected to Vults"), connected),
+          ...section(t("On this computer, not connected yet"), toSetUp),
+          ...section(t("No longer supported"), retired),
+        ]
       : [el("section", { class: "card" }, el("p", { class: "note", text: t("No supported agent was found on this computer. Install one, then open this page again.") }))]),
     ...(others.length ? [disclosure(t("Agents not found on this computer"), ...others.map((a) => agentCard(a.kind, a.name, false)))] : []),
   ];
@@ -1186,7 +1192,8 @@ function themeTiles(): HTMLElement {
 function generalPage(): HTMLElement[] {
   return [
     el("h1", { text: t("General") }),
-    el("h2", { class: "settings-group-title", text: t("Startup and usage") }),
+    el("p", { class: "lede", text: t("Startup, plan usage and the price list Vults uses for cost estimates.") }),
+    el("h2", { class: "settings-group-title", text: t("Startup") }),
     el("section", { class: "card rows" },
       row(
         t("Start with the desktop"),
@@ -1196,6 +1203,9 @@ function generalPage(): HTMLElement[] {
           autostart = on;
         }),
       ),
+    ),
+    el("h2", { class: "settings-group-title", text: t("Usage and prices") }),
+    el("section", { class: "card rows" },
       row(
         t("Codex usage"),
         t("Shows your Codex plan's usage on the island. Vults asks the codex you are logged into every 5 minutes, and each ask reaches OpenAI. Off, nothing is asked."),
@@ -1236,7 +1246,7 @@ function appearancePage(): HTMLElement[] {
         themeTiles(),
         themeNote ? el("p", { class: "note error", text: themeNote }) : null),
     ),
-    el("h2", { class: "settings-group-title", text: t("Interface") }),
+    el("h2", { class: "settings-group-title", text: t("Window and language") }),
     el("section", { class: "card rows" },
       row(t("Mini and Quick width"), t("Shared width, limited to the available screen space."),
         dropdown(ISLAND_WIDTHS.map(value => ({ value, label: value ? `${value} px` : t("Default") })), restoreWidth(), async value => {
@@ -1263,6 +1273,7 @@ function islandPage(): HTMLElement[] {
   return [
     el("h1", { text: t("Island") }),
     el("p", { class: "lede", text: t("Where the island sits, how it opens and folds, and how present it is.") }),
+    el("h2", { class: "settings-group-title", text: t("Behavior") }),
     el("section", { class: "card rows" },
       row(
         t("Presence"),
@@ -1302,6 +1313,9 @@ function islandPage(): HTMLElement[] {
           openOnHover = on;
         }),
       ),
+    ),
+    el("h2", { class: "settings-group-title", text: t("Placement") }),
+    el("section", { class: "card rows" },
       row(
         t("Corner widget"),
         t("A small window in a corner of the screen with up to three birds, the sessions that matter most, and how many work or need you."),
@@ -1350,6 +1364,7 @@ function soundPage(): HTMLElement[] {
   return [
     el("h1", { text: t("Sound and notifications") }),
     el("p", { class: "lede", text: t("What Vults plays and shows when an agent finishes, fails or needs you.") }),
+    el("h2", { class: "settings-group-title", text: t("Sounds") }),
     el("section", { class: "card rows" },
       row(
         t("Sounds"),
@@ -1369,6 +1384,9 @@ function soundPage(): HTMLElement[] {
           nowPlaying = on;
         }),
       ),
+    ),
+    el("h2", { class: "settings-group-title", text: t("Notifications") }),
+    el("section", { class: "card rows" },
       row(
         t("Do not disturb"),
         dndUntil
@@ -1426,13 +1444,11 @@ function dictationShortcuts(): HTMLElement[] {
     : t("Opening KDE Shortcuts…") });
   shortcutFeedback.setAttribute("role", shortcutsOpenFailed ? "alert" : "status");
   return [
-      el("h3", { class: "shortcut-subtitle", text: t("Global shortcuts") }),
-      el("p", { class: "hint", text: t("Dictation and voice commands have separate shortcuts.") }),
       el("section", { class: "card rows" },
-        row(t("Dictation"), t("Choose a local model in Settings > Dictation > Voice input. Hold to dictate into your current app. This shortcut never opens Chat."), el("span", { class: "kbd", text: boundKeys("talk") })),
-        row(t("Voice command"), t("Hold to control Vults, then release. Nothing is typed into another app."), el("span", { class: "kbd", text: boundKeys("talk-command") })),
-        row(t("Copy last dictation"), t("Copy the last successful dictation again. Paste it yourself; Vults does not submit anything."), el("span", { class: "kbd", text: boundKeys("talk-again") })),
-        row(t("Cancel voice"), t("Discard the current dictation or Chat recording."), el("span", { class: "kbd", text: boundKeys("talk-cancel") })),
+        row(t("Dictation"), t("Choose a local model in Settings > Dictation > Voice input. Hold to dictate into your current app. This shortcut never opens Chat."), keycaps(boundKeys("talk"))),
+        row(t("Voice command"), t("Hold to control Vults, then release. Nothing is typed into another app."), keycaps(boundKeys("talk-command"))),
+        row(t("Copy last dictation"), t("Copy the last successful dictation again. Paste it yourself; Vults does not submit anything."), keycaps(boundKeys("talk-again"))),
+        row(t("Cancel voice"), t("Discard the current dictation or Chat recording."), keycaps(boundKeys("talk-cancel"))),
         windowsShortcuts.render(),
         ...(windowsShortcuts.desktopEditor() ? [row(t("Desktop shortcut settings"), t("Opens KDE System Settings → Shortcuts. Other desktops manage global keys in their own settings."), shortcutEditor)] : []),
         ...(shortcutsOpening || shortcutsOpenFailed ? [shortcutFeedback] : []),
@@ -1470,6 +1486,19 @@ function dictationShortcuts(): HTMLElement[] {
   ];
 }
 
+/** A shortcut as keycaps: each key a cap, alternatives apart; one not bound reads as words. */
+function keycaps(text: string): HTMLElement {
+  const box = el("span", { class: "keycaps" });
+  box.setAttribute("aria-label", text);
+  text.split(" · ").forEach((combo, i) => {
+    if (i) box.append(el("span", { class: "keycaps-or", text: "/" }));
+    const trimmed = combo.trim();
+    if (!trimmed || trimmed === t("Not bound")) { box.append(el("span", { class: "keycaps-none", text: trimmed || t("Not bound") })); return; }
+    for (const key of trimmed.split(/\+(?!$)/)) box.append(el("kbd", { text: key }));
+  });
+  return box;
+}
+
 /** Settings → Keyboard shortcuts. */
 function shortcutsPage(): HTMLElement[] {
   // Dictation's keys join once it has a voice model: before, they would do nothing.
@@ -1480,17 +1509,17 @@ function shortcutsPage(): HTMLElement[] {
   return [
     el("h1", { text: t("Keyboard shortcuts") }),
     el("p", { class: "lede", text: t("The keys that reach Vults from any app, and the ones inside its windows.") }),
-    el("h2", { class: "settings-group-title", text: "Vults" }),
+    el("h2", { class: "settings-group-title", text: t("Island and flock") }),
     el(
       "section",
       { class: "card rows" },
       windowsShortcuts.render(),
-      row(t("Allow / Deny from anywhere"), windowsShortcuts.supported() ? t("Use the Windows shortcut editor above to change these keys.") : t("Answer the visible permission card. Change global keys in System Settings → Shortcuts."), el("span", { class: "kbd", text: boundKeys("allow", "deny") })),
-      row(t("Next / previous session"), t("Move through the flock. A waiting permission keeps its session in front."), el("span", { class: "kbd", text: boundKeys("next", "previous") })),
-      row(t("Open the island"), t("Open the island with keyboard control: ↑ ↓ sessions, Enter terminal, M actions, Y / N answer, C chat, Esc return."), el("span", { class: "kbd", text: boundKeys("open") })),
-      row(t("Change size"), t("Switch to Mini, Quick or Room from anywhere."), el("span", { class: "kbd", text: boundKeys("mini", "quick", "room") })),
-      row(t("Command palette"), t("Find a session, open a tab or prepare a chat command in Quick or Room."), el("span", { class: "kbd", text: "Ctrl+K" })),
-      row(t("The Nest's tabs"), t("Choose Flock, Chat, Dictation, Connections or Activity. Esc leaves Full."), el("span", { class: "kbd", text: "Alt+1–5" })),
+      row(t("Allow / Deny from anywhere"), windowsShortcuts.supported() ? t("Answer the waiting permission card from any app.") : t("Answer the visible permission card. Change global keys in System Settings → Shortcuts."), keycaps(boundKeys("allow", "deny"))),
+      row(t("Next / previous session"), t("Move through the flock. A waiting permission keeps its session in front."), keycaps(boundKeys("next", "previous"))),
+      row(t("Open the island"), t("Open the island with keyboard control: ↑ ↓ sessions, Enter terminal, M actions, Y / N answer, C chat, Esc return."), keycaps(boundKeys("open"))),
+      row(t("Change size"), t("Switch to Mini, Quick or Room from anywhere."), keycaps(boundKeys("mini", "quick", "room"))),
+      row(t("Command palette"), t("Find a session, open a tab or prepare a chat command in Quick or Room."), keycaps("Ctrl+K")),
+      row(t("The Nest's tabs"), t("Choose Flock, Chat, Dictation, Connections or Activity. Esc leaves Full."), keycaps("Alt+1–5")),
     ),
     el("h2", { class: "settings-group-title", text: t("Dictation") }),
     ...dictation,
@@ -1604,8 +1633,8 @@ function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[]
   return [
     el("h1", { text: t(DICTATION_SETTINGS.find(p => p.id === dictationSection)!.label) }),
     ...(windowsShortcuts.supported() ? [
-      el("p",{class:"hint",text:t("Windows dictation uses the selected local model. Hold its shortcut to record and release to transcribe. Text is copied by default; optional insertion supports recognized desktop text fields. Browsers and terminals require manual paste.")}),
-      el("p",{class:"hint",text:t("Windows supports Vults navigation, selected-player playback and linked app volume, optional computer audio commands and installed desktop or Microsoft Store apps. Dictation can pause compatible media.")}),
+      el("p",{class:"hint windows-intro",text:t("Windows dictation uses the selected local model. Hold its shortcut to record and release to transcribe. Text is copied by default; optional insertion supports recognized desktop text fields. Browsers and terminals require manual paste.")}),
+      el("p",{class:"hint windows-intro",text:t("Windows supports Vults navigation, selected-player playback and linked app volume, optional computer audio commands and installed desktop or Microsoft Store apps. Dictation can pause compatible media.")}),
     ] : []),
     ...(dictationSection === "keys" ? [
       el("h2", { text: t("Recording controls") }),
@@ -1642,7 +1671,7 @@ function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[]
           dictationCommandOutput = on; dictationCommandOutputChanged = true;
         })),
         ...(windowsShortcuts.supported() ? [playerAudio.render()] : []),
-        row(t("Command key"), t("Hold to control Vults, then release. Nothing is typed into another app."), el("span", { class: "kbd", text: boundKeys("talk-command") })),
+        row(t("Command key"), t("Hold to control Vults, then release. Nothing is typed into another app."), keycaps(boundKeys("talk-command"))),
         row(t("Names it understands"), t("Uses current project and agent names, plus replacements in Dictionary. Small spelling differences can match; when names tie, Vults asks which one."), button(t("Dictionary"), () => void Bridge.openNest("dictation-dictionary"))),
       ),
       el("section", { class: "card rows" },
@@ -1783,7 +1812,13 @@ function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[]
 const dictationTool = () => dictationSection === "styles" || dictationSection === "diagnostics";
 function dictationPage(): HTMLElement[] {
   if (dictationTool()) return dictationSectionPage(dictationSection);
-  const body = (id: DictationSetting) => dictationSectionPage(id).filter(node => node.tagName !== "H1" && !node.classList.contains("lede")).map(node => node.tagName === "H2" ? el("h3", { text: node.textContent ?? "" }) : node);
+  // The Windows notes are the page's, said once under its lede: kept from the first group only.
+  const intro: HTMLElement[] = [];
+  const body = (id: DictationSetting) => dictationSectionPage(id).filter(node => {
+    if (!node.classList.contains("windows-intro")) return true;
+    if (id === "voice") intro.push(node);
+    return false;
+  }).filter(node => node.tagName !== "H1" && !node.classList.contains("lede")).map(node => node.tagName === "H2" ? el("h3", { text: node.textContent ?? "" }) : node);
   const group = (id: string, title: string, children: HTMLElement[], folded = false) => {
     const node = folded ? disclosure(title, ...children) : el("section", { class: "dictation-preference-group" }, el("h2", { text: title }), ...children);
     node.dataset.dictationSection = id;
@@ -1791,11 +1826,12 @@ function dictationPage(): HTMLElement[] {
     return node;
   };
   const voice = body("voice");
-  const feedback = voice.findIndex(node => node.tagName === "H2" && node.textContent === t("Sound and feedback"));
+  const feedback = voice.findIndex(node => node.tagName === "H3" && node.textContent === t("Sound and feedback"));
   const sound = feedback >= 0 ? voice.splice(feedback, 2) : [];
   const processing = voice.pop()!;
   return [el("h1", { text: t("Dictation") }),
     el("p", { class: "lede", text: t("Set up your voice, recording controls and text delivery. Your writing tools stay in Dictation.") }),
+    ...intro,
     group("voice", t("Voice input"), voice),
     group("keys", t("Recording"), [...body("keys"), ...sound]),
     group("paste", t("Text delivery"), body("paste")),
@@ -1825,7 +1861,7 @@ function checkEngines(): void {
 function enginesCard(): HTMLElement {
   if (!engines && !enginesLoading && !enginesNote) checkEngines();
   const SIGN_IN: Record<string, string> = { claude: "claude", codex: "codex", "acp:antigravity": "acp:antigravity", "acp:opencode": "acp:opencode" };
-  const line = (id: string, name: string, summary: { dot: "ok" | "warn" | "off"; headline: string }, canSignIn: boolean) => {
+  const line = (id: string, name: string, summary: { dot: "ok" | "warn" | "off" | "unknown"; headline: string }, canSignIn: boolean) => {
     const signIn = canSignIn && SIGN_IN[id]
       ? button(t("Sign in"), () => {
           Bridge.chatSignIn(id as import("../../bridge").ChatProvider).then(
@@ -1905,8 +1941,7 @@ function chatPage(): HTMLElement[] {
   const detail = p
     ? el("div", { class: "provider-detail" },
         el("div", { class: "provider-detail-head" },
-          el("div", { class: "provider-detail-name" }, dot(summary!.dot), el("span", { text: p.label })),
-          el("p", { class: "row-about", text: summary!.headline })),
+          el("div", { class: "provider-detail-name" }, dot(summary!.dot), el("span", { text: p.label }))),
         el("div", { class: "rows" }, row(...keyRow(p, done)), row(...modelRow(p))),
         message)
     : el("div", { class: "provider-detail" }, el("p", { class: "note", text: t("Choose a provider on the left.") }));
@@ -1917,7 +1952,7 @@ function chatPage(): HTMLElement[] {
 
   return [
     el("h1", { text: t("Chat & voice") }),
-    ...(zeca ? [] : [el("p", { class: "note", text: t("Zeca is off (Flock & Zeca): no chat or voice until you turn him back on.") })]),
+    ...(zeca ? [] : [el("p", { class: "note", text: t("Zeca is off, so Chat and voice are unavailable. Turn him on in Zeca.") })]),
     el("p", {
       class: "lede",
       text: t("Claude Code and Codex use your CLI login and subscription. API providers use your own key or a local model."),
@@ -1975,7 +2010,6 @@ function chatPage(): HTMLElement[] {
       ...(accessNote ? [el("p", { class: "note error", text: accessNote })] : []),
     ),
     el("h2", { class: "settings-group-title", text: t("API") }),
-    el("p", { class: "note", text: t("API messages go to this provider. This mode cannot run commands or edit files.") }),
     el("section", { class: "card provider-card" }, ...rows),
     el("p", { class: "note", text: apiNote }),
     ...(web ? [el("h2", { class: "settings-group-title", text: t("Web") }), el("section", { class: "card rows" }, ...webRows())] : []),
@@ -2271,7 +2305,7 @@ function aboutPage(): HTMLElement[] {
     el(
       "section",
       { class: "card about" },
-      el("img", { class: "logo" }),
+      (() => { const logo = el("img", { class: "logo" }); logo.alt = "Vults"; logo.addEventListener("error", () => { logo.hidden = true; }); return logo; })(),
       el(
         "div",
         {},
@@ -2463,7 +2497,7 @@ function zecaPage(): HTMLElement[] {
         el("div", { class: "rows" },
           row(
             t("Zeca on"),
-            t("The companion who chats and listens. Off, the flock, cards, notifications, connectors and independent local dictation keep working; Chat is unavailable."),
+            t("Chats and listens. Off, Chat stops; the flock, cards and dictation keep working."),
             toggle(zeca, async (on) => {
               await Bridge.setZeca(on);
               zeca = on;
@@ -2485,11 +2519,11 @@ function zecaPage(): HTMLElement[] {
         t("Auto dresses Zeca for the season: a witch hat from October 1 to November 1, a Santa hat from December 1 to 26, a party hat from New Year's Eve to January 2, bunny ears from Good Friday to Easter Monday. Sunglasses and the other outfits only when you pick them."),
       ),
     ),
-    el("h2", { class: "settings-group-title", text: t("Species") }),
-    el("p", { class: "note", text: t("Every vulture he can be. The one you pick is him in the island and in Chat.") }),
-    ...group("new-world", t("Vultures of the Americas")),
-    ...group("old-world", t("Vultures of Africa, Europe and Asia")),
     ...memorySection(),
+    el("h2", { class: "settings-group-title", text: t("Species") }),
+    el("p", { class: "note", text: t("The one you pick is Zeca on the island and in Chat.") }),
+    ...group("new-world", t("Vultures of the Americas")),
+    disclosure(t("Vultures of Africa, Europe and Asia"), ...group("old-world", t("Vultures of Africa, Europe and Asia")).slice(1)),
   ];
 }
 
@@ -2499,6 +2533,7 @@ function flockPage(): HTMLElement[] {
   return [
     el("h1", { text: t("Flock") }),
     el("p", { class: "lede", text: t("The birds of your agents' sessions: where they come from, and who visits now and then.") }),
+    el("h2", { class: "settings-group-title", text: t("Birds") }),
     el("section", { class: "card rows" },
       row(
         t("The flock draws from"),

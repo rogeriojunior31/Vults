@@ -6,6 +6,8 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Fixed
 
+- **Settings**: Dictation's sound and feedback rows sit under Recording as meant; its Windows notes show once instead of in every group; Gitea's empty address no longer reads *undefined*; About's logo hides when its image is missing; Chat & voice no longer names the old Flock & Zeca page.
+
 - **Settings → Chat & voice**: *Who answers Zeca's cards* no longer says destructive commands ask under full access.
 
 - **Zeca's chat**: a folder that no longer exists stops the message with a note, instead of the chat quietly working elsewhere.
@@ -31,6 +33,8 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 - **Phone relay**: plain `http://` only for a relay on this computer, a LAN or a tailnet; one address holds at most 64 connections (`VULTS_RELAY_PER_ADDRESS`, 0 behind a proxy).
 
 ### Changed
+
+- **Settings**, after a design critique of every page: each page reads as title, one sentence, then titled sections (General: Startup, Usage and prices; Island: Behavior, Placement; Sound and notifications: Sounds, Notifications; Flock: Birds); keys drawn as keycaps; disclosures open with a drawn chevron; a switch stays beside its words on narrow windows; Zeca's memory comes before the species gallery, with the second family folded; Agents says when every connected agent is up to date and puts retired agents apart; an ACP engine's unknown sign-in has a neutral dot.
 
 - **Settings → Keyboard shortcuts**: Dictation's keys (its global shortcuts, recording mode and X11 keys) moved there from Dictation, shown once dictation has a voice model; Dictation keeps what is voice.
 

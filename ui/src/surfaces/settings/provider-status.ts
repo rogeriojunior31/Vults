@@ -4,7 +4,7 @@ import { el } from "../../dom";
 import { t } from "../../i18n";
 import type { ApiProvider, ChatEngines } from "../../bridge";
 
-export type Dot = "ok" | "warn" | "off";
+export type Dot = "ok" | "warn" | "off" | "unknown";
 
 export interface Summary {
   dot: Dot;
@@ -20,7 +20,7 @@ export function engineSummary(state: ChatEngines["claude"]): Summary {
 
 /** An installed ACP agent: it says nothing of its login before a turn. */
 export function acpSummary(): Summary {
-  return { dot: "ok", headline: t("Installed. It signs in with its own login.") };
+  return { dot: "unknown", headline: t("Installed. Sign-in is checked in its own app.") };
 }
 
 /** An API provider: its key, or the local model it needs. */

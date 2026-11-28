@@ -530,14 +530,16 @@ events.onSettings({ dictationInsert: true }); events.onDictationPermission("read
 assert.equal(writes.length, modeWrites, "Mode presentation never writes settings or requests keyboard access");
 events.onShortcutKeys({ talk: "Meta+V", "talk-again": "Meta+B", "talk-cancel": "Meta+X", "talk-command": "Meta+Z" });
 await go("Keyboard shortcuts"); await tick();
-assert.ok(page().textContent.includes("Meta+V") && page().textContent.includes("Meta+B") && page().textContent.includes("Meta+X"));
-assert.ok(rowNamed("Voice command").textContent.includes("Meta+Z"), "The shortcut page separates dictation and local commands");
+// Keys are drawn as caps; each shortcut names its keys whole for assistive tech.
+const keysIn = node => node.querySelectorAll(".keycaps").map(n => n.getAttribute("aria-label")).join(" ");
+assert.ok(keysIn(page()).includes("Meta+V") && keysIn(page()).includes("Meta+B") && keysIn(page()).includes("Meta+X"));
+assert.ok(keysIn(rowNamed("Voice command")).includes("Meta+Z"), "The shortcut page separates dictation and local commands");
 const x11Keys = () => page().querySelector('[data-setting="dictation-x11-keys"]');
 assert.equal(x11Keys().open, false, "Platform-specific gestures start disclosed");
 x11Keys().open = true; events.onSettings({ volume: 80 });
 assert.equal(x11Keys().open, true, "A settings repaint keeps the keyboard disclosure choice");
 await dictationPage("commands");
-assert.ok(rowNamed("Command key").textContent.includes("Meta+Z"), "Dictation shows the command key's actual desktop binding");
+assert.ok(keysIn(rowNamed("Command key")).includes("Meta+Z"), "Dictation shows the command key's actual desktop binding");
 assert.equal(page().querySelector(".voice-command-check"), null, "Command testing belongs to the work page, not preferences");
 await go("Keyboard shortcuts"); await tick();
 assert.equal(pendingShortcutOpens.length, 0, "Entering Settings never launches a desktop editor");
@@ -557,7 +559,7 @@ assert.ok(!page().querySelectorAll('[role="alert"]').some(n => n.textContent.inc
 pendingShortcutOpens[1].resolve(); await tick();
 assert.equal(button("Change in KDE…").disabled, false);
 assert.ok(!page().textContent.includes("Opening KDE Shortcuts"));
-assert.ok(page().textContent.includes("Meta+V"), "Launching the editor never guesses a new binding");
+assert.ok(keysIn(page()).includes("Meta+V"), "Launching the editor never guesses a new binding");
 console.log("check-settings-ui: explicit KDE shortcut launch, retained pending state, failure/retry and no duplicate launch");
 await dictationPage("privacy");
 button("Erase dictation history…").fire("click");

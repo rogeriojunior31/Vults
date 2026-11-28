@@ -21,7 +21,7 @@ export function createGitea(native: Native) {
     if (busy) return;
     token.value = "";
     busy = true; update();
-    try { current = await native.read(); url.value = current.baseUrl; status.textContent = ""; }
+    try { current = await native.read(); url.value = current.baseUrl ?? ""; status.textContent = ""; }
     catch { status.textContent = t("Could not read the Gitea connection."); }
     finally { busy = false; update(); }
   };
@@ -32,7 +32,7 @@ export function createGitea(native: Native) {
     token.value = ""; status.textContent = t("Saving…"); update();
     try {
       current = await native.save(url.value, secret, current.generation, clear);
-      url.value = current.baseUrl;
+      url.value = current.baseUrl ?? "";
       status.textContent = t("Saved. Turn on Gitea separately to start checking.");
     } catch (error) { status.textContent = connectorError(String(error)); }
     finally { busy = false; update(); }
