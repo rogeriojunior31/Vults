@@ -17,6 +17,7 @@ pub mod flock;
 pub mod fspath;
 pub mod handoff;
 pub mod i18n;
+pub mod labs;
 pub mod ledger;
 pub mod looks;
 pub mod metrics;

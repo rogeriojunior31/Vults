@@ -15,6 +15,7 @@ import { LOOK_GROUPS, dress } from "../../character/looks";
 import { drawFrame, frameAt, type Frame } from "../../character/sprites";
 import { perchOf } from "../../character/zeca";
 import { AGENTS as REGISTRY } from "../../agents";
+import { LABS, labOn } from "../../labs";
 import { CONNECTORS, connectorError } from "../../connectors";
 import { el } from "../../dom";
 import { button, confirmed, diff, disclosure, row, saveSetting, toggle } from "./pieces";
@@ -40,7 +41,7 @@ import { createNestFoot, createNestHead, tabByKey } from "../nest/head";
 import { needsYou } from "../nest/flock";
 import type { SessionView } from "../../view.gen";
 
-type Page = "dictation" | "general" | "agents" | "chat" | "approvals" | "projects" | "activity" | "connectors" | "phone" | "flock" | "about";
+type Page = "dictation" | "general" | "agents" | "chat" | "approvals" | "projects" | "activity" | "connectors" | "phone" | "flock" | "labs" | "about";
 
 /** The sidebar's groups, in the prototype's order: how it feels, the work, the system. */
 const GROUPS = [
@@ -60,6 +61,7 @@ const PAGES: { id: Page; label: string; group: (typeof GROUPS)[number]["id"]; ic
   { id: "activity", label: tk("History and budget"), group: "system", icon: "bars" },
   { id: "connectors", label: tk("Connection setup"), group: "system", icon: "plug" },
   { id: "phone", label: tk("Phone"), group: "system", icon: "phone" },
+  { id: "labs", label: tk("Labs"), group: "system", icon: "flask" },
   { id: "about", label: tk("About"), group: "system", icon: "person" },
 ];
 
@@ -289,6 +291,8 @@ let localEmbeddings = false;
 let memorySuggest = false;
 let sleep = false;
 let antigravityApprovals = false;
+/** Settings → Labs: the beta features turned on, by key. */
+let labs: Record<string, boolean> = {};
 let voice: VoiceStatus | null = null;
 /** Model id → percent downloaded, for every download running. */
 const downloading = new Map<string, number>();
@@ -2077,6 +2081,25 @@ function webRows(): HTMLElement[] {
 /** What opening the documentation said, when it failed. */
 let aboutNote: string | null = null;
 
+/** Settings → Labs: each beta feature with its switch, all off until turned on here. */
+function labsPage(): HTMLElement[] {
+  const rows = LABS.map(lab => {
+    const blocked = lab.requires !== null && !labOn(labs, lab.requires);
+    const control = toggle(labOn(labs, lab.id), async on => {
+      await Bridge.setLab(lab.id, on);
+      labs = { ...labs, [lab.id]: on };
+    });
+    control.disabled = blocked;
+    const about = lab.restart ? t("{about} It takes effect after Vults restarts.", { about: t(lab.about) }) : t(lab.about);
+    return row(t(lab.name), about, control);
+  });
+  return [
+    el("h1", { text: t("Labs") }),
+    el("p", { class: "lede", text: t("Features still in beta. Each is off until you turn it on here, and may change or break before it is finished.") }),
+    el("section", { class: "card rows" }, ...rows),
+  ];
+}
+
 function aboutPage(): HTMLElement[] {
   return [
     el("h1", { text: t("About") }),
@@ -2361,7 +2384,9 @@ function render(): void {
               ? phonePage()
               : page === "flock"
                 ? flockPage()
-                : aboutPage();
+                : page === "labs"
+                  ? labsPage()
+                  : aboutPage();
   if (page !== "flock") window.clearInterval(previews);
   const navButton = (p: (typeof PAGES)[number]) => {
     const b = el(
@@ -2496,6 +2521,7 @@ void Bridge.appSettings().then((s) => {
   memorySuggest = s.memorySuggest;
   sleep = s.sleep;
   antigravityApprovals = s.antigravityApprovals;
+  labs = s.labs ?? {};
   zecaSpecies = s.zecaSpecies;
   zecaLook = s.zecaLook;
   flock = s.flock;
@@ -2537,6 +2563,7 @@ Bridge.onSettingsSection((section) => {
 });
 // The island's speaker button changes the sounds too: keep the toggle and the slider in step.
 Bridge.onSettings((s) => {
+  if (s.labs !== undefined) { labs = s.labs; if (page === "labs") render(); }
   if (s.questionAgents !== undefined) questionAgents.changed(s.questionAgents);
   cleanupSettings.update(s);
   meetingSettings.update(s);

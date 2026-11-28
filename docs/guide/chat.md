@@ -35,7 +35,8 @@ setup** (the Claude Code and Codex CLIs, each *Signed in*, *Installed* or *Not i
 asks the CLI itself, `claude auth status` or `codex login status`, and reads only whether it is
 signed in, falling back to whether its login file is there; **Sign in** beside one that is not opens
 a terminal with that CLI's own sign-in, which Vults never sees; then every agent that speaks
-ACP and is installed here, such as Antigravity (`agy acp`, its telemetry off), OpenCode, Qwen Code,
+ACP and is installed here (Qwen Code, Copilot CLI and Kimi Code only once turned on in
+**Settings → Labs**, until each is checked with a live turn), such as Antigravity (`agy acp`, its telemetry off), OpenCode, Qwen Code,
 Copilot CLI or Kimi Code, which uses its own model and its own permission settings, as in its
 terminal: what it asks for is a card, and what its settings allow it runs, with the turn's
 **Activity** saying *Ran by the agent's own settings, without asking*; the model menu lists the agent's own models (asked once from a session it opens in a folder of

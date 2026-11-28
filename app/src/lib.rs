@@ -377,6 +377,7 @@ pub fn run() {
             settings::set_memory_suggest,
             settings::set_sleep,
             settings::set_antigravity_approvals,
+            settings::set_lab,
             memory::memory_command,
             memory::memory_view,
             memory::memory_decide,

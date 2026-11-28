@@ -28,11 +28,15 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Changed
 
+- **Zeca's chat**: Qwen Code, Copilot CLI and Kimi Code are offered as engines only once turned on in **Settings → Labs**.
+
 - **Zeca's chat, ACP agents**: an agent follows its own permission settings, as in its terminal: what it asks is a card, and what its settings allow it runs, said in the turn's **Activity**, instead of the turn being stopped.
 
 - **Quick chat**: no name, greeting or explanation; *Ask anything…* in the draft. Once a conversation runs, the portrait gives its room to the messages, and long code, diffs and tool output scroll in their own shorter blocks.
 
 ### Added
+
+- **Settings → Labs**: beta features, each off until you turn it on there. The first are Qwen Code, Copilot CLI and Kimi Code as chat engines, until each is checked with a live turn.
 
 - **Zeca's chat**: an ACP agent's own models are in the model menu (Antigravity's Gemini, Claude and GPT-OSS; OpenCode's providers), and a model picked mid-conversation applies from the next turn.
 - **Zeca's chat**: each message shows when it was said.

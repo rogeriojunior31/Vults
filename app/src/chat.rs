@@ -1288,6 +1288,7 @@ async fn send(
     if let Origin::Voice(ticket, _) = &origin {
         voice_result(&app, ticket, &text, vults_core::i18n::VoiceFeedback::SentToChat);
     }
+    engine_allowed(&app, chat.provider())?;
     // A resumed session its CLI may have lost: what was said so far, kept for a fresh one.
     if chat.session().is_some()
         && !chat.is_specialist()
@@ -1801,6 +1802,7 @@ pub async fn chat_switch_engine(
     if !crate::runtime::card_host(&window) {
         return Err("Chat history belongs to the island or Nest.".into());
     }
+    engine_allowed(&app, provider)?;
     let state = app.state::<ChatState>();
     let mut chat = state.navigation(generation)?;
     if chat.is_specialist() {
@@ -3219,9 +3221,29 @@ pub struct AcpEngine {
     title: &'static str,
 }
 
+/// An engine still in Labs is offered and run only once the user turned it on there.
+fn engine_allowed(app: &AppHandle, provider: Provider) -> Result<(), String> {
+    match provider {
+        Provider::Acp(key) => match vults_core::labs::Lab::of_acp(key) {
+            Some(lab) if !crate::settings::lab(app, lab) => Err(format!(
+                "{} is in Labs: turn it on in Settings → Labs to use it in the chat.",
+                vults_chat::acp_title(key).unwrap_or(key)
+            )),
+            _ => Ok(()),
+        },
+        _ => Ok(()),
+    }
+}
+
 #[tauri::command]
-pub async fn chat_engines() -> Engines {
+pub async fn chat_engines(app: AppHandle) -> Engines {
     let mut engines = files_engines().await;
+    // One still in Labs only once it is turned on there.
+    engines.acp.retain(|e| {
+        e.id.strip_prefix("acp:")
+            .and_then(vults_core::labs::Lab::of_acp)
+            .is_none_or(|lab| crate::settings::lab(&app, lab))
+    });
     // The CLI's own word on its login beats the file check (a keychain login or a key counts).
     let (claude, codex) = tokio::join!(
         vults_chat::signed_in(Provider::Claude),
