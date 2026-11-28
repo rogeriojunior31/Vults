@@ -1624,7 +1624,6 @@ function dictationSectionPage(dictationSection: DictationSetting): HTMLElement[]
       el("p",{class:"hint windows-intro",text:t("Windows supports Vults navigation, selected-player playback and linked app volume, optional computer audio commands and installed desktop or Microsoft Store apps. Dictation can pause compatible media.")}),
     ] : []),
     ...(dictationSection === "keys" ? [
-      el("h2", { text: t("Recording controls") }),
       el("section", { class: "card rows" },
         row(t("Cancel by voice"), t("Say a cancel phrase by itself or at the end of the final transcript, such as “cancel” or “never mind”. Discards this dictation without copying, inserting or saving it."), toggle(dictationCancelByVoice, async on => {
           await Bridge.setDictationProcessing("cancelByVoice", on);
@@ -2041,7 +2040,8 @@ function voiceRows(): HTMLElement[] {
     const mb = t("{n} MB", { n: Math.round(m.size / 1_000_000) });
     let control: HTMLElement;
     const progress = downloading.get(m.id);
-    if (progress !== undefined) control = el("span", { class: "muted", text: t("Downloading… {pct}%", { pct: progress }) });
+    // At 100% the file is whole and being checked against its hash before use.
+    if (progress !== undefined) control = el("span", { class: "muted", text: progress >= 100 ? t("Verifying…") : t("Downloading… {pct}%", { pct: progress }) });
     else if (m.installed && status.selected === m.id && status.ready) control = badge(t("In use"), "ok");
     else if (m.installed)
       control = button(t("Use"), async () => {
@@ -2066,7 +2066,18 @@ function voiceRows(): HTMLElement[] {
         // The model that suits the spoken language: Base is weak outside English.
         !status.models.some((x) => x.installed) && m.id === (/^(en|auto)/.test(status.language ?? status.system ?? "en") ? "base" : "small"),
       );
-    return row(t(VOICE_MODEL_LABELS[m.id] ?? m.label), m.installed ? t("{size}, on this computer", { size: mb }) : t("{size} speech model, downloaded and checked before use (whisper.cpp, from Hugging Face)", { size: mb }), control);
+    // What sets each model apart, at a glance (t3code's model cards): speed or accuracy, the GPU,
+    // and the one that suits the language spoken.
+    const recommended = m.id === (/^(en|auto)/.test(status.language ?? status.system ?? "en") ? "base" : "small");
+    const tags = [
+      recommended ? [t("Recommended"), "ok"] : null,
+      m.id === "base" ? [t("Fastest"), "off"] : m.id === "small" ? [t("Balanced"), "off"] : m.id === "turbo" ? [t("Most accurate"), "off"] : null,
+      m.id === "turbo" ? [t("Best with a GPU"), "off"] : null,
+    ].filter((x): x is string[] => x !== null);
+    const modelRow = row(t(VOICE_MODEL_LABELS[m.id] ?? m.label), m.installed ? t("{size}, on this computer", { size: mb }) : t("{size} speech model, downloaded and checked before use (whisper.cpp, from Hugging Face)", { size: mb }), control);
+    modelRow.classList.add("model-row");
+    modelRow.querySelector(".row-title")?.after(el("div", { class: "model-tags" }, ...tags.map(([text, kind]) => badge(text, kind as "ok" | "off"))));
+    return modelRow;
   });
   return [intro, language, ...models, ...(voiceError ? [el("p", { class: "note error", text: voiceError })] : [])];
 }
@@ -2297,9 +2308,8 @@ function aboutPage(): HTMLElement[] {
       el(
         "div",
         {},
-        el("div", { class: "card-title", text: "Vults" }),
+        el("div", { class: "card-title", text: version ? `Vults ${version}` : "Vults" }),
         el("p", { class: "row-about", text: t("A friendly flock watching your coding agents. MIT licensed; no telemetry.") }),
-        version ? el("p", { class: "note", text: t("Version {version}", { version }) }) : null,
         el("div", { class: "actions about-actions" }, button(t("Documentation"), () => {
           aboutNote = null;
           Bridge.openDocs().catch((e) => { aboutNote = failure(t("Could not open the documentation."), e); render(); });
@@ -2307,11 +2317,12 @@ function aboutPage(): HTMLElement[] {
         aboutNote ? el("p", { class: "note error", text: aboutNote }) : null,
       ),
     ),
+    el("h2", { class: "settings-group-title", text: t("Files on this computer") }),
     el(
       "section",
       { class: "card rows" },
-      row(t("Settings"), t("Your settings file."), el("code", { text: settingsPath })),
-      row(t("Data"), t("The hook relay, the inbox of dropped files, connector state."), el("code", { text: dataPath })),
+      row(t("Settings file"), t("Every choice on these pages."), el("code", { text: settingsPath })),
+      row(t("Data folder"), t("The hook relay, the inbox of dropped files, connector state."), el("code", { text: dataPath })),
     ),
   ];
 }

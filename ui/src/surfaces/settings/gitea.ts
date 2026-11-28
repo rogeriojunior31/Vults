@@ -37,7 +37,7 @@ export function createGitea(native: Native) {
     } catch (error) { status.textContent = connectorError(String(error)); }
     finally { busy = false; update(); }
   };
-  const save = button(t("Save connection"), () => void write(false));
+  const save = button(t("Save connection"), () => void write(false), true);
   // Removing asks first: the first click arms it and focuses Cancel; the second removes.
   let removing = false;
   const clear = button(t("Remove connection"), () => {
@@ -46,6 +46,7 @@ export function createGitea(native: Native) {
     removing = false;
     void write(true);
   });
+  clear.classList.add("quiet");
   const cancel = button(t("Cancel"), () => { removing = false; status.textContent = ""; update(); clear.focus(); });
   const retry = button(t("Reload connection"), () => void load());
   function update() {

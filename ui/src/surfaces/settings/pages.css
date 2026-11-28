@@ -918,3 +918,16 @@ code {
 #settings .card .settings-disclosure > summary { padding: 4px 0; color: var(--fg); font-size: var(--text-s); font-weight: 500; }
 #settings .card .settings-disclosure > summary:hover { background: transparent; color: var(--fg-bright); }
 #settings .card .settings-disclosure .disclosure-body { padding: 4px 0 0 15px; }
+
+/* Projects: the project's name and folder, then its choices on one line, Forget at its end. */
+.row:has(> .project-choices) { flex-direction: column; align-items: stretch; gap: 10px; }
+.row:has(> .project-choices) .row-about { font-family: var(--mono); font-size: 11px; }
+.row > .row-text + .project-choices, .project-choices { max-width: none; justify-content: flex-start; gap: 8px 16px; }
+.project-choices > :last-child { margin-left: auto; }
+/* About's paths: whole, selectable, left under their title when narrow. */
+.row > code { user-select: text; }
+@media (max-width: 650px) { .row:has(> code) { flex-direction: column; align-items: flex-start; } .row > code { max-width: 100%; } }
+
+/* Voice models: what sets each apart, as tags under its name. */
+.model-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.model-tags .badge { font-size: 11px; }

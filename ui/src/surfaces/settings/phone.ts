@@ -182,17 +182,11 @@ export function phonePage(): HTMLElement[] {
 
   return [
     ...head,
+    el("p", { class: "note", text: t("The Vults phone app is not out yet. Until it is, the command-line test client in the docs pairs and answers like a phone.") }),
+    el("h2", { class: "settings-group-title", text: t("Connection") }),
     el("section", { class: "card rows" }, ...rows),
     el("h2", { class: "settings-group-title", text: t("Paired phones") }),
     el("section", { class: "card rows" }, ...devices),
-    el(
-      "section",
-      { class: "card" },
-      el("p", {
-        class: "note",
-        text: t("The Vults phone app is not out yet. Until it is, the command-line test client in the docs pairs and answers like a phone."),
-      }),
-    ),
   ];
 }
 

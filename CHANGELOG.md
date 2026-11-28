@@ -34,6 +34,8 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Changed
 
+- **Settings**: voice models carry tags (*Recommended* for the language spoken, *Fastest*, *Balanced*, *Most accurate*, *Best with a GPU*) and say *Verifying…* when a download is checked; Projects show each project's choices on one line; Phone says first that its app is not out yet; Gitea's *Save connection* is the one primary step; About names its version in its title and lists its files under a title.
+
 - **Settings**: a long description shows its first sentence, with the rest under **More**; each agent's card shows its state and the step that is due first, with how it works folded and **Remove** last and quiet; History and budget, Approvals and Labs read in titled sections.
 
 - **Settings**, after a design critique of every page: each page reads as title, one sentence, then titled sections (General: Startup, Usage and prices; Island: Behavior, Placement; Sound and notifications: Sounds, Notifications; Flock: Birds); keys drawn as keycaps; disclosures open with a drawn chevron; a switch stays beside its words on narrow windows; Zeca's memory comes before the species gallery, with the second family folded; Agents says when every connected agent is up to date and puts retired agents apart; an ACP engine's unknown sign-in has a neutral dot.
