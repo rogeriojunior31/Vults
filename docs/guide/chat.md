@@ -13,9 +13,11 @@ In Quick, conversation actions stay beside Zeca, and the engine sits below the d
 Its menu opens upward across the footer width, with one scroll area for long lists
 and wrapping engine, model and effort options, in a started conversation too.
 Quick Chat is slightly wider than the other tabs (about 561 logical pixels after zoom).
-An empty Quick Chat stays short: Zeca uses his original 3x portrait beside a greeting,
-with the draft and controls directly below. The title disappears and his portrait uses 2x
-when messages arrive. The surface grows with the actual transcript until it reaches the
+An empty Quick Chat stays short and quiet: Zeca's original 3x portrait, no name, greeting or
+explanation, and *Ask anything…* in the draft, with the controls directly below. Once messages
+arrive the portrait gives its room to them and the header shrinks to its buttons. Long replies
+keep their code, diffs and tool output in their own shorter scrolling blocks, and nothing in the
+transcript scrolls sideways. The surface grows with the actual transcript until it reaches the
 available overlay height, then only the transcript scrolls. Starting an empty conversation
 releases the previous transcript height. Opening, loading and closing the engine menu does
 not change that height: the menu overlays the conversation and scrolls within the space

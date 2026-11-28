@@ -879,7 +879,8 @@ export class ChatPanel {
     this.paintContext();
     this.findInput.placeholder = t("Find in conversation");
     this.findInput.setAttribute("aria-label", this.findInput.placeholder);
-    this.input.placeholder = this.opts.specialist ? t("Message {name}…", { name: this.recipientName() }) : t("Ask Zeca…");
+    // Quick is for asking fast: no name, no introduction.
+    this.input.placeholder = this.opts.specialist ? t("Message {name}…", { name: this.recipientName() }) : this.compact ? t("Ask anything…") : t("Ask Zeca…");
     this.input.setAttribute("aria-label", this.input.placeholder);
     this.input.title = t("Type @ to reference a file, folder, session or project.");
     this.log.setAttribute("aria-label", t("Chat"));
@@ -1171,7 +1172,8 @@ export class ChatPanel {
     this.greeting.textContent = this.opts.specialist ? this.recipientName() : this.offers?.greeting ?? t("Ask Zeca");
     const api = t("Ask anything, or drop a file on the island. This chat only talks: it can't run commands or open your project.");
     this.caption.textContent = this.offers?.caption ?? t("Ask anything, or drop a file on the island.");
-    this.caption.hidden = !this.offers && (this.compact || this.provider === "api");
+    this.caption.hidden = this.compact || (!this.offers && this.provider === "api");
+    this.greeting.hidden = this.compact && !this.opts.specialist;
     if (this.opts.specialist) {
       this.caption.textContent = this.provider === "api"
         ? t("This agent uses its own instructions, messages and selected files. GitHub is available only when enabled for this profile.")
@@ -3357,6 +3359,7 @@ export class ChatPanel {
       this.input.setAttribute("aria-label", this.input.placeholder);
     }
     this.recipient.textContent = this.recipientName();
+    this.recipient.hidden = this.compact && !this.opts.specialist;
     this.recipient.title = t("Recipient: {name}", { name: this.recipientName() });
     this.recipient.setAttribute("aria-label", this.recipient.title);
     if (this.menuOpen || this.modelOpen || this.accessOpen || this.historyOpen) this.closeMentions();

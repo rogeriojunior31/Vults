@@ -3444,6 +3444,18 @@ body.still #island .inner:has(.main > .chat) .need-strip.top { animation: none; 
 #island .main:has(> .chat) { display: flex; flex: 1; overflow-y: auto; }
 #island .chat-main { min-height: 0; }
 #island .chat :is(.chat-head, .chat-foot) { flex: none; }
+/* Once a conversation runs, Quick gives the perch's room to the messages. */
+#island .chat.has-messages .chat-perch { display: none; }
+#island .chat.has-messages .chat-head { min-height: 32px; padding-left: 0; }
+/* Long or wide replies scroll inside their own blocks; the transcript never scrolls sideways. */
+#island .chat .log { overflow-x: hidden; }
+#island .chat .msg { max-width: 100%; min-width: 0; }
+#island .chat .msg.you { max-width: 88%; }
+#island .chat .activity-diff { max-height: 160px; }
+#island .chat .activity-output, #island .chat .activity-reasoning { max-height: 120px; }
+#island .chat .codeblock pre { max-height: 200px; }
+#island .chat .msg.you > .msg-tools { position: static; opacity: 1; justify-content: flex-end; }
+#island .chat .msg.you:not(:hover):not(:focus-within) > .msg-tools { display: none; }
 #island .chat .log-box { flex: 0 1 auto; height: var(--chat-content-height, 0px); min-height: 0; }
 #island .chat.has-messages .log-box { min-height: 40px; }
 #island .chat:not(.has-messages):not(.chat-api) .log-box { display: none; }

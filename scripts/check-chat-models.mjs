@@ -237,7 +237,7 @@ try {
       assert.equal(sent, 0);
       assert.equal(input.value, "Keep composing");
     }
-    assert.equal(input.attributes["aria-label"], "Ask Zeca…");
+    assert.equal(input.attributes["aria-label"], surface === "island" ? "Ask anything…" : "Ask Zeca…");
     assert.equal(log.tabIndex, 0, "The transcript must support keyboard scrolling");
     input.listeners.keydown({ key: "Enter", preventDefault() {} });
     await tick();

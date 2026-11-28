@@ -1299,6 +1299,7 @@ export default {
   "A conversation keeps its model; New starts another.": "Una conversación mantiene su modelo; Nuevo empieza otra.",
   "The model and effort for new conversations in this folder.": "El modelo y el esfuerzo de las nuevas conversaciones en esta carpeta.",
   "Clean": "Limpio",
+  "Ask anything…": "Pregunta lo que quieras…",
   "Context: {used} of {window} tokens. Near the end, start a new conversation or let the engine compact it.": "Contexto: {used} de {window} tokens. Cerca del final, empieza una conversación nueva o deja que el motor la compacte.",
   "Context: {used} tokens": "Contexto: {used} tokens",
   "Using {tool}…": "Usando {tool}…",

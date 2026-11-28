@@ -1299,6 +1299,7 @@ export default {
   "A conversation keeps its model; New starts another.": "一段对话会保持它的模型；新建可开始另一段。",
   "The model and effort for new conversations in this folder.": "此文件夹中新对话的模型和力度。",
   "Clean": "干净",
+  "Ask anything…": "随便问…",
   "Context: {used} of {window} tokens. Near the end, start a new conversation or let the engine compact it.": "上下文：已用 {used}，共 {window} 个 token。接近上限时，请开始新对话或让引擎压缩它。",
   "Context: {used} tokens": "上下文：{used} 个 token",
   "Using {tool}…": "正在使用 {tool}…",

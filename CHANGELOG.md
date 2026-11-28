@@ -17,6 +17,10 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 - **Phone**: the pairing code's text shows only on request, and **Copy** leaves it out of clipboard history and cloud sync.
 - **Phone relay**: plain `http://` only for a relay on this computer, a LAN or a tailnet; one address holds at most 64 connections (`VULTS_RELAY_PER_ADDRESS`, 0 behind a proxy).
 
+### Changed
+
+- **Quick chat**: no name, greeting or explanation; *Ask anything…* in the draft. Once a conversation runs, the portrait gives its room to the messages, and long code, diffs and tool output scroll in their own shorter blocks.
+
 ### Added
 
 - **Zeca's chat**: an edit in a turn's **Activity** shows its change as colored lines, with the lines added and removed on its row (Claude Code and Codex).
