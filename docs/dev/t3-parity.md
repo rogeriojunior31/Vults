@@ -281,3 +281,52 @@ What Vults already has: links open in the system browser (`app/src/runtime.rs:13
 
 Rules for both: nothing leaves the computer for a title or a search unless its feature is on; a
 browser the agent drives is a Lab first, never on by default, and never answers a permission.
+
+## 9. The chat's workspace bar: worktrees, PRs, editors and connections
+
+t3code: the thread header shows the project and branch; a worktree per thread (`New thread on
+{branch}`), *Open in* with the editors it finds (VS Code, Insiders, VSCodium, Cursor, Zed, Kiro, Trae,
+Finder/Files; `apps/web/src/components/Icons.tsx`), git actions from the header (commit, push, create
+a PR) and Linear/Jira links on the thread.
+
+What Vults already has:
+
+- roosts group a repository's worktrees (`app/src/roosts.rs`: shared git dir, `owner/repo` from the
+  remote, a worktree's own HEAD);
+- creating and editing a PR through the GitHub connector, prepared and shown before any write
+  (`crates/connectors/src/github/pull_requests.rs`, `PullRequestWrite::Create`), and the same for
+  GitLab and Gitea;
+- the Nest chat's side panel (`ui/src/surfaces/nest/workspace.ts`: Changes with diffs, Files);
+- the official marks of GitHub, GitLab, Gitea and the editors' brands (`ui/src/brands.ts`).
+
+What is missing: the chat does not show the branch or worktree it works in, cannot open the folder in
+an editor, and the connections' actions live only in Connections.
+
+### Clean, in one bar
+
+One quiet line above the Nest chat's messages, nothing else added:
+`[repo mark] owner/repo  ·  ⎇ branch (worktree)  ·  ↗ Open in ▾  ·  ⋯`
+
+- **Branch chip**: the branch and whether this folder is a worktree; a click lists the repository's
+  worktrees (from roosts) with their branch and changes count, and **Chat here** for each. Read-only:
+  Vults lists worktrees, the agent creates them.
+- **Open in ▾**: the editors found on this computer (by their commands on PATH: `code`, `codium`,
+  `cursor`, `zed`, `subl`, and the file manager), each with its mark; the last one used becomes the
+  button's default. It opens the conversation's folder, or a file from Changes at its line.
+- **⋯ (connections)**: only what the connected forge can do for this branch, each one a prepared
+  action you see before it runs: **Create PR** (title and body drafted from the conversation, base and
+  head filled, draft by default), **Open PR** when one exists (its checks dot), **Open issue**. A
+  forge that is not connected shows one line: *Connect GitHub in Connections*.
+- In Quick, nothing of this: Quick stays fast; the Nest is where work is.
+
+Rules: a PR is a write on your behalf, so it is shown first and sent with a click (rule 4, the gate);
+opening an editor runs a local program with the folder as its argument, never a shell string.
+
+| # | Step | Where | Size |
+|---|---|---|---|
+| W1 | The workspace bar: repo mark, branch chip (worktree or not), from the conversation's folder | `app/src/roosts.rs`, `nest/workspace.ts` | S |
+| W2 | The worktree list from the chip, with changes count and *Chat here* | `app/src/roosts.rs`, `nest/` | M |
+| W3 | **Open in**: editors found on PATH with their marks, last used first; folder, or a file at its line from Changes | `crates/platform`, `app/`, `ui/src/brands.ts` | M |
+| W4 | **Create PR** from the chat: drafted from the conversation, shown as the connector's prepared write, sent with a click | `app/src/chat.rs`, `crates/connectors` | M |
+| W5 | **Open PR / Open issue** and the PR's checks dot on the bar | `crates/connectors`, `nest/` | S |
+| W6 | Docs and a check for the bar's states | `docs/guide/chat.md`, `scripts/` | S |
