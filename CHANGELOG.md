@@ -32,6 +32,8 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Changed
 
+- **Icons**: every surface draws Lucide's line icons, as t3code does (ISC; see NOTICE); the flock keeps its own drawing.
+
 - **Settings**: **Zeca, chat and agents** groups Zeca, Chat & voice and Agents. Chat & voice reads in sections (agent engines, permissions and setup, API, web, voice); the API providers are a list beside the chosen one's key and model; Agents lists what is connected, then what is here to set up.
 
 - **Settings**: one topic per page, each with titled sections, as t3code arranges them. **Zeca** leads its own group with **Chat & voice**: his portrait, switch, look, species and memory (moved from Chat & voice). **General** keeps startup, usage and updates; **Appearance** (colors and themes, interface), **Island**, **Sound and notifications** and **Keyboard shortcuts** are pages of their own; **Flock** keeps the flock's species pool and rare visitors.

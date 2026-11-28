@@ -31,8 +31,10 @@ this document defines how the UI presents them.
 - With no sessions, the Nest's habitat keeps its heading while its empty sky recedes.
   The existing welcome bird, explanation and agent setup action lead the empty state.
   Populated habitats retain their scene and bird positions.
-- Reuse the existing icon vocabulary and font stack. Do not introduce a second
-  icon set, downloaded font, component framework or theme for a prototype.
+- Icons are Lucide's line drawings (as t3code uses them), kept by name in
+  `ui/src/island/icons.ts`; only the flock keeps the product's own drawing. Add an icon by
+  taking Lucide's, never by drawing a second style. Reuse the font stack. Do not introduce a
+  second icon set, downloaded font, component framework or theme for a prototype.
 
 | Role | Production token | Current value |
 | --- | --- | --- |
