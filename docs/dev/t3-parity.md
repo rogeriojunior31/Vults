@@ -1,13 +1,82 @@
 # What t3code does well, in Vults
 
-The plan for six areas where t3code (studied at its `61808c68cf`) is ahead, each step with where it
+The plan for the areas where t3code (studied at its `61808c68cf`) is ahead, each step with where it
 goes and its size (S, M, L). Every step keeps Vults' rules: Linux first, Rust backend, no telemetry,
 a request only through `app/src/gate.rs` for a feature the user turned on, secrets only in the
 keyring, a permission answered only by a human or by what they chose beforehand, every sentence in
 four languages, docs in English and Brazilian Portuguese in the same PR.
 
-Order: **Labs** first (it lets the others ship off by default), then **Chat folders**, **Settings**,
-**Code**, **Scheduled tasks**, **Environments**.
+The order of work is the roadmap's *t3code first* section ([ROADMAP.md](ROADMAP.md)); section 0 below
+is how each step is built.
+
+## 0. How every step here is built
+
+The sections below say *what* each step does. This one says *how*, once for all of them, so a feature
+lands whole and is not reopened later.
+
+### Shared pieces, built once
+
+Several sections need the same thing. Each piece is built in the first step that needs it, in the
+place named here, and every later step reuses it. A step never draws its own copy.
+
+| Piece | First needed by | Lives in | Reused by |
+|---|---|---|---|
+| **List and detail pane**: a list (groups, mark, title, one line, a dot) beside the chosen item's detail; arrow keys, Home and End; stacked when narrow | Settings, Agents (done) | `ui/src/surfaces/settings/pieces.ts` today; moves to `ui/src/pane.ts` at C2 | C2, C3, C6 (Connections), U6 (Usage), S10 (Scheduled tasks), T2 (archived conversations) |
+| **Prepared-write card**: what will change, the target and its fresh state (head SHA, open or closed), *Send* and *Cancel*, audited; the same card in the Nest and the chat | Connections, C4 | `ui/src/surfaces/nest/prepared.ts` over `app/src/connectors.rs` prepare and execute | C5, C7, C9, C11, W4 (Create PR from the chat), X6 |
+| **Markdown as DOM** (never HTML), task boxes, code with highlighting | done | `ui/src/island/markdown.ts` | C2, C6, the Summary of a run (S11) |
+| **Diff view**: files, hunks, line numbers, a selection | done in Changes | `ui/src/island/chat-activity.ts`, `nest/workspace.ts` | C8, C9, X5 (ask about lines), W3 (open at a line) |
+| **Marks**: a provider, agent, forge or editor by its official mark | done | `ui/src/brands.ts`, `brandMark()` | W3 (editors), C2 (forges), U6 (chart colors), I2 to I4 |
+| **Icons**: Lucide only, `icon(name, size, stroke)` | done in Settings | `ui/src/island/icons.ts` | every step; I1 adds the check |
+| **Numbers**: tokens as 1.2K, M, B or T; money; *in 2 h*, *51d ago*; pace | U3 | `ui/src/cost.ts` (tokens, money, pace), `ui/src/time.ts` (relative time) | U6, the chat ring, C2 (*opened 51d ago*), S10 (*next run*) |
+| **SVG chart**: lines and soft areas per series, a tooltip, no chart library, both themes | U6 | `ui/src/chart.ts` | Records, later usage per roost |
+| **Editors table**: the editors found on PATH, each with its go-to-line argument, one absolute path argument, never a shell | W3 | `app/src/open.rs` | W3, C8 (open a file at a line), X5 |
+| **Store migrations**: one numbered migration per step that adds a table, with a test that opens an old database | T2 | `crates/store/migrations/` | T2, S3, U4, C10 |
+| **A Lab**: a switch in `crates/core/src/labs.rs`, off by default, its docs line | done | `labs.rs`, `labs.gen.ts` | S2, X7, X11, B4, T7 |
+| **A gate feature**: switch, daily budget, local trace, docs in the safety table | done | `app/src/gate.rs` | S4 (`ROUTINES`), any new request |
+
+### The checklist for each step
+
+Every step meets all of these in the same PR. A step that cannot is split, never shipped half.
+
+1. **Layers.** Domain in `crates/core` (pure: `reduce`, no IO), IO in its crate, the app glues them,
+   the UI renders `State::view()`. `scripts/check-layers.sh` passes.
+2. **Rules.**
+   - A request is made only for a feature the user turned on, through `app/src/gate.rs`, with its budget and trace.
+   - A write is a prepared-write card, a click and an audit line.
+   - A permission is answered only as rule 2 says.
+   - A secret is only in the keyring.
+   - An agent's config is changed only with a backup, a diff and a click.
+3. **States.** Each new view has its loading, empty, error with *Try again*, and long-content states.
+   Each new action has its pending, done and failed states, and keeps the user's draft on failure.
+4. **Words.**
+   - Every sentence is short (one per row; *More* holds the rest) and written whole in English.
+   - The same PR translates it into pt-BR, es and zh.
+   - `scripts/check-i18n.sh` and `scripts/check-english.sh` pass.
+5. **Look.** It reuses the shared pieces above, the theme tokens and Lucide icons; marks through
+   `brandMark()`. It works in the dark and light themes, at the Nest's smallest size, and with the
+   keyboard alone. Every button has its words or an `aria-label`.
+6. **Tests.**
+   - Rust: unit tests for the domain and parsing.
+   - The UI: a `scripts/check-*.mjs` per new surface or flow, covering every state in item 3, added to *Before every commit* in `CLAUDE.md` and to CI.
+   - A request or a write: a test with a recorded response, never the network.
+7. **Docs.**
+   - The guide page in English and pt-BR (with its source mark).
+   - The safety table when it sends something.
+   - The settings reference when it adds a setting.
+   - `CHANGELOG.md`, and this file's step marked done.
+8. **In the running app.** Checked in `npm run tauri dev` on Linux before the PR merges, with what was
+   seen written in the PR.
+
+### Order and dependencies across sections
+
+- **Nothing outside a section.** Steps with no dependency outside their own section: X1, X3, X4, X8, X9, X10, X12-X15, T1, T6, U1-U3.
+- **The pane first.** C2 moves the list and detail pane to `ui/src/pane.ts`; U6, S10 and T2's archive list wait for it.
+- **The prepared-write card.** C4 builds it; W4, C5, C7, C9, C11 and X6 use it.
+- **The bird on the wire.** S5 (a specialist's run on the island) closes UX8-PROJ and comes before S8.
+- **The usage scan.** U4 replaces most of W9b (the OTLP receiver); W9b is reconsidered after U4.
+- **Icons last.** I1 to I7 run after the features of phases A to D, so each surface is redrawn once.
+- **Decisions before code.** U9 (Claude's reset credits) and B4 (agent access to a browser) need a
+  decision recorded as an ADR before any step.
 
 ## 1. Labs
 
@@ -358,3 +427,184 @@ an IDE; `@` lists paths), guest share links and tunnels (they expose the machine
 relay are the Vults way), 1Password and agent secret requests (secrets only in the keyring), webhooks
 (inbound network), *suggest next prompt* (sends every draft to a model), MCP server management (the
 CLI owns it), telemetry export (no telemetry), Mermaid and HTML render (heavy for little).
+
+## 11. Usage: plans, resets, cost and tokens
+
+**What t3code does.**
+
+- **Plan limits.** Claude's come from the CLI's `get_usage` (`apps/server/src/provider/claudeUsageLimits.ts:187-233`): the 5-hour *Session* window, *Weekly*, a weekly row per model (`model_scoped`) and *Monthly spend* (`extra_usage`), all updated live from the stream's rate-limit events. Codex's come from app-server `account/rateLimits/read` (`codexUsageLimits.ts:60-132`): primary and secondary windows, a monthly window for Free and Go plans, and the individual credit limit.
+- **Resets.** These are banked reset credits, not a window count.
+  - Claude: t3code reads the CLI's OAuth token from `~/.claude/.credentials.json` and calls `api.anthropic.com/api/oauth/usage` with a `claude-cli` user agent (`claudeResetCredits.ts:194-230`). That returns the count left for each kind (5-hour, Weekly and others), when they expire, and a *Redeem* (`POST .../reset_rate_limits`).
+  - Codex: the same `account/rateLimits/read` returns them as `rateLimitResetCredits`.
+- **Tokens and cost**, local only.
+  - Sources: Claude's transcripts (`~/.claude/projects/**/*.jsonl`, `Drivers/claudeUsage.ts:135-148`: input, cache read, cache write with its 1-hour split, output, `costUSD`, deduplicated by message and request) and Codex's `token_count` events in `~/.codex/sessions`; also OpenCode, Cursor, Antigravity and others. Scans are cached.
+  - Cost per category: `input×in + cacheRead×cr + cacheWrite5m×cw5m + cacheWrite1h×cw1h + output×out`, with speed tiers and context tiers (`usage/usagePricing.ts:357-368`). A cost the agent reports wins, and the split is scaled to it. Every figure says its source: *reported*, *priced* or *unpriced*. Cache savings are shown.
+- **UI** (`components/usage/UsagePage.tsx`):
+  - toggles: Cost, Tokens or Limits, over 24 hours (hourly) or 7, 30 or 90 days;
+  - the total, with *API estimate* and the unpriced share, and each provider's share;
+  - a daily chart in hand-written SVG, a line and a soft area per provider with a tooltip (`UsageProviderChart.tsx`; no chart library);
+  - tiles for processed tokens, cached input, uncached input, output and cache savings;
+  - share bars by token type, cost type and speed, and a table by model or by day;
+  - tokens formatted as 1.2K, M, B or T (`packages/shared/src/usageFormat.ts:94-115`);
+  - limits as bars with *Resets 18:00 · in 2 h*, the pace, and the reset credits with *Redeem* behind a confirmation.
+
+**What Vults has.**
+
+- **Plan windows.** Codex's through `account/rateLimits/read` and Claude's through the CLI's `get_usage` (`crates/agents/src/usage.rs`), behind the gate features `codex-usage` and `claude-usage`. Only the 5-hour and 7-day windows are read; the per-model weekly rows, `extra_usage` and the reset credits are ignored.
+- **Cost.** A `spend` table per day, source and roost, filled only from costs the agents report (`crates/store/src/spend.rs`). Live per-session token metrics (`crates/agents/src/metrics.rs`). Catalog prices from models.dev behind `model-prices` (`crates/agents/src/prices.rs`).
+- **UI.** Nest → Records → usage: plan bars, 14 days of CSS bars against the budget, tokens per day, roosts and tiles (`ui/src/surfaces/nest/records.ts:240-300`). The chat's ring shows the fullest window. Settings has *Usage and prices* and the daily budget.
+- **Not built.** W9b, the cost of watched sessions through an OTLP receiver.
+
+**The rule for resets.** Vults reads usage only through what the agent's own CLI answers, and never uses the CLI's token itself (`crates/agents/src/usage.rs:1-2`, CLAUDE.md rule 4). Codex's reset credits arrive in a response Vults already asks for, so they can be shown at once. Claude's are different: they need Vults to read the CLI's OAuth token and call Anthropic as if it were the CLI. That goes against the rule, so it is **To decide** below, not a step. Redeeming a credit is never automatic: a click after a confirmation that says what it spends.
+
+| # | Step | Where | Size | Network |
+|---|---|---|---|---|
+| U1 | **Every window** from the responses already fetched: Claude's weekly per model and monthly spend; Codex's monthly and credit limit | `crates/agents/src/usage.rs`, `crates/core` state | S | none new |
+| U2 | **Codex reset credits**: the count left and the next expiry, from `rateLimitResetCredits` in the same read | `crates/agents/src/usage.rs` | S | none new |
+| U3 | **Token format and pace**: 1.2K, M, B or T rounding-aware; *ahead*, *on pace* or *under* from the time used against what is used | `ui/src/cost.ts`, chat ring, Records | S | none |
+| U4 | **Local usage scan**: Claude's transcripts and Codex's sessions, incremental with an offset cache, deduplicated, into a `usage` table per hour, provider, model and token kind; also sessions Vults never watched. Replaces most of W9b | `crates/agents/src/usage_scan.rs`, `crates/store` migration | L | none |
+| U5 | **Cost math**: the 1-hour cache-write rate, speed and context tiers, a split by kind, cache savings; a reported cost wins and the split scales to it; each figure says *reported*, *priced* or *unpriced* | `crates/agents/src/prices.rs` | M | none new (models.dev already gated) |
+| U6 | **The Usage page** in the Nest: Cost, Tokens or Limits; 24 h, 7, 30 or 90 days; a hand-written SVG chart per provider in its brand mark's color; tiles; share bars; a table by model or day; limits with *Resets 18:00 · in 2 h*, pace and credits | `ui/src/surfaces/nest/usage.ts`, store queries | L | none |
+| U7 | **Settings → History and budget**: how long usage is kept, a price override per model, model aliases | `settings/budget.ts`, `app/src/settings.rs` | M | none |
+| U8 | Docs (guide and safety in both languages), checks for the scan, the math and the format | `docs/`, `scripts/` | M | none |
+
+To decide: **U9**, Claude's reset credits and *Redeem*. They need the CLI's OAuth token and a direct call to Anthropic, so an ADR first. One option: ask the CLI for them if a future `get_usage` returns them, and show nothing until then.
+
+## 12. Connections: issues and pull requests you read, review and approve
+
+**The goal.** In Connections, a list beside a detail pane, as t3code's Issues and Pull Requests pages.
+You read the real item (description, labels, timeline, code) and you act from there: comment, close,
+review, approve, merge. Each act is a preview and a click.
+
+### What t3code does
+
+**Issues** (`apps/web/src/components/issue/`):
+
+- **The list** (`IssuesPage.tsx`):
+  - Open, Closed or All; *Everyone*, *Assigned to me*, *Opened by me* or *Mentioning me*.
+  - Sorted by *Recently updated* or *Newest*.
+  - Search, label and assignee filters, refresh.
+  - Grouped by provider and host, with a *not configured* note and *Load more* per group (`:572-655`).
+  - Saved views (`issueSavedViews.ts`).
+- **The detail** (`IssueDetailPanel.tsx:432`):
+  - `owner/repo#n` with a link, an Open/Closed menu and refresh.
+  - An editable title, then the author and *opened 51d ago*.
+  - Labels as colored chips with a picker, and assignees with a picker.
+  - The description in Markdown, task boxes included.
+  - Reactions and linked pull requests.
+  - An activity timeline mixing events and comments, with *Load older* (`:935-1030`).
+  - A comment composer (`IssueCommentComposer.tsx`).
+
+**Pull requests** (`components/pullRequest/`, `PullRequestDetailPanel.tsx:358`) have four tabs:
+
+- **Summary** (`PullRequestSummaryTab.tsx`): facts, description, checks, and comments with their file and line, plus *add to chat*.
+- **Timeline** (`PullRequestTimelineTab.tsx`): conversation, review threads, commits, lifecycle events, and reviews with their verdict.
+- **Code** (`PullRequestCodeTab.tsx`): the diff per file with *Viewed*, inline threads with *Resolve*, and draft inline comments.
+- **Guide**: a review tour written by a model.
+
+Around the tabs:
+
+- a **review form** with Comment, Approve or Request changes (`PullRequestReviewForm.tsx:62`);
+- **merge** with a method and auto-merge, ready or draft, update branch, close, delete branch (`PullRequestActionsMenu.tsx`);
+- a **checks** popover;
+- stacks.
+
+**Data.** GitHub GraphQL plus REST with a token: one from settings, from the environment, or from `gh auth token` (`GitHubCredentials.ts`). There are plug-ins for GitLab (`glab`), Forgejo, Bitbucket, Azure, Jira and Linear.
+
+### What Vults has
+
+**The UI** (`ui/src/surfaces/nest/connections.ts`):
+
+- A chip per connector, a repository filter, search and refresh.
+- Tabs Inbox, Pull requests, Actions and Releases.
+- A detail pane with the ref, title, branch, author, diff size, reviewers, a checks list and technical facts.
+- Buttons: *Open in GitHub*, *Seen*, *Ask Zeca*.
+- The only write from the UI is **Squash and merge**, with two clicks.
+- Nothing else: no description, comments, timeline, labels, issues list or code view.
+
+**Reads** (`crates/connectors/src/github.rs:47`):
+
+- The board: your open PRs, with reviews, checks and diff size.
+- Your repositories.
+- `review-requested:@me`.
+
+Richer reads exist only as Zeca's tools (`app/src/flock_tools.rs`):
+
+- `work_item`: body, state, comments, reviews, threads, files, checks and mergeable;
+- `pull_request_diff`;
+- Actions runs, jobs and logs;
+- branch rules.
+
+GitLab and Gitea are read-only snapshots.
+
+**Writes already built, each prepared, shown, clicked and audited:**
+
+- `IssueWrite` (`github.rs:622`): create, edit, comment, labels, assignees, close and reopen.
+- `PullRequestWrite` (`github/pull_requests.rs:48`): create, edit, ready, draft, reviewers, and **SubmitReview with Comment, Approve or Request changes**, including inline comments on a line and the approved head SHA as `commit_id`.
+- `MergeControl`: merge and delete branch.
+- `ActionsControl`: rerun and cancel.
+
+Today they are reachable only through Zeca's GitHub tools. `ui/src/island/markdown.ts` renders Markdown as DOM, task boxes included.
+
+So most of the backend is done. What is missing is reads the UI can call and the panes themselves.
+
+### Rules
+
+- Reads go through `gh api` (the token stays with `gh`) and through the gate, under the GitHub connector's switch, which is the one already on.
+- Every write is the existing prepared write: a preview card in the Nest, a click, the fresh check before it runs (head SHA, state), and the audit.
+- Approving needs the same click as any write. Nothing approves or merges by itself.
+- Text from an issue or PR is untrusted: it is rendered as DOM, never HTML. It reaches Zeca only quoted, through *Ask Zeca* or *Work on this* (X6).
+
+### Steps
+
+| # | Step | Where | Size | Kind |
+|---|---|---|---|---|
+| C1 | UI reads: `github_item_detail(repo, n)` and a paged `github_item_timeline`, reusing `work_item` and adding labels with colors, assignees, author, reactions, linked PRs and timeline events | `crates/connectors/src/github.rs`, `app/src/connectors.rs` | M | read |
+| C2 | **Detail pane v1** for issues and PRs: header, state pill, labels, assignees, body in Markdown, read-only timeline, linked PRs, reaction counts; *Open in GitHub*, *Ask Zeca* | `ui/src/surfaces/nest/connections-detail.ts` | M | UI |
+| C3 | **Issues tab**: `is:issue involves:@me`, with Open, Closed or All, involvement, sort, search, label filter and refresh, grouped by connector and repository | `github.rs`, `connections.ts` | M | read + UI |
+| C4 | **Comment** on an issue or PR from the pane (the existing `IssueWrite::Comment`): a preview in the Nest, a click, audited; usable with the connector on, not only Zeca's tools | `app/src/connectors.rs`, a Nest preview card | S | write |
+| C5 | **State, labels, assignees**: the Open/Closed menu and pickers (a repository-labels read) | same | S | write |
+| C6 | **PR tabs, Summary and Timeline**: description, checks, comments with file and line; reviews, threads, commits, events | `connections-detail.ts` | M | UI |
+| C7 | **Review**: Comment, Approve or Request changes (summary required for changes), through `SubmitReview`; the preview names the head commit | same | S-M | write |
+| C8 | **Code tab**: files and diffs from `pull_request_diff` (`Diff`, `FileDiff` and `Hunk` already in `view.gen.ts`), threads at their lines | same | L | read + UI |
+| C9 | Inline comments drafted in Code and sent with the review; **Resolve** a thread (a new GraphQL write) | same, `github/pull_requests.rs` | M | write |
+| C10 | **Viewed** files, kept locally in the store (no write to GitHub) | `crates/store` | S | local |
+| C11 | Merge method (squash, merge, rebase), ready or draft, rerun failed checks from the checks list: the controls exist, the menu is new | `connections-detail.ts` | S | write |
+| C12 | Docs (connectors guide in both languages, safety table), checks for the pane, the previews and stale heads | `docs/`, `scripts/` | M | — |
+
+Later: saved views (local, S), GitLab and Gitea detail reads (M each), a review guide written by Zeca
+(needs Zeca's chat on; L), stacks (skip).
+
+Order: C1, C2, C3 (the first useful slice: read everything), then C4, C5, then C6, C7 (approve from
+the pane), then C8 to C11, and C12 with each slice.
+
+## 13. Icons across the whole app
+
+**Why.** Settings now uses Lucide, as t3code does, and each provider, agent and connection shows its
+official mark (`ui/src/brands.ts`). Next to them the rest of the app looks older: icons drawn by hand,
+text glyphs used as icons, sizes and strokes that differ from one surface to the next. Changing
+everything at once gives one visual language.
+
+**Done so far.** `ui/src/island/icons.ts` holds Lucide's drawings (ISC, in NOTICE); the flock keeps
+its own pixel path. `brandMark()` draws the official marks, in the brand's color unless it is black
+or white.
+
+**The rule** (DESIGN.md, *Icons*). One set, Lucide, through `icon(name, size, stroke)`: 14 px in
+rows and menus, 16 px in buttons and tabs, 20 px in empty states, stroke 1.75 (2 on small sizes).
+A brand appears only through `brandMark()`. No text glyph stands in for an icon (✓ ✕ ▾ ↗ ⎇ ●), and an
+icon never carries meaning alone: the button has its words or an `aria-label`. The pixel-art
+characters (Zeca, the flock) stay as they are: they are the product, not icons.
+
+| # | Step | Where | Size |
+|---|---|---|---|
+| I1 | **Inventory**: every icon, hand-drawn SVG and glyph in the UI, by surface, with the Lucide name or brand mark that replaces it; a check that fails on a new inline SVG path or glyph icon outside `icons.ts` and `brands.ts` | `scripts/check-icons.mjs` | S |
+| I2 | **The island**: the dock, cards (permission, question, done, failed), the chat's tool steps, attachments, the composer's buttons, the model and engine picker (brand marks) | `ui/src/island/` | M |
+| I3 | **The Nest**: tabs, the flock list, roosts, records, connections (each forge's mark, PR and issue states, checks), activity, the workspace bar (editors' marks) | `ui/src/surfaces/nest/` | M |
+| I4 | **The rest**: the corner widget, the dictation overlay, Settings leftovers, empty states | `ui/src/surfaces/widget/`, `dictation-overlay/`, `settings/` | S |
+| I5 | **The tray**: one monochrome icon per state (idle, working, needs you, paused) in the panel's style, light and dark | `app/icons/tray/`, `crates/platform` | S |
+| I6 | **The app icon**: Zeca's head redrawn for 16 to 512 px, sharp at each size; `.desktop`, AUR and installers | `app/icons/`, `packaging/` | M |
+| I7 | DESIGN.md's icon rule written out with the sizes; screenshots in the docs refreshed where icons changed | `DESIGN.md`, `docs/` | S |
+
+Order: I1 first (it finds everything and keeps it fixed), then I2 to I5 in one pass per surface, I6
+and I7 last. It runs after the features above so every new surface is drawn once, already in the
+new style.
