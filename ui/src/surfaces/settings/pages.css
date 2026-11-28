@@ -818,14 +818,24 @@ code {
 .engine-name { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .engine-actions { display: flex; gap: 6px; }
 .engine-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.provider-list { display: flex; flex-direction: column; gap: 2px; min-width: min(100%, 320px); }
-.provider-group { margin: 6px 0 2px; color: var(--fg-dim); font: 600 var(--text-s)/1.4 var(--font); }
-.provider-item { display: grid; grid-template-columns: auto minmax(0, auto) minmax(0, 1fr); align-items: center; gap: 8px; padding: 6px 8px; border-radius: var(--radius-control); text-align: left; color: var(--fg); }
-.provider-item:hover { background: var(--raised); }
-.provider-item.on { background: var(--raised); box-shadow: inset 2px 0 0 var(--focus); }
+.provider-card { padding: 0; overflow: hidden; }
+.provider-pane { display: grid; grid-template-columns: minmax(190px, 230px) minmax(0, 1fr); min-height: 260px; }
+.provider-list { display: flex; flex-direction: column; gap: 2px; padding: 10px 8px; border-right: 1px solid var(--border); background: color-mix(in srgb, var(--chrome) 60%, transparent); }
+.provider-detail { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 14px 16px; }
+.provider-detail-head { display: flex; flex-direction: column; gap: 2px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.provider-detail-name { display: flex; align-items: center; gap: 8px; color: var(--fg); font: 600 var(--text-l)/1.3 var(--font); }
+.provider-detail .rows > .row { padding-left: 0; padding-right: 0; }
+@media (max-width: 700px) { .provider-pane { grid-template-columns: 1fr; } .provider-list { border-right: 0; border-bottom: 1px solid var(--border); } }
+.provider-group { margin: 8px 8px 4px; color: var(--fg-muted); font: 600 11px/1.4 var(--font); text-transform: none; }
+.provider-group:first-child { margin-top: 0; }
+.provider-item { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 8px; align-items: center; width: 100%; margin: 0; padding: 7px 8px; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--fg); font: inherit; text-align: left; cursor: pointer; transition: background-color 120ms ease-out; }
+.provider-item .status-dot { grid-row: 1 / 3; }
+.provider-item:hover { background: color-mix(in srgb, var(--raised) 60%, transparent); }
+.provider-item.on { background: var(--raised); box-shadow: inset 0 0 0 1px var(--control-border); }
+.provider-item.on .provider-name { color: var(--fg-bright); }
 .provider-item:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
-.provider-name { font-weight: 600; white-space: nowrap; }
-.provider-state { color: var(--fg-dim); font-size: var(--text-s); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.provider-name { font: 600 var(--text-m)/1.3 var(--font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.provider-state { grid-column: 2; color: var(--fg-dim); font: 11px/1.35 var(--font); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 700px) { .engine-row { grid-template-columns: 1fr; } }
 
 /* General > Appearance: each theme as a tile holding a small picture of Vults in its own colors
@@ -867,3 +877,4 @@ code {
 .zeca-hero .rows > .row { padding-left: 0; padding-right: 0; }
 .species-family { margin: 14px 0 8px; color: var(--fg-dim); font: 600 var(--text-m)/1.3 var(--font); }
 @media (max-width: 560px) { .zeca-hero { grid-template-columns: 1fr; justify-items: start; } }
+@media (prefers-reduced-motion: reduce) { .provider-item { transition: none; } }

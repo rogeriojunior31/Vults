@@ -46,7 +46,7 @@ type Page = "zeca" | "dictation" | "general" | "appearance" | "island" | "sound"
 
 /** The sidebar's groups, in the prototype's order: how it feels, the work, the system. */
 const GROUPS = [
-  { id: "companion", label: tk("Your companion") },
+  { id: "companion", label: tk("Zeca, chat and agents") },
   { id: "experience", label: tk("Experience") },
   { id: "work", label: tk("Work") },
   { id: "system", label: tk("System") },
@@ -55,6 +55,7 @@ const GROUPS = [
 const PAGES: { id: Page; label: string; group: (typeof GROUPS)[number]["id"]; icon: IconName }[] = [
   { id: "zeca", label: "Zeca", group: "companion", icon: "bird" },
   { id: "chat", label: tk("Chat & voice"), group: "companion", icon: "chat" },
+  { id: "agents", label: tk("Agents"), group: "companion", icon: "terminal" },
   { id: "general", label: tk("General"), group: "experience", icon: "gear" },
   { id: "appearance", label: tk("Appearance"), group: "experience", icon: "palette" },
   { id: "island", label: tk("Island"), group: "experience", icon: "island" },
@@ -62,7 +63,7 @@ const PAGES: { id: Page; label: string; group: (typeof GROUPS)[number]["id"]; ic
   { id: "shortcuts", label: tk("Keyboard shortcuts"), group: "experience", icon: "keyboard" },
   { id: "dictation", label: tk("Dictation"), group: "experience", icon: "mic" },
   { id: "flock", label: tk("Flock"), group: "experience", icon: "flock" },
-  { id: "agents", label: tk("Agents"), group: "work", icon: "terminal" },
+
   { id: "approvals", label: tk("Approvals"), group: "work", icon: "check" },
   { id: "projects", label: tk("Projects"), group: "work", icon: "folder" },
   { id: "activity", label: tk("History and budget"), group: "system", icon: "bars" },
@@ -954,10 +955,16 @@ function agentCards(): HTMLElement[] {
   };
   const found = listed.filter(here), others = listed.filter((a) => !here(a));
   const due = listed.filter((a) => panels.get(a.kind)?.status?.outdated).length;
+  // As t3code lists its providers: what is connected first, then what is here to set up, then the rest.
+  const connected = found.filter((a) => panels.get(a.kind)?.status?.installed);
+  const toSetUp = found.filter((a) => !panels.get(a.kind)?.status?.installed);
+  const section = (title: string, agents: typeof found) => agents.length
+    ? [el("h2", { class: "settings-group-title", text: title }), ...agents.map((a) => agentCard(a.kind, a.name))]
+    : [];
   return [
     ...(due ? [el("p", { class: "note warn with-icon" }, icon("warning", 14, 2), el("span", { text: due === 1 ? t("1 agent needs an update.") : t("{n} agents need an update.", { n: due }) }))] : []),
     ...(found.length
-      ? found.map((a) => agentCard(a.kind, a.name))
+      ? [...section(t("Connected to Vults"), connected), ...section(t("On this computer, not connected yet"), toSetUp)]
       : [el("section", { class: "card" }, el("p", { class: "note", text: t("No supported agent was found on this computer. Install one, then open this page again.") }))]),
     ...(others.length ? [disclosure(t("Agents not found on this computer"), ...others.map((a) => agentCard(a.kind, a.name, false)))] : []),
   ];
@@ -1878,14 +1885,20 @@ function chatPage(): HTMLElement[] {
     void refreshApi();
   };
 
+  // As t3code shows its providers: the list beside the chosen one's detail (stacked when narrow).
+  const summary = p ? apiSummary(p) : null;
+  const detail = p
+    ? el("div", { class: "provider-detail" },
+        el("div", { class: "provider-detail-head" },
+          el("div", { class: "provider-detail-name" }, dot(summary!.dot), el("span", { text: p.label })),
+          el("p", { class: "row-about", text: summary!.headline })),
+        el("div", { class: "rows" }, row(...keyRow(p, done)), row(...modelRow(p))),
+        message)
+    : el("div", { class: "provider-detail" }, el("p", { class: "note", text: t("Choose a provider on the left.") }));
   const rows: (HTMLElement | null)[] = [
-    row(t("Provider"), t("API messages go to this provider. This mode cannot run commands or edit files."), providerList(), t("The API chat can't run commands, edit files or open your project. It reads the files you drop on the island and, when a question needs it, what the island shows (your sessions, the cards waiting, usage, your GitHub card), which then goes to the provider with the conversation. Keys are kept in the system keyring, never in a file, and only ever sent to their own provider.")),
+    el("div", { class: "provider-pane" }, providerList(), detail),
   ];
-  if (p) {
-    rows.push(row(...keyRow(p, done)));
-    rows.push(row(...modelRow(p)));
-  }
-  rows.push(message ? el("div", { class: "row" }, message) : null);
+  const apiNote = t("The API chat can't run commands, edit files or open your project. It reads the files you drop on the island and, when a question needs it, what the island shows (your sessions, the cards waiting, usage, your GitHub card), which then goes to the provider with the conversation. Keys are kept in the system keyring, never in a file, and only ever sent to their own provider.");
 
   return [
     el("h1", { text: t("Chat & voice") }),
@@ -1894,6 +1907,10 @@ function chatPage(): HTMLElement[] {
       class: "lede",
       text: t("Claude Code and Codex use your CLI login and subscription. API providers use your own key or a local model."),
     }),
+    el("h2", { class: "settings-group-title", text: t("Agent engines") }),
+    el("p", { class: "note", text: t("The CLIs that run Zeca's chat on this computer, each with its own login. Vults only asks each one whether it is signed in.") }),
+    enginesCard(),
+    el("h2", { class: "settings-group-title", text: t("Permissions and setup") }),
     el(
       "section",
       { class: "card rows" },
@@ -1942,13 +1959,12 @@ function chatPage(): HTMLElement[] {
           : []),
       ...(accessNote ? [el("p", { class: "note error", text: accessNote })] : []),
     ),
-    el("h2", { text: t("Agent engines") }),
-    el("p", { class: "note", text: t("The CLIs that run Zeca's chat on this computer, each with its own login. Vults only asks each one whether it is signed in.") }),
-    enginesCard(),
-    el("h2", { text: t("API") }),
-    el("section", { class: "card rows" }, ...rows),
-    ...(web ? [el("h2", { text: t("Web") }), el("section", { class: "card rows" }, ...webRows())] : []),
-    el("h2", { text: t("Voice") }),
+    el("h2", { class: "settings-group-title", text: t("API") }),
+    el("p", { class: "note", text: t("API messages go to this provider. This mode cannot run commands or edit files.") }),
+    el("section", { class: "card provider-card" }, ...rows),
+    el("p", { class: "note", text: apiNote }),
+    ...(web ? [el("h2", { class: "settings-group-title", text: t("Web") }), el("section", { class: "card rows" }, ...webRows())] : []),
+    el("h2", { class: "settings-group-title", text: t("Voice") }),
     el("section", { class: "card rows" },
       row(t("Voice model and language"), t("Dictation and Chat share one local model and spoken language. Manage both in Settings > Dictation > Voice input."), button(t("Dictation settings"), () => chooseDictation("voice")))),
   ];
