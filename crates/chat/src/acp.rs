@@ -121,6 +121,8 @@ enum Msg {
         /// Its kind and its input, as far as this message says them.
         kind: Option<String>,
         input: Option<Value>,
+        /// The change it makes, from its `diff` content, as the chat's diff lines.
+        diff: Option<String>,
     },
     /// The session's cost so far, in US dollars (`usage_update`).
     Cost(f64),
@@ -221,6 +223,7 @@ fn update(u: &Value) -> Msg {
                 mutates: matches!(u["kind"].as_str(), Some("edit" | "delete" | "move" | "execute")),
                 kind: u["kind"].as_str().map(str::to_string),
                 input,
+                diff: change_of(u),
             }
         }
         Some("usage_update") if u["cost"]["currency"] == "USD" => u["cost"]["amount"]
@@ -229,6 +232,26 @@ fn update(u: &Value) -> Msg {
             .map_or(Msg::Other, Msg::Cost),
         _ => Msg::Other,
     }
+}
+
+/// The change an edit call reports: each `diff` content's old and new text, under its path.
+fn change_of(u: &Value) -> Option<String> {
+    let parts: Vec<String> = u["content"]
+        .as_array()?
+        .iter()
+        .filter(|c| c["type"] == "diff")
+        .filter_map(|c| {
+            crate::edit_diff(
+                c["path"].as_str().unwrap_or_default(),
+                c["oldText"].as_str().unwrap_or_default(),
+                c["newText"].as_str().unwrap_or_default(),
+            )
+        })
+        .collect();
+    crate::diff_bounded(&parts.join(
+        "
+",
+    ))
 }
 
 /// A call's input: its `rawInput`, or else the arguments it streams as its text before it runs
@@ -817,6 +840,7 @@ impl AcpDriver {
                     mutates,
                     kind,
                     input,
+                    diff,
                 } => {
                     said.note(&id, kind, input);
                     if mutates && end == Some(true) && !allowed.contains(&id) {
@@ -840,6 +864,12 @@ impl AcpDriver {
                         })
                         .await;
                         tools.insert(id.clone(), (tool, true));
+                    }
+                    // Its change, once told: the update that carries it may come before or after.
+                    if let Some(diff) = diff
+                        && tools.get(&id).is_some_and(|(_, told)| *told)
+                    {
+                        sink.event(Event::ToolDiff { id: id.clone(), diff }).await;
                     }
                     if let Some(ok) = end {
                         sink.event(Event::ToolEnd { id: id.clone(), ok }).await;
@@ -942,6 +972,18 @@ pub fn inside(dir: &Path, path: &str) -> bool {
 mod tests {
     #![allow(clippy::unwrap_used)]
     use super::*;
+
+    #[test]
+    fn an_edit_call_brings_its_diff() {
+        let call = r#"{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"s","update":{"sessionUpdate":"tool_call","toolCallId":"c","kind":"edit","title":"Edit","rawInput":{"filePath":"/w/a.txt"},"content":[{"type":"diff","path":"/w/a.txt","oldText":"old","newText":"new"}]}}}"#;
+        assert!(
+            matches!(classify(call), Msg::Tool { diff: Some(ref d), .. } if d == "@@ /w/a.txt
+-old
++new"),
+            "{:?}",
+            classify(call)
+        );
+    }
 
     #[cfg(unix)]
     #[tokio::test]
