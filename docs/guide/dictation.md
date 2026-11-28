@@ -90,7 +90,7 @@ Other apps keep the words. Turn it off in **Settings > Dictation > Paste > Spoke
 ## Styles and text clean-up
 
 Optionally, a model can tidy the text after it is transcribed. **Dictation > Styles**, **Clean up
-with a model** is off by default; it uses the API provider chosen in **Settings > Chat & voice**
+with a model** is off by default; it uses the API provider chosen in **Settings > Agents**
 (a local Ollama or LM Studio works too). Only text is sent, never audio.
 
 | Style | Result |

@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 9c8bd9ea49ab -->
+<!-- source: 7be9baca15c8 -->
 
 Os painéis laterais redimensionáveis seguem o ponteiro que iniciou o arraste, ignoram toques adicionais e encerram o arraste quando a janela perde o foco. O cancelamento preserva a largura atual e mantém os rascunhos. Quando o espaço limita um painel, o arraste e o redimensionamento pelo teclado partem da largura visível; reduzir apenas o espaço disponível não sobrescreve a largura salva. Os controles de redimensionar e recolher usam a mesma cor de foco de teclado que o restante do tema selecionado.
 
@@ -136,7 +136,7 @@ de novo; digitar ou atualizar o chat não repete continuamente a consulta que fa
 
 A escolha é lembrada por pasta e por motor: uma conversa nova naquela pasta começa com ela. Ela
 também pode mudar no meio da conversa: o próximo turno roda com o novo modelo e esforço, e a
-conversa continua; uma resposta que já está chegando mantém o que começou usando. O modelo do chat por API é escolhido em **Settings → Chat & voice**.
+conversa continua; uma resposta que já está chegando mantém o que começou usando. O modelo do chat por API é escolhido em **Settings → Agents → API providers**.
 
 <a id="referencing-the-flock"></a>
 
@@ -489,13 +489,12 @@ Veja [Segurança](../safety.md) para o resto.
 ## Sem uma CLI: uma chave de API, ou um modelo local
 
 O chat também pode usar a API de um provedor com a sua própria chave, ou um modelo rodando na sua
-máquina. Em **Settings → Chat & voice**, escolha o **Provider**, cole a chave dele e escolha um **Model**; o
-nome do provedor então aparece no seletor de motor do chat, ao lado de Claude e Codex. Os provedores
-formam uma lista, cada um com um ponto e como está (*Chave salva no chaveiro do sistema.*, *Ainda sem
-chave.*, *Roda neste computador; não precisa de chave.*). Acima dela, **Agent engines** lista o Claude
-Code, o Codex e cada agente ACP instalado do mesmo jeito (*Conectado e pronto.*, *Instalado, sem
-login.*, *Não está instalado neste computador.*), com **Sign in** onde o motor tem um, quando foram
-verificados e **Check again**.
+máquina. Em **Settings → Agents → API providers**, escolha o provedor, cole a chave dele e escolha um
+**Model**; o nome do provedor então aparece no seletor de motor do chat, ao lado de Claude e Codex. Cada
+provedor mostra a sua marca, um ponto e como está (*Chave salva no chaveiro do sistema.*, *Ainda sem
+chave.*). Acima, a lista **Agents** traz cada agente com a sua marca e estado; escolher um mostra os
+hooks dele e, em **In Zeca's chat**, como está o motor (*Conectado e pronto.*, *Instalado, sem
+login.*), com **Sign in** onde houver e **Check again**.
 
 | Provedor | Chave | Observações |
 |---|---|---|

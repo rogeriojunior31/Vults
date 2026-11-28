@@ -34,6 +34,8 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Changed
 
+- **Settings → Agents**: every agent and API provider in one page, as t3code's Providers: a list with each mark and state beside the chosen agent's hooks and its engine in Zeca's chat (Sign in, Check again); the API providers below. Chat & voice keeps permissions, web and voice.
+
 - **Settings and Chat**: each provider, agent and connection shows its official mark beside its name (Claude, OpenAI/Codex, Antigravity, OpenCode, Gemini, Copilot, Ollama, GitHub, GitLab, Gitea and more), as t3code does; the chat's engine menu too.
 
 - **Settings**: 191 of its longer sentences rewritten shorter, in all four languages, keeping what leaves the computer, what costs and what can't be undone.

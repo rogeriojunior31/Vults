@@ -130,7 +130,7 @@ updating the chat does not keep repeating the failed request.
 
 The choice is remembered per folder and per engine: a new conversation in that folder starts with
 it. It can change during a conversation too: the next turn runs with the new model and effort,
-and the conversation goes on; a reply already streaming keeps the one it started with. The API chat's model is chosen in **Settings → Chat & voice**.
+and the conversation goes on; a reply already streaming keeps the one it started with. The API chat's model is chosen in **Settings → Agents → API providers**.
 
 ## Referencing the flock
 
@@ -436,12 +436,12 @@ See [Safety](../safety.md) for the rest.
 ## Without a CLI: an API key, or a local model
 
 The chat can also use a provider's API with your own key, or a model running on your machine. In
-**Settings → Chat & voice**, pick the **Provider**, paste its key, and choose a **Model**; the provider's
-name then appears at the top of the chat, next to Claude and Codex. The providers are one list, each
-with a dot and how it stands (*Key saved in the system keyring.*, *No key yet.*, *Runs on this
-computer; no key needed.*). Above it, **Agent engines** lists Claude Code, Codex and each installed
-ACP agent the same way (*Signed in and ready.*, *Installed, not signed in.*, *Not installed on this
-computer.*), with **Sign in** where the engine has one, when they were checked and **Check again**.
+**Settings → Agents → API providers**, pick the provider, paste its key, and choose a **Model**; the
+provider's name then appears at the top of the chat, next to Claude and Codex. Each provider shows its
+mark, a dot and how it stands (*Key saved in the system keyring.*, *No key yet.*). Above it, the
+**Agents** list holds every agent with its mark and state; choosing one shows its hooks and, under
+**In Zeca's chat**, how its engine stands (*Signed in and ready.*, *Installed, not signed in.*), with
+**Sign in** where it has one and **Check again**.
 
 | Provider | Key | Notes |
 |---|---|---|

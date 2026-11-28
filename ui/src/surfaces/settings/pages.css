@@ -940,3 +940,9 @@ code {
 .engine-state { display: flex; align-items: center; gap: 8px; }
 .provider-detail-name { gap: 10px; }
 .provider-detail-name .status-dot { margin-left: 2px; }
+
+/* Agents: the chosen agent's card fills the detail pane without a second card around it. */
+.agent-detail > .card { margin: 0; padding: 0; border: 0; background: transparent; box-shadow: none; }
+.agent-engine { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+.agent-engine .engine-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 4px 0; }
+.agent-list { max-height: 560px; overflow-y: auto; }

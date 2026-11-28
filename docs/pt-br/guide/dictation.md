@@ -1,5 +1,5 @@
 # Ditado
-<!-- source: 8b17f6fd9292 -->
+<!-- source: 5572042b8520 -->
 
 Fale e suas palavras viram texto no aplicativo que você estava usando. Tudo roda neste computador:
 o modelo de fala é local, o áudio fica na memória e nada é enviado com Enter. O ditado funciona com
@@ -105,7 +105,7 @@ Os outros aplicativos mantêm as palavras. Desligue em **Configurações > Ditad
 
 Se você quiser, um modelo pode arrumar o texto depois da transcrição. Em **Ditado > Estilos**,
 **Limpar com um modelo** começa desligado; ele usa o provedor de API escolhido em **Configurações >
-Chat e voz** (um Ollama ou LM Studio local também serve). Só texto é enviado, nunca áudio.
+Agentes** (um Ollama ou LM Studio local também serve). Só texto é enviado, nunca áudio.
 
 | Estilo | Resultado |
 | --- | --- |

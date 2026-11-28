@@ -371,7 +371,6 @@ function readState(failed: boolean, reading: string, failure: string, retry: () 
 let apiProviders: ApiProvider[] = [];
 /** The chat's engines as last checked, and when; read when Chat & voice opens, again on request. */
 let engines: import("../../bridge").ChatEngines | null = null;
-let enginesAt = 0;
 let enginesLoading = false;
 let enginesNote: string | null = null;
 let apiSelected = "";
@@ -933,13 +932,46 @@ let doctorAsked = false;
 
 /** The agents on this computer first, each with the step that is due; the others fold away. Before
  *  the doctor answers, or if its check fails, every agent shows as it always did. */
+/** The agent whose detail shows, kept while Settings is open. */
+let agentSelected: string | null = null;
+
+/** One agent in Zeca's chat: how its engine stands and its own sign-in; none for one that is not an
+ *  engine. One still in Labs says so. */
+function agentEngine(kind: string): HTMLElement | null {
+  const id = kind === "claude" || kind === "codex" ? kind : `acp:${kind}`;
+  const lab = LABS.find(l => l.id === `acp-${kind}`);
+  if (!engines && !enginesLoading && !enginesNote) checkEngines();
+  const listed = id === "claude" || id === "codex" || (engines?.acp ?? []).some(a => a.id === id);
+  const head = el("h3", { class: "shortcut-subtitle", text: t("In Zeca's chat") });
+  if (lab && !labOn(labs, lab.id))
+    return el("div", { class: "agent-engine" }, head,
+      el("div", { class: "row" }, el("div", { class: "row-text" }, el("div", { class: "row-about", text: t("It joins the chat once you turn it on in Labs.") })),
+        button(t("Labs"), () => choosePage("labs"))));
+  if (!listed || !engines) return engines || lab ? null : el("div", { class: "agent-engine" }, head, el("p", { class: "note", text: t("Checking the engines…") }));
+  const summary = id === "claude" || id === "codex" ? engineSummary(engines[id]) : acpSummary();
+  const SIGN_IN = ["claude", "codex", "acp:antigravity", "acp:opencode"];
+  const canSignIn = SIGN_IN.includes(id) && (id.startsWith("acp:") || engines[id as "claude" | "codex"] === "installed");
+  const signIn = canSignIn
+    ? button(t("Sign in"), () => {
+        Bridge.chatSignIn(id as import("../../bridge").ChatProvider).then(
+          () => { enginesNote = t("Finish signing in in the terminal that opened, then check again."); render(); },
+          e => { enginesNote = failure(t("Could not open a terminal."), e); render(); },
+        );
+      })
+    : null;
+  return el("div", { class: "agent-engine" }, head,
+    el("div", { class: "row engine-row" },
+      el("div", { class: "row-about engine-state" }, dot(summary.dot), el("span", { text: summary.headline })),
+      el("div", { class: "engine-actions" }, ...(signIn ? [signIn] : []), button(enginesLoading ? t("Checking…") : t("Check again"), () => checkEngines()))),
+    enginesNote ? el("p", { class: "note", text: enginesNote }) : null);
+}
+
 function agentCards(): HTMLElement[] {
   const listed = AGENTS.filter((a) => !a.retired || panels.get(a.kind)?.status?.installed || panels.get(a.kind)?.message);
   const known = present;
-  if (!known) return listed.map((a) => agentCard(a.kind, a.name));
   const here = (a: (typeof AGENTS)[number]) => {
     const p = panels.get(a.kind);
-    return known.has(a.kind) || !!p?.status?.installed || !!p?.status?.error || !!p?.message || !!p?.pending;
+    return !known || known.has(a.kind) || !!p?.status?.installed || !!p?.status?.error || !!p?.message || !!p?.pending;
   };
   const found = listed.filter(here), others = listed.filter((a) => !here(a));
   const due = listed.filter((a) => panels.get(a.kind)?.status?.outdated).length;
@@ -947,20 +979,83 @@ function agentCards(): HTMLElement[] {
   const connected = found.filter((a) => !a.retired && panels.get(a.kind)?.status?.installed);
   const toSetUp = found.filter((a) => !a.retired && !panels.get(a.kind)?.status?.installed);
   const retired = found.filter((a) => a.retired);
-  const section = (title: string, agents: typeof found) => agents.length
-    ? [el("h2", { class: "settings-group-title", text: title }), ...agents.map((a) => agentCard(a.kind, a.name))]
-    : [];
+  const groups: [string, typeof found][] = [
+    [t("Connected to Vults"), connected], [t("On this computer, not connected yet"), toSetUp],
+    [t("No longer supported"), retired], [t("Not found on this computer"), others],
+  ];
+  const all = groups.flatMap(([, list]) => list);
+  if (!all.some(a => a.kind === agentSelected)) agentSelected = all[0]?.kind ?? null;
+  const state = (a: (typeof AGENTS)[number]): [string, "ok" | "warn" | "off"] => {
+    const s = panels.get(a.kind)?.status;
+    if (a.retired) return [t("No longer supported"), "warn"];
+    if (s?.error) return [t("Can't read"), "warn"];
+    if (s?.installed) return s.outdated ? [t("Update available"), "warn"] : [t("Connected"), "ok"];
+    return others.includes(a) ? [t("Not on this computer"), "off"] : [t("Not connected yet"), "off"];
+  };
+  const list = el("div", { class: "provider-list agent-list" });
+  list.setAttribute("role", "radiogroup");
+  list.setAttribute("aria-label", t("Agents"));
+  for (const [title, agents] of groups) {
+    if (!agents.length) continue;
+    list.append(el("span", { class: "provider-group", text: title }));
+    for (const a of agents) {
+      const [line, kind] = state(a);
+      const on = a.kind === agentSelected;
+      const item = el("button", { class: `provider-item${on ? " on" : ""}`, onclick: () => { agentSelected = a.kind; render(); } },
+        brandMark(a.kind, a.name, 18),
+        el("span", { class: "provider-text" }, el("span", { class: "provider-name", text: a.name }), el("span", { class: "provider-state", text: line })),
+        dot(kind));
+      item.setAttribute("role", "radio");
+      item.setAttribute("aria-checked", String(on));
+      list.append(item);
+    }
+  }
+  list.addEventListener("keydown", event => {
+    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+    const items = [...list.querySelectorAll<HTMLButtonElement>(".provider-item")];
+    const at = items.indexOf(document.activeElement as HTMLButtonElement);
+    const next = event.key === "Home" ? 0 : event.key === "End" ? items.length - 1 : (at + (event.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
+    event.preventDefault();
+    items[next]?.focus();
+  });
+  const chosen = all.find(a => a.kind === agentSelected);
+  const detail = chosen
+    ? el("div", { class: "provider-detail agent-detail" }, agentCard(chosen.kind, chosen.name, !others.includes(chosen)), agentEngine(chosen.kind))
+    : el("div", { class: "provider-detail" }, el("p", { class: "note", text: t("No supported agent found. Install one, then reopen this page.") }));
   return [
-    ...(due ? [el("p", { class: "note warn with-icon" }, icon("warning", 14, 2), el("span", { text: due === 1 ? t("1 agent needs an update.") : t("{n} agents need an update.", { n: due }) }))] : []),
-    ...(found.length
-      ? [
-          ...(!due && connected.length ? [el("p", { class: "note ok with-icon" }, icon("check", 14, 2), el("span", { text: t("All connected agents are up to date.") }))] : []),
-          ...section(t("Connected to Vults"), connected),
-          ...section(t("On this computer, not connected yet"), toSetUp),
-          ...section(t("No longer supported"), retired),
-        ]
-      : [el("section", { class: "card" }, el("p", { class: "note", text: t("No supported agent found. Install one, then reopen this page.") }))]),
-    ...(others.length ? [disclosure(t("Agents not found on this computer"), ...others.map((a) => agentCard(a.kind, a.name, false)))] : []),
+    ...(due ? [el("p", { class: "note warn with-icon" }, icon("warning", 14, 2), el("span", { text: due === 1 ? t("1 agent needs an update.") : t("{n} agents need an update.", { n: due }) }))]
+      : connected.length ? [el("p", { class: "note ok with-icon" }, icon("check", 14, 2), el("span", { text: t("All connected agents are up to date.") }))] : []),
+    el("section", { class: "card provider-card" }, el("div", { class: "provider-pane" }, list, detail)),
+  ];
+}
+
+/** The API providers: the list beside the chosen one's key and model (t3code's providers). */
+function apiSection(): HTMLElement[] {
+  const p = apiProviders.find((x) => x.id === apiSelected);
+  const message = apiMessage ? el("p", { class: `note${apiMessage.error ? " error" : " ok"}`, text: apiMessage.text }) : null;
+  const done = (text: string, error = false) => {
+    apiMessage = { text, error };
+    void refreshApi();
+  };
+
+  // As t3code shows its providers: the list beside the chosen one's detail (stacked when narrow).
+  const summary = p ? apiSummary(p) : null;
+  const detail = p
+    ? el("div", { class: "provider-detail" },
+        el("div", { class: "provider-detail-head" },
+          el("div", { class: "provider-detail-name" }, brandMark(p.id, p.label, 22), el("span", { text: p.label }), dot(summary!.dot))),
+        el("div", { class: "rows" }, row(...keyRow(p, done)), row(...modelRow(p))),
+        message)
+    : el("div", { class: "provider-detail" }, el("p", { class: "note", text: t("Choose a provider on the left.") }));
+  const rows: (HTMLElement | null)[] = [
+    el("div", { class: "provider-pane" }, providerList(), detail),
+  ];
+  const apiNote = t("The API chat can't run commands or edit files. It reads files you drop and, when needed, what the island shows, and sends it to the provider. Keys stay in the system keyring and go only to their provider.");
+
+  return [
+    el("h2", { class: "settings-group-title", text: t("API providers") }),
+    el("section", { class: "card provider-card" }, ...rows),
+    el("p", { class: "note", text: apiNote }),
   ];
 }
 
@@ -973,9 +1068,11 @@ function agentsPage(): HTMLElement[] {
     el("h1", { text: t("Agents") }),
     el("p", {
       class: "lede",
-      text: t("Vults adds small entries called hooks to your agents' settings. You see every change first, a dated backup is kept, and other hooks stay."),
+      text: t("Every agent and provider in one place: what Vults watches in your flock, and what runs Zeca's chat."),
     }),
+    el("h2", { class: "settings-group-title", text: t("Agents") }),
     ...agentCards(),
+    ...apiSection(),
     disclosure(t("What each agent can do"),
       el("p", { class: "note", text: t("What each agent on this computer can do with Vults, used by the router and your policies.") }),
       doctor.element,
@@ -1839,45 +1936,9 @@ function checkEngines(): void {
   if (enginesLoading) return;
   enginesLoading = true;
   Bridge.chatEngines().then(
-    e => { engines = e; enginesAt = Date.now(); enginesNote = null; },
+    e => { engines = e; enginesNote = null; },
     e => { enginesNote = failure(t("Could not check the engines."), e); },
-  ).finally(() => { enginesLoading = false; if (page === "chat") render(); });
-}
-
-/** Each engine of the chat: how it stands in one line, and its own sign-in when it has one. */
-function enginesCard(): HTMLElement {
-  if (!engines && !enginesLoading && !enginesNote) checkEngines();
-  const SIGN_IN: Record<string, string> = { claude: "claude", codex: "codex", "acp:antigravity": "acp:antigravity", "acp:opencode": "acp:opencode" };
-  const line = (id: string, name: string, summary: { dot: "ok" | "warn" | "off" | "unknown"; headline: string }, canSignIn: boolean) => {
-    const signIn = canSignIn && SIGN_IN[id]
-      ? button(t("Sign in"), () => {
-          Bridge.chatSignIn(id as import("../../bridge").ChatProvider).then(
-            () => { enginesNote = t("Finish signing in in the terminal that opened, then check again."); render(); },
-            e => { enginesNote = failure(t("Could not open a terminal."), e); render(); },
-          );
-        })
-      : null;
-    return el("div", { class: "row engine-row" },
-      el("div", { class: "engine-name" }, brandMark(id, name, 18), el("span", { class: "row-title", text: name })),
-      el("div", { class: "row-about engine-state" }, dot(summary.dot), el("span", { text: summary.headline })),
-      signIn ? el("div", { class: "engine-actions" }, signIn) : null);
-  };
-  const rows: (HTMLElement | null)[] = engines
-    ? [
-        line("claude", "Claude Code", engineSummary(engines.claude), engines.claude === "installed"),
-        line("codex", "Codex", engineSummary(engines.codex), engines.codex === "installed"),
-        ...(engines.acp ?? []).map(a => line(a.id, a.title, acpSummary(), true)),
-      ]
-    : [el("p", { class: "note", text: enginesLoading ? t("Checking the engines…") : t("The engines have not been checked yet.") })];
-  const checked = enginesAt
-    ? t("Checked at {time}.", { time: new Date(enginesAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) })
-    : "";
-  return el("section", { class: "card rows engines" },
-    ...rows,
-    el("div", { class: "row engine-foot" },
-      el("span", { class: "note", text: checked }),
-      button(enginesLoading ? t("Checking…") : t("Check again"), () => checkEngines())),
-    enginesNote ? el("p", { class: "note", text: enginesNote }) : null);
+  ).finally(() => { enginesLoading = false; if (page === "chat" || page === "agents") render(); });
 }
 
 /** The API providers as one list: each with its dot and how it stands, the chosen one marked. */
@@ -1916,37 +1977,13 @@ function providerList(): HTMLElement {
 }
 
 function chatPage(): HTMLElement[] {
-  const p = apiProviders.find((x) => x.id === apiSelected);
-  const message = apiMessage ? el("p", { class: `note${apiMessage.error ? " error" : " ok"}`, text: apiMessage.text }) : null;
-  const done = (text: string, error = false) => {
-    apiMessage = { text, error };
-    void refreshApi();
-  };
-
-  // As t3code shows its providers: the list beside the chosen one's detail (stacked when narrow).
-  const summary = p ? apiSummary(p) : null;
-  const detail = p
-    ? el("div", { class: "provider-detail" },
-        el("div", { class: "provider-detail-head" },
-          el("div", { class: "provider-detail-name" }, brandMark(p.id, p.label, 22), el("span", { text: p.label }), dot(summary!.dot))),
-        el("div", { class: "rows" }, row(...keyRow(p, done)), row(...modelRow(p))),
-        message)
-    : el("div", { class: "provider-detail" }, el("p", { class: "note", text: t("Choose a provider on the left.") }));
-  const rows: (HTMLElement | null)[] = [
-    el("div", { class: "provider-pane" }, providerList(), detail),
-  ];
-  const apiNote = t("The API chat can't run commands or edit files. It reads files you drop and, when needed, what the island shows, and sends it to the provider. Keys stay in the system keyring and go only to their provider.");
-
   return [
     el("h1", { text: t("Chat & voice") }),
     ...(zeca ? [] : [el("p", { class: "note", text: t("Chat and voice need Zeca. Turn him on in Zeca.") })]),
     el("p", {
       class: "lede",
-      text: t("Claude Code and Codex use your CLI login and subscription. API providers use your own key or a local model."),
+      text: t("How Zeca's chat asks, searches the web and listens. Its agents and providers are in Agents."),
     }),
-    el("h2", { class: "settings-group-title", text: t("Agent engines") }),
-    el("p", { class: "note", text: t("The CLIs that run Zeca's chat, each with its own login. Vults only checks that you are signed in.") }),
-    enginesCard(),
     el("h2", { class: "settings-group-title", text: t("Permissions and setup") }),
     el(
       "section",
@@ -1996,9 +2033,6 @@ function chatPage(): HTMLElement[] {
           : []),
       ...(accessNote ? [el("p", { class: "note error", text: accessNote })] : []),
     ),
-    el("h2", { class: "settings-group-title", text: t("API") }),
-    el("section", { class: "card provider-card" }, ...rows),
-    el("p", { class: "note", text: apiNote }),
     ...(web ? [el("h2", { class: "settings-group-title", text: t("Web") }), el("section", { class: "card rows" }, ...webRows())] : []),
     el("h2", { class: "settings-group-title", text: t("Voice") }),
     el("section", { class: "card rows" },
@@ -2170,7 +2204,7 @@ async function loadModels(id: string): Promise<void> {
     apiModels.set(id, { error: String(e) });
   }
   apiLoading.delete(id);
-  if (page === "chat") render();
+  if (page === "chat" || page === "agents") render();
 }
 
 async function refreshApi(): Promise<void> {
@@ -2191,7 +2225,7 @@ async function refreshApi(): Promise<void> {
   } catch {
     web = null;
   }
-  if (page === "chat") render();
+  if (page === "chat" || page === "agents") render();
 }
 
 /** Zeca's web: off until turned on, an engine, its key or address. */
@@ -2594,7 +2628,7 @@ function choosePage(next: Page, section?: "memory"): void {
     void refreshActivity();
     budget.refresh();
   }
-  if (next === "chat") void refreshApi();
+  if (next === "chat" || next === "agents") void refreshApi();
   if (next === "phone") void refreshPhone(renderPhone);
   // Read again on the way in, like Projects and Phone: a stale or failed read is never shown as fresh.
   if (next === "connectors") void refreshConnectors();
