@@ -3535,7 +3535,6 @@ body.still #island .inner:has(.main > .chat) .need-strip.top { animation: none; 
 .msg li.task-item { list-style: none; }
 .msg .task { margin-right: 6px; color: var(--fg-dim); }
 .msg .task.done { color: var(--ok, #5fb87a); }
-.window-nest .msg { content-visibility: auto; contain-intrinsic-size: auto 80px; }
 .activity-output { margin: 6px 0 0; padding: 8px 10px; max-height: 220px; overflow: auto; border-left: 2px solid var(--line); background: var(--float); color: var(--fg-dim); font: 11px/1.5 var(--mono, monospace); white-space: pre-wrap; overflow-wrap: anywhere; }
 .activity-output[hidden] { display: none; }
 .ask-questions { display: flex; flex-direction: column; gap: 10px; margin: 8px 0; }
