@@ -227,6 +227,58 @@ struct Live {
     text: String,
     /// What the turn's cards say the conversation read from outside (Z8), for cards rebuilt there.
     outside: Option<String>,
+    /// The turn in the order it happened: each stretch of activity and the words after it, saved
+    /// as such so a conversation reopens as it ran.
+    segments: Vec<(vults_chat::activity::Activity, String)>,
+}
+
+impl Live {
+    /// Activity, after words: a new stretch starts.
+    fn note(&mut self, event: &vults_chat::activity::Event) {
+        use vults_chat::activity::Event;
+        self.activity.apply(event);
+        // A tool's end, output or change belongs to the stretch it started in.
+        if let Event::End { id, .. } | Event::Output { id, .. } | Event::Diff { id, .. } = event {
+            if let Some((activity, _)) = self
+                .segments
+                .iter_mut()
+                .rev()
+                .find(|(a, _)| a.tools.iter().any(|t| t.id == *id))
+            {
+                activity.apply(event);
+            }
+            return;
+        }
+        if self.segments.last().is_none_or(|(_, text)| !text.is_empty()) {
+            self.segments.push(Default::default());
+        }
+        if let Some((activity, _)) = self.segments.last_mut() {
+            activity.apply(event);
+        }
+    }
+
+    fn say(&mut self, text: &str) {
+        self.text.push_str(text);
+        match self.segments.last_mut() {
+            Some((_, said)) => said.push_str(text),
+            None => self.segments.push((Default::default(), text.to_string())),
+        }
+    }
+
+    /// What the turn saves, in order: `activity` lines (as history JSON) and `zeca` lines.
+    fn lines(&self) -> Vec<(&'static str, String)> {
+        self.segments
+            .iter()
+            .flat_map(|(activity, text)| {
+                let activity = (!activity.is_empty())
+                    .then(|| serde_json::to_string(&activity.for_history()).ok())
+                    .flatten()
+                    .map(|a| ("activity", a));
+                let text = (!text.is_empty()).then(|| ("zeca", text.clone()));
+                activity.into_iter().chain(text)
+            })
+            .collect()
+    }
 }
 
 /// A card the chat waits on: its answer's channel, and what it asks (for the audit log).
@@ -852,7 +904,7 @@ async fn send(
                     match &delta {
                         Delta::Text { text } => {
                             s.0.push_str(text);
-                            state.live(|l| l.text.push_str(text));
+                            state.live(|l| l.say(text));
                         }
                         Delta::ToolState { active } => state.live(|l| l.tools = *active),
                         Delta::Error { message } => s.1 = Some(message.clone()),
@@ -871,21 +923,19 @@ async fn send(
                     }
                 }
                 state.live(|l| match &delta {
-                    Delta::Activity { event } => l.activity.apply(event),
-                    Delta::Allowed { tool, target } => {
-                        l.activity.apply(&vults_chat::activity::Event::Decision {
-                            tool: tool.clone(),
-                            target: target.clone(),
-                            answer: "allow".into(),
-                            by: "conversation".into(),
-                        })
-                    }
+                    Delta::Activity { event } => l.note(event),
+                    Delta::Allowed { tool, target } => l.note(&vults_chat::activity::Event::Decision {
+                        tool: tool.clone(),
+                        target: target.clone(),
+                        answer: "allow".into(),
+                        by: "conversation".into(),
+                    }),
                     Delta::Settled {
                         tool,
                         target,
                         allow,
                         by,
-                    } => l.activity.apply(&vults_chat::activity::Event::Decision {
+                    } => l.note(&vults_chat::activity::Event::Decision {
                         tool: tool.clone(),
                         target: target.clone(),
                         answer: if *allow { "allow" } else { "deny" }.into(),
@@ -1252,20 +1302,17 @@ async fn send(
             crate::journal::chat(&app, "zeca", &folder, &reply, outside.is_some());
         }
         let stopped = ended.lock().is_ok_and(|e| e.1 == "stopped");
-        let activity = state.live.lock().ok().and_then(|l| {
-            (!l.activity.is_empty())
-                .then(|| serde_json::to_string(&l.activity.for_history()).ok())
-                .flatten()
-        });
-        for (who, text) in [
-            ("activity", activity),
-            ("zeca", Some(reply).filter(|r| !r.is_empty())),
-            ("error", error),
-            ("stopped", stopped.then(String::new)),
-        ] {
-            if let Some(text) = text {
-                crate::writer::send(crate::writer::Job::Say(id, who, text, Vec::new(), now));
-            }
+        // The turn as it ran: its stretches of activity and words in order, then how it ended.
+        let mut lines = state.live.lock().map(|l| l.lines()).unwrap_or_default();
+        if lines.is_empty() && !reply.is_empty() {
+            lines.push(("zeca", reply));
+        }
+        lines.extend(error.map(|e| ("error", e)));
+        if stopped {
+            lines.push(("stopped", String::new()));
+        }
+        for (who, text) in lines {
+            crate::writer::send(crate::writer::Job::Say(id, who, text, Vec::new(), now));
         }
         crate::writer::send(crate::writer::Job::Save(id, session, history, outside, now));
     }
@@ -1511,7 +1558,7 @@ fn decide_for(
             .and_then(|d| d.full)
             .unwrap_or_else(|| asked.target.clone());
         state.live(|l| {
-            l.activity.apply(&vults_chat::activity::Event::Decision {
+            l.note(&vults_chat::activity::Event::Decision {
                 tool: asked.tool.clone(),
                 target: full_target,
                 answer: match answer {
@@ -3683,6 +3730,37 @@ pub fn clean_inbox() {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_turn_saves_its_activity_and_words_in_the_order_they_came() {
+        use super::Live;
+        use vults_chat::activity::Event;
+        let start = |id: &str| Event::Start {
+            id: id.into(),
+            tool: "Bash".into(),
+            detail: "ls".into(),
+        };
+        let mut live = Live::default();
+        live.say("Let me look. ");
+        live.note(&start("a"));
+        live.say("Found it. ");
+        // Its end after the words still goes to its own stretch.
+        live.note(&Event::End {
+            id: "a".into(),
+            ok: true,
+        });
+        live.note(&start("b"));
+        live.say("Done.");
+        let who: Vec<&str> = live.lines().iter().map(|(w, _)| *w).collect();
+        assert_eq!(who, ["zeca", "activity", "zeca", "activity", "zeca"]);
+        assert_eq!(live.lines()[2].1, "Found it. ");
+        assert_eq!(
+            live.text, "Let me look. Found it. Done.",
+            "the whole reply stays for the live view"
+        );
+        assert!(!live.activity.is_empty());
+        assert_eq!(live.segments[1].0.tools[0].ok, Some(true));
+    }
+
     #[test]
     fn specialist_archive_blocks_new_turns_with_every_executor() {
         use vults_store::profiles::{ExecutionDefaults, ProfileState};

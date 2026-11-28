@@ -284,7 +284,9 @@ before they are used.
 
 ![One pending approval with its command and actions in the minimum Nest](../assets/nest-chat-approval.png)
 
-The reply stays separate from a collapsed **Activity** disclosure. Open it for the readable
+A turn reads in the order it ran: each stretch of tools is a collapsed **Activity** disclosure
+placed where it happened, between the words before and after it, live and when the conversation
+is reopened. Open it for the readable
 thinking supplied by the engine and the tools it reported. Each tool exposes its arguments or
 command, its reported completion or failure, and, when the engine reports it (Claude Code's tool
 results, Codex's command output), the last 4,000 characters of what it printed, secrets hidden.

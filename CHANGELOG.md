@@ -28,6 +28,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 - **Zeca's chat**: **↑** and **↓** walk through your earlier messages, your last one offers **Edit and send again**, and each of your messages can be copied.
 - **Zeca's chat**: a ring beside **Send** shows how full the model's context is (Claude Code and Codex), amber past 80%.
 - **Zeca's chat**: a Claude Code or Codex session referenced with **@** brings what was said in it (its words, not its tools; secrets hidden), not only its summary.
+- **Zeca's chat**: a turn reads in the order it ran: each stretch of tools sits between the words before and after it, live and when reopened.
 - **Zeca's chat**: **Ctrl+F** finds in the conversation and steps through the matches.
 - **Zeca's chat**: replies show `~~strikethrough~~`, task lists and bare addresses; a long conversation no longer redraws every message on each update.
 

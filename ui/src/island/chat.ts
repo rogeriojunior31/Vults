@@ -1723,7 +1723,12 @@ export class ChatPanel {
     this.conversationVersion++;
     if (d.kind === "done" || d.kind === "stopped" || d.kind === "error") this.liveEnded = true;
     if (d.kind === "activity") {
-      const activity = this.turnActivity();
+      // A tool's end, output or change goes to the stretch it started in, even after words.
+      const event = d.event;
+      const owner = event.type === "end" || event.type === "output" || event.type === "diff"
+        ? [...this.messages].reverse().find((m): m is ActivityMessage => m.who === "activity" && m.data.tools.some(tool => tool.id === event.id))
+        : undefined;
+      const activity = owner ?? this.turnActivity();
       if (d.event.type === "start") this.replyBreak = true;
       applyActivity(activity.data, d.event);
       if (this.activityTimer === undefined) this.activityTimer = window.setTimeout(() => {
@@ -1820,7 +1825,7 @@ export class ChatPanel {
       if (turn) {
         let start = this.messages.length - 1;
         while (start >= 0 && this.messages[start].who !== "you") start--;
-        const activity = this.messages.slice(start + 1).find((m): m is ActivityMessage => m.who === "activity");
+        const activity = this.messages.slice(start + 1).reverse().find((m): m is ActivityMessage => m.who === "activity");
         if (activity && activity.took === undefined) activity.took = Clock.now() - this.turnSince;
       }
       for (const message of this.messages) if (message.who === "activity") message.ended = true;
@@ -2434,10 +2439,14 @@ export class ChatPanel {
   private turnActivity(): ActivityMessage {
     let start = this.messages.length - 1;
     while (start >= 0 && this.messages[start].who !== "you") start--;
-    const existing = this.messages.slice(start + 1).find((m): m is ActivityMessage => m.who === "activity");
-    if (existing) return existing;
+    // The turn reads in the order it ran: activity after words is a stretch of its own, below them.
+    let at = this.messages.length - 1;
+    while (at > start && this.messages[at].who !== "activity") at--;
+    const said = this.messages.slice(Math.max(at, start) + 1).some(m => m.who === "zeca" && !m.error && !!m.text.trim());
+    if (at > start && !said) return this.messages[at] as ActivityMessage;
     const activity: ActivityMessage = { who: "activity", data: emptyActivity(), ended: !this.busy };
-    this.messages.splice(start + 1, 0, activity);
+    if (said) { this.messages.push(activity); this.replyBreak = true; }
+    else this.messages.splice(start + 1, 0, activity);
     return activity;
   }
 

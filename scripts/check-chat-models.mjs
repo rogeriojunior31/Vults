@@ -903,12 +903,17 @@ for (const surface of ["island", "nest"]) {
   activity.open = true;
   chat.receive({ kind: "activity", event: { type: "start", id: "read", tool: "Read", detail: "/work/file.rs" } }); flush();
   const tool = nodes(activity).find(n => n.classList.contains("activity-tool")); tool.open = true;
-  chat.receive({ kind: "text", text: "The readable answer" });
   chat.receive({ kind: "activity", event: { type: "reasoning", text: " More summary." } }); flush();
   assert.equal(nodes(chat.element).find(n => n.classList.contains("chat-activity")), activity);
   assert.equal(activity.open, true); assert.equal(tool.open, true);
   assert.equal(nodes(activity).find(n => n.classList.contains("activity-tool")), tool, "Streaming preserves the inspected tool and its disclosure");
   assert.ok(activity.textContent.includes("Provider summary <script>inert</script> More summary."));
+  // Thinking after words is a stretch of its own, below them; the first keeps what it showed.
+  chat.receive({ kind: "text", text: "The readable answer" });
+  chat.receive({ kind: "activity", event: { type: "reasoning", text: "Later thought." } }); flush();
+  const stretches = nodes(chat.element).filter(n => n.classList.contains("chat-activity"));
+  assert.equal(stretches.length, 2); assert.equal(stretches[0], activity); assert.equal(activity.open, true);
+  assert.ok(stretches[1].textContent.includes("Later thought.") && !activity.textContent.includes("Later thought."));
   assert.ok(activity.textContent.includes("Running"));
   chat.receive({ kind: "activity", event: { type: "end", id: "read", ok: false } }); flush();
   assert.ok(tool.textContent.includes("Failed"));

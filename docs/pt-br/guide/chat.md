@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 80dbebd45a65 -->
+<!-- source: 0d38ff3d4d4b -->
 
 Os painéis laterais redimensionáveis seguem o ponteiro que iniciou o arraste, ignoram toques adicionais e encerram o arraste quando a janela perde o foco. O cancelamento preserva a largura atual e mantém os rascunhos. Quando o espaço limita um painel, o arraste e o redimensionamento pelo teclado partem da largura visível; reduzir apenas o espaço disponível não sobrescreve a largura salva. Os controles de redimensionar e recolher usam a mesma cor de foco de teclado que o restante do tema selecionado.
 
@@ -317,7 +317,9 @@ deles antes de serem usados.
 
 ![Uma aprovação pendente com seu comando e ações no Ninho mínimo](../../assets/nest-chat-approval.png)
 
-A resposta fica separada de uma seção **Atividade** recolhida. Abra para ver o pensamento
+Um turno é lido na ordem em que rodou: cada trecho de ferramentas é uma seção **Atividade**
+recolhida, no lugar em que aconteceu, entre as palavras de antes e as de depois, ao vivo e ao
+reabrir a conversa. Abra para ver o pensamento
 legível fornecido pelo motor e as ferramentas que ele informou. Cada ferramenta mostra seus
 argumentos ou comando, a conclusão ou falha informada e, quando o motor informa (os resultados de
 ferramenta do Claude Code, a saída de comando do Codex), os últimos 4.000 caracteres do que ela

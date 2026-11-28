@@ -135,6 +135,20 @@ find.value = "zzz"; find.listeners.input({});
 assert.equal(byClass("find-count")[0].textContent, "No matches");
 find.listeners.keydown({ key: "Escape", preventDefault() {}, stopPropagation() {} });
 assert.ok(!byClass("chat-find")[0].classList.contains("on"), "Escape closes it");
+// Activity after words is a stretch of its own, below them: the turn reads in the order it ran.
+await send("Look and fix");
+panel.receive({ kind: "activity", event: { type: "start", id: "s1", tool: "Read", detail: "/w/a.rs" } });
+panel.receive({ kind: "text", text: "Found the bug." });
+panel.receive({ kind: "activity", event: { type: "start", id: "s2", tool: "Edit", detail: "/w/a.rs" } });
+panel.receive({ kind: "text", text: "Fixed it." });
+panel.receive({ kind: "done" });
+await tick();
+const order = byClass("chat-activity").length;
+const log = nodes(panel.element).find(n => n.className === "log" || n.classList.contains("log"));
+const tail = log.children.slice(-4).map(n => n.classList.contains("chat-activity") ? "activity" : n.textContent.includes("Found") ? "found" : n.textContent.includes("Fixed") ? "fixed" : "?");
+assert.deepEqual(tail, ["activity", "found", "activity", "fixed"], `in order (${tail})`);
+assert.ok(order >= 3);
+
 // The context meter: hidden until the engine says, a share once it gives the window too.
 const meter = byClass("context-meter")[0];
 assert.ok(meter.hidden, "no meter before the engine says");
