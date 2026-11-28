@@ -78,7 +78,25 @@ export function toggle(on: boolean, change: (on: boolean) => Promise<void>): HTM
   return input;
 }
 
+/** A long description: its first sentence to read at a glance, the rest for More. Each part is
+ *  whole sentences of the translated text, so no fragment is ever shown. */
+export function briefly(about: string): [string, string] {
+  if (about.length <= 140) return [about, ""];
+  const cut = /[.!?](?=\s+\S)|[。！？](?=\S)/g;
+  for (let m = cut.exec(about); m; m = cut.exec(about)) {
+    const end = m.index + 1;
+    // A first sentence too short to say what the row does keeps the next one with it.
+    if (end < 40) continue;
+    const rest = about.slice(end).trim();
+    return rest ? [about.slice(0, end), rest] : [about, ""];
+  }
+  return [about, ""];
+}
+
 export function row(title: string, about: string, control: HTMLElement, more?: string): HTMLElement {
+  const [shown, rest] = briefly(about);
+  about = shown;
+  more = [rest, more].filter(Boolean).join(" ") || undefined;
   const titleId = `settings-row-title-${++rowNumber}`;
   const titleElement = el("div", { class: "row-title", text: title });
   titleElement.id = titleId;

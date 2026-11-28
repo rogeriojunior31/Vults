@@ -412,10 +412,10 @@ function approvalsPage(): HTMLElement[] {
         ? t("Zeca's chat runs with full access: its commands and edits run without a card. Only what a policy of yours denies is refused.")
         : t("Zeca's chat follows your policies: what they allow runs without a card.") }),
       button(t("Chat & voice"), () => choosePage("chat")))]),
-    el("h2", { text: t("What was answered") }),
+    el("h2", { class: "settings-group-title", text: t("What was answered") }),
     el("p", { class: "lede", text: t("Every card's answer and who gave it: you, your phone, a rule or a policy below, or the chat's access. Kept 90 days, never changed.") }),
     answersLog.element,
-    el("h2", { text: t("What answers without a card") }),
+    el("h2", { class: "settings-group-title", text: t("What answers without a card") }),
     group("approvals-rules", ruleCount === undefined ? t("Always allowed") : t("Always allowed ({n})", { n: ruleCount }), !!rulesNote || rulesFailed,
     el("p", {
       class: "lede",
@@ -781,6 +781,17 @@ function agentStatus(s: InstallStatus): HTMLElement {
   return badge(t("Installed"), "ok");
 }
 
+/** How an agent works with Vults: read on request, so its card shows its state first. */
+function howItWorks(text: string): HTMLElement {
+  return disclosure(t("How it works"), el("p", { class: "note", text }));
+}
+
+/** A step that undoes (Remove): present, never the eye's first stop. */
+function quiet(b: HTMLButtonElement): HTMLButtonElement {
+  b.classList.add("quiet");
+  return b;
+}
+
 function agentCard(kind: InstallAgent, name: string, found = true): HTMLElement {
   const { status: s, message, pending } = panels.get(kind)!;
   const notice = message ? el("p", { class: message.error ? "note error" : "note ok", text: message.text }) : null;
@@ -814,10 +825,7 @@ function agentCard(kind: InstallAgent, name: string, found = true): HTMLElement 
   // The plan's usage reaches the island only through a statusLine of ours.
   const usageHelp =
     s.installed && s.statusLine === "none"
-      ? el("p", {
-          class: "note",
-          text: t("Reinstall the hooks to see your plan's usage on the island: it adds a status line that Claude Code fills in and that shows nothing on its screen."),
-        })
+      ? howItWorks(t("Reinstall the hooks to see your plan's usage on the island: it adds a status line that Claude Code fills in and that shows nothing on its screen."))
       : s.statusLine === "theirs"
         ? el("p", {
             class: "note",
@@ -831,7 +839,7 @@ function agentCard(kind: InstallAgent, name: string, found = true): HTMLElement 
         "div",
         { class: "review" },
         el("div", { class: "review-title", text: pending.install ? t("Review the install") : t("Review the removal") }),
-        pending.preview.diff ? diff(pending.preview.diff) : el("p", { class: "note", text: t("Nothing to change.") }),
+        pending.preview.diff ? diff(pending.preview.diff) : howItWorks(t("Nothing to change.")),
         el(
           "div",
           { class: "actions" },
@@ -863,10 +871,7 @@ function agentCard(kind: InstallAgent, name: string, found = true): HTMLElement 
         ? el(
             "div",
             {},
-            el("p", {
-              class: "note",
-              text: t("Shared Antigravity hooks watch CLI, desktop and IDE sessions. CLI metrics also install a status line, preserving your previous command. Desktop and IDE hooks alone do not report cost or context."),
-            }),
+            howItWorks(t("Shared Antigravity hooks watch CLI, desktop and IDE sessions. CLI metrics also install a status line, preserving your previous command. Desktop and IDE hooks alone do not report cost or context.")),
             s.installed
               ? row(t("Approve commands from the island"), t("A shell command that none of Antigravity's own rules covers waits on a card: Allow runs it, Deny stops it, and no answer leaves Antigravity's own prompt. Hooks installed before this switch need Update hooks… first."), toggle(antigravityApprovals, async (on) => {
                   await Bridge.setAntigravityApprovals(on);
@@ -875,37 +880,19 @@ function agentCard(kind: InstallAgent, name: string, found = true): HTMLElement 
               : null,
           )
         : kind === "opencode"
-          ? el("p", {
-              class: "note",
-              text: t("OpenCode loads a plugin file instead of hooks: restart it after installing. Permissions can be answered on the island or in OpenCode. In OpenCode 2, questions are answered only in its terminal."),
-            })
+          ? howItWorks(t("OpenCode loads a plugin file instead of hooks: restart it after installing. Permissions can be answered on the island or in OpenCode. In OpenCode 2, questions are answered only in its terminal."))
           : kind === "hermes"
-            ? el("p", { class: "note", text: t("Hermes uses a Python observer plugin. After installing, enable it with hermes plugins enable vults and open a new Hermes session. Sessions, tools and repository changes appear in Flock; permissions and questions stay in Hermes.") })
+            ? howItWorks(t("Hermes uses a Python observer plugin. After installing, enable it with hermes plugins enable vults and open a new Hermes session. Sessions, tools and repository changes appear in Flock; permissions and questions stay in Hermes."))
           : kind === "qwen"
-            ? el("p", {
-                class: "note",
-                text: t("Restart Qwen Code after installing. Its permissions show on the island; Qwen asks in its own terminal once the card goes away unanswered. Its questions stay in its terminal."),
-              })
+            ? howItWorks(t("Restart Qwen Code after installing. Its permissions show on the island; Qwen asks in its own terminal once the card goes away unanswered. Its questions stay in its terminal."))
             : kind === "copilot"
-              ? el("p", {
-                  class: "note",
-                  text: t("Copilot CLI reads every hooks file in ~/.copilot/hooks/: this one is Vults' own. Restart Copilot after installing. Its permissions show on the island; Copilot asks in its own terminal once the card goes away unanswered."),
-                })
+              ? howItWorks(t("Copilot CLI reads every hooks file in ~/.copilot/hooks/: this one is Vults' own. Restart Copilot after installing. Its permissions show on the island; Copilot asks in its own terminal once the card goes away unanswered."))
               : kind === "cursor"
-                ? el("p", {
-                    class: "note",
-                    text: t("One hooks file for the editor and cursor-agent; other tools' hooks in it stay. Cursor asks its permissions itself, and the island shows its sessions as cursor. Restart Cursor after installing."),
-                  })
+                ? howItWorks(t("One hooks file for the editor and cursor-agent; other tools' hooks in it stay. Cursor asks its permissions itself, and the island shows its sessions as cursor. Restart Cursor after installing."))
                 : kind === "droid"
-                  ? el("p", {
-                      class: "note",
-                      text: t("Droid runs these hooks in the CLI and its sessions show as droid. Droid asks its permissions itself, in its own prompt. Restart Droid after installing."),
-                    })
+                  ? howItWorks(t("Droid runs these hooks in the CLI and its sessions show as droid. Droid asks its permissions itself, in its own prompt. Restart Droid after installing."))
                   : kind === "kimi"
-                    ? el("p", {
-                        class: "note",
-                        text: t("Kimi Code reads these hooks from its config.toml, beside your own settings, and its sessions show as kimi. Kimi asks its permissions itself, in its own prompt. Restart Kimi after installing."),
-                      })
+                    ? howItWorks(t("Kimi Code reads these hooks from its config.toml, beside your own settings, and its sessions show as kimi. Kimi asks its permissions itself, in its own prompt. Restart Kimi after installing."))
                     : null,
     notice,
     s.error || pending
@@ -913,7 +900,6 @@ function agentCard(kind: InstallAgent, name: string, found = true): HTMLElement 
       : el(
           "div",
           { class: "actions" },
-          s.installed ? button(setupWord(kind) === "plugin" ? t("Remove plugin…") : t("Remove hooks…"), () => void preview(kind, false)) : null,
           s.installBlocked
             ? null
             : // The white button is the step that is due: installing, updating, or a reinstall a note asks
@@ -926,6 +912,7 @@ function agentCard(kind: InstallAgent, name: string, found = true): HTMLElement 
                 // An agent that is not on this computer has nothing due: its install stays a plain button.
                 (found && !s.installed) || s.outdated || usageHelp !== null,
               ),
+          s.installed ? quiet(button(setupWord(kind) === "plugin" ? t("Remove plugin…") : t("Remove hooks…"), () => void preview(kind, false))) : null,
         ),
     review,
   );
@@ -2295,6 +2282,7 @@ function labsPage(): HTMLElement[] {
   return [
     el("h1", { text: t("Labs") }),
     el("p", { class: "lede", text: t("Features still in beta. Each is off until you turn it on here, and may change or break before it is finished.") }),
+    el("h2", { class: "settings-group-title", text: t("Chat engines") }),
     el("section", { class: "card rows" }, ...rows),
   ];
 }
@@ -2660,10 +2648,12 @@ function render(): void {
               ? projectsPage()
             : page === "activity"
               ? [el("h1", { text: t("History and budget") }),
-                el("p", { class: "lede", text: t("Choose what stays on this computer. Recaps and records are in Activity.") }),
-                el("div", { class: "actions" }, button(t("Open Activity"), () => void Bridge.openNest("week"))),
+                el("p", { class: "lede", text: t("What Vults keeps on this computer, and how much it may spend a day.") }),
+                el("h2", { class: "settings-group-title", text: t("Budget") }),
                 budget.element,
-                historyCard(activity, { confirming: clearing }, activityActions)]
+                el("h2", { class: "settings-group-title", text: t("History") }),
+                historyCard(activity, { confirming: clearing }, activityActions),
+                el("div", { class: "actions" }, button(t("Open Activity"), () => void Bridge.openNest("week")))]
             : page === "connectors"
               ? connectorsPage()
             : page === "phone"

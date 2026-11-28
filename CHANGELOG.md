@@ -34,6 +34,8 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Changed
 
+- **Settings**: a long description shows its first sentence, with the rest under **More**; each agent's card shows its state and the step that is due first, with how it works folded and **Remove** last and quiet; History and budget, Approvals and Labs read in titled sections.
+
 - **Settings**, after a design critique of every page: each page reads as title, one sentence, then titled sections (General: Startup, Usage and prices; Island: Behavior, Placement; Sound and notifications: Sounds, Notifications; Flock: Birds); keys drawn as keycaps; disclosures open with a drawn chevron; a switch stays beside its words on narrow windows; Zeca's memory comes before the species gallery, with the second family folded; Agents says when every connected agent is up to date and puts retired agents apart; an ACP engine's unknown sign-in has a neutral dot.
 
 - **Settings → Keyboard shortcuts**: Dictation's keys (its global shortcuts, recording mode and X11 keys) moved there from Dictation, shown once dictation has a voice model; Dictation keeps what is voice.

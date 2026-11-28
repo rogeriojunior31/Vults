@@ -909,3 +909,12 @@ code {
 .page .species-family { color: var(--fg-dim); text-decoration: none; }
 .species.on { border-color: var(--mark); box-shadow: inset 0 0 0 1px var(--mark); }
 .note.ok.with-icon { color: var(--ok); }
+
+/* A step that undoes: plain text weight, no fill, last in its row. */
+.btn.quiet { background: transparent; color: var(--fg-dim); }
+.btn.quiet:hover { background: var(--raised); color: var(--fg); }
+/* Inside a card a disclosure is a line like More, not a second card. */
+#settings .card .settings-disclosure { margin-top: 6px; border: 0; border-radius: 0; background: transparent; overflow: visible; }
+#settings .card .settings-disclosure > summary { padding: 4px 0; color: var(--fg); font-size: var(--text-s); font-weight: 500; }
+#settings .card .settings-disclosure > summary:hover { background: transparent; color: var(--fg-bright); }
+#settings .card .settings-disclosure .disclosure-body { padding: 4px 0 0 15px; }
