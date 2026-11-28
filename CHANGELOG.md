@@ -19,6 +19,12 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Added
 
+- **Zeca's chat**: an edit in a turn's **Activity** shows its change as colored lines, with the lines added and removed on its row (Claude Code and Codex).
+- **Zeca's chat**: the line under the conversation says what the agent is doing now (*Running cargo test…*, *Editing lib.rs…*) and for how long; a finished turn's **Activity** says how long it took.
+- **Zeca's chat**: **↑** and **↓** walk through your earlier messages, your last one offers **Edit and send again**, and each of your messages can be copied.
+- **Zeca's chat**: **Ctrl+F** finds in the conversation and steps through the matches.
+- **Zeca's chat**: replies show `~~strikethrough~~`, task lists and bare addresses; a long conversation no longer redraws every message on each update.
+
 - **Zeca's chat**: each tool in a turn's **Activity** shows the end of what it printed (Claude Code's tool results, Codex's command output), secrets hidden.
 - **Zeca's chat**: an agent's question shows its options to click, and typing while a card waits answers it with your words (a no Claude Code reads); full access never answers a question for you.
 - **Zeca's chat**: paste an image, or text of 32 KB or more, and it is attached as a file.

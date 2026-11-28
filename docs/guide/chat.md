@@ -213,8 +213,9 @@ With the memory on, what Zeca remembers and recalls joins as well: see [Zeca's m
 - **Enter** sends, **Shift+Enter** starts a new line. While a reply comes, **Enter** queues the
   message above the draft (**×** takes it out); when the turn ends well the queue goes, in order,
   one turn each. After **Stop** or an error nothing goes on its own: the queued words come back into
-  the draft. **↑** in an empty composer brings back your last message,
-  to change it or send it again. **/** at the start of the draft lists the chat's commands:
+  the draft. **↑** in an empty composer brings back your last message, and each **↑** after it an
+  earlier one; **↓** comes forward again, past the newest to an empty draft. Your last message also
+  offers **Edit and send again** while no turn runs, and every message of yours can be copied. **/** at the start of the draft lists the chat's commands:
   `/remember`, `/forget`, `/continue` and `/new`, which starts a new conversation at once.
 - When the agent asks you something (Claude Code's `AskUserQuestion`), its card shows each question
   with its options: a click on each goes back as your answer, or type your own and press **Enter**.
@@ -228,9 +229,14 @@ With the memory on, what Zeca remembers and recalls joins as well: see [Zeca's m
   reply shows it when the pointer is over it. A code block has its own **Copy**. A failed copy
   says so and can be retried.
 - Both Quick and Room show headings, lists, quotes, code and tables. Code and wide tables have
-  their own keyboard-focusable scrolling area. Links stay text, with their address beside the label.
+  their own keyboard-focusable scrolling area. Links stay text, with their address beside the label;
+  a bare address shows as one. `~~text~~` strikes through, and `- [ ]` / `- [x]` lists get their boxes.
 - A turn that fails says why, with **Try again**: it sends the same words and files once more.
-- While a turn runs, *Thinking…* says so, with its seconds once it takes longer than three.
+- While a turn runs, the line under the conversation says what the agent is doing now (*Running
+  cargo test…*, *Editing lib.rs…*), with how long the turn has run once it takes longer than three
+  seconds. Once it ends, its **Activity** says how long it took.
+- **Ctrl+F** (**⌘F**) finds in the conversation: it counts the messages that match, **Enter** and
+  **Shift+Enter** step through them, **Escape** closes it.
 - In the Nest the conversation reads in one column as wide as the composer, however wide the window.
   Each reply is signed with Zeca and the engine that wrote it, and a code block names its language.
 
@@ -273,7 +279,9 @@ before they are used.
 The reply stays separate from a collapsed **Activity** disclosure. Open it for the readable
 thinking supplied by the engine and the tools it reported. Each tool exposes its arguments or
 command, its reported completion or failure, and, when the engine reports it (Claude Code's tool
-results, Codex's command output), the last 4,000 characters of what it printed, secrets hidden. Missing results remain **No result reported**;
+results, Codex's command output), the last 4,000 characters of what it printed, secrets hidden.
+An edit shows its change as colored lines, with the lines it added and removed on its row
+(Claude Code's Edit, MultiEdit and Write; Codex's file changes). Missing results remain **No result reported**;
 Vults does not invent thought text or treat elapsed turn time as measured thinking time. Codex
 shows its public reasoning summaries; engines that do not supply details say so.
 

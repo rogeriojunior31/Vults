@@ -225,7 +225,46 @@ type Ask = {
   replied?: string;
 };
 
-type ActivityMessage = { who: "activity"; data: ChatActivity; ended: boolean };
+/** A turn's activity; `took` is how long the turn ran, when this window saw it run. */
+type ActivityMessage = { who: "activity"; data: ChatActivity; ended: boolean; took?: number };
+
+type ToolNode = { node: HTMLDetailsElement; status: HTMLElement; detail: HTMLElement; output: HTMLElement; diff: HTMLElement; counts: HTMLElement; target: HTMLElement; shown: string | undefined };
+
+/** A tool's argument as one short line, for its row and the status line. */
+function brief(detail: string, max = 72): string {
+  const line = detail.trim().split("\n")[0] ?? "";
+  return line.length > max ? `${line.slice(0, max - 1)}…` : line;
+}
+
+/** A duration as the chat says it: seconds, then minutes and seconds. */
+function duration(ms: number): string {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  return s < 60 ? t("{seconds} s", { seconds: s }) : t("{minutes} min {seconds} s", { minutes: Math.floor(s / 60), seconds: s % 60 });
+}
+
+/** What a running tool is doing, as the status line says it. */
+function doing(tool: string, detail: string): string {
+  const what = brief(detail, 56);
+  const name = tool.replace(/^mcp__[^_]+__/, "");
+  if (!what) return t("Using {tool}…", { tool: name });
+  if (/^(Bash|shell|exec|execute|run_shell_command|commandExecution)$/i.test(tool)) return t("Running {what}…", { what });
+  if (/^(Edit|MultiEdit|Write|NotebookEdit|apply_patch|edit|write_file|replace)$/i.test(tool)) return t("Editing {what}…", { what: shortName(what) });
+  if (/^(Read|read_file|view|cat)$/i.test(tool)) return t("Reading {what}…", { what: shortName(what) });
+  if (/^(Grep|Glob|search|grep|glob|web_search|WebSearch|find)$/i.test(tool)) return t("Searching for {what}…", { what });
+  return t("Using {tool}…", { tool: name });
+}
+
+/** A diff's lines, colored: added, removed, a file or hunk header, context. */
+function diffNode(diff: string): { node: HTMLElement; added: number; removed: number } {
+  let added = 0, removed = 0;
+  const lines = diff.split("\n").map(line => {
+    const kind = line.startsWith("@@") ? "hunk" : line.startsWith("+") ? "add" : line.startsWith("-") ? "del" : "ctx";
+    if (kind === "add") added++;
+    if (kind === "del") removed++;
+    return el("span", { class: `d-line d-${kind}`, text: kind === "hunk" ? line.replace(/^@@\s?/, "") : line || " " });
+  });
+  return { node: el("div", { class: "diff-lines" }, ...lines), added, removed };
+}
 
 type Message =
   | ActivityMessage
@@ -396,7 +435,17 @@ export class ChatPanel {
   private selectedAsk: string | null = null;
   private approvalQueueKey = "";
   private askNodes = new WeakMap<Ask, HTMLElement>();
-  private readonly activityNodes = new WeakMap<ActivityMessage, { node: HTMLDetailsElement; summary: HTMLElement; reasoning: HTMLElement; tools: HTMLElement; decisions: HTMLElement; warning: HTMLElement; toolNodes: Map<string, { node: HTMLDetailsElement; status: HTMLElement; detail: HTMLElement; output: HTMLElement }> }>();
+  private readonly activityNodes = new WeakMap<ActivityMessage, { node: HTMLDetailsElement; summary: HTMLElement; reasoning: HTMLElement; tools: HTMLElement; decisions: HTMLElement; warning: HTMLElement; toolNodes: Map<string, ToolNode> }>();
+  /** Each message's node, kept while what it shows stays the same: a repaint rebuilds none of them. */
+  private rendered = new WeakMap<Message, { key: string; node: HTMLElement }>();
+  /** Where ↑ and ↓ are in the user's earlier messages; none while writing a new one. */
+  private recallAt: number | null = null;
+  /** Find in the conversation: its words, and which match is current. */
+  private findOpen = false;
+  private findAt = 0;
+  private readonly findInput = el("input", { class: "find-input" }) as HTMLInputElement;
+  private readonly findCount = el("span", { class: "find-count" });
+  private readonly findBar = el("div", { class: "chat-find" });
   private activityTimer: number | undefined;
   private replyBreak = false;
   private readonly approvalQueue = el("div", { class: "approval-queue" });
@@ -595,9 +644,11 @@ export class ChatPanel {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         void this.submit();
-      } else if (e.key === "ArrowUp" && !this.input.value && this.recall()) e.preventDefault();
+      } else if (e.key === "ArrowUp" && !e.altKey && (!this.input.value || this.recallAt !== null) && this.recallStep(-1)) e.preventDefault();
+      else if (e.key === "ArrowDown" && !e.altKey && this.recallAt !== null && this.recallStep(1)) e.preventDefault();
     });
     this.input.addEventListener("input", (event) => {
+      this.recallAt = null;
       this.grow();
       this.paintSend();
       this.keepDraft();
@@ -709,7 +760,34 @@ export class ChatPanel {
         buttons[next].focus();
       });
     }
+    // Ctrl+F (⌘F) finds in the conversation; Enter steps through, Escape closes.
+    const step = (dir: 1 | -1) => () => { this.findAt += dir; this.paintFind(true); };
+    const findButton = (label: string, glyph: string, onclick: () => void) => {
+      const b = el("button", { class: "ghost find-step", text: glyph, onclick });
+      b.setAttribute("aria-label", label);
+      b.title = label;
+      return b;
+    };
+    this.element.classList.add(`window-${this.opts.window ?? "quick"}`);
+    this.findCount.setAttribute("aria-live", "polite");
+    this.findBar.append(this.findInput, this.findCount,
+      findButton(t("Previous match"), "↑", step(-1)), findButton(t("Next match"), "↓", step(1)),
+      findButton(t("Close search"), "×", () => this.closeFind()));
+    this.findInput.addEventListener("input", () => { this.findAt = 0; this.paintFind(true); });
+    this.findInput.addEventListener("keydown", event => {
+      if (event.key === "Enter") { event.preventDefault(); step(event.shiftKey ? -1 : 1)(); }
+      else if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); this.closeFind(); }
+    });
     this.element.addEventListener("keydown", event => {
+      if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === "f" && this.messages.length) {
+        event.preventDefault();
+        event.stopPropagation();
+        this.findOpen = true;
+        this.paintFind(true);
+        this.findInput.focus();
+        this.findInput.select?.();
+        return;
+      }
       if (event.key !== "Escape" || event.isComposing || event.keyCode === 229 || event.defaultPrevented || this.voice !== "off") return;
       if (this.closeMenus(true)) { event.preventDefault(); event.stopPropagation(); }
     });
@@ -773,7 +851,7 @@ export class ChatPanel {
       head,
       this.approvalQueue,
       this.profileNotice,
-      el("div", { class: "log-box" }, this.log, this.jump),
+      el("div", { class: "log-box" }, this.findBar, this.log, this.jump),
       el("div", { class: "composer" },
         this.mentionMenu,
         this.queueBox,
@@ -794,11 +872,14 @@ export class ChatPanel {
    *  says which one, so the first call comes from there too. */
   relabel(): void {
     this.askNodes = new WeakMap();
+    this.rendered = new WeakMap();
+    this.findInput.placeholder = t("Find in conversation");
+    this.findInput.setAttribute("aria-label", this.findInput.placeholder);
     this.input.placeholder = this.opts.specialist ? t("Message {name}…", { name: this.recipientName() }) : t("Ask Zeca…");
     this.input.setAttribute("aria-label", this.input.placeholder);
     this.input.title = t("Type @ to reference a file, folder, session or project.");
     this.log.setAttribute("aria-label", t("Chat"));
-    this.composerHint.textContent = t("Enter sends, Shift+Enter starts a new line, ↑ recalls your last message, and @ references the flock.");
+    this.composerHint.textContent = t("Enter sends, Shift+Enter starts a new line, ↑ and ↓ go through your earlier messages, Ctrl+F finds in the conversation, and @ references the flock.");
     this.attachLabel.textContent = t("Attach a file");
     this.paintQueue();
     this.chips.setAttribute("role", "group");
@@ -1723,6 +1804,13 @@ export class ChatPanel {
       if (d.kind === "error") this.announce(t("Chat error. Review the message in the conversation."));
       else if (d.kind === "stopped") this.announce(t("Stopped."));
       else if (d.kind === "done" && turn) this.announceReply();
+      // How long the turn ran, on its activity: what the user waited for.
+      if (turn) {
+        let start = this.messages.length - 1;
+        while (start >= 0 && this.messages[start].who !== "you") start--;
+        const activity = this.messages.slice(start + 1).find((m): m is ActivityMessage => m.who === "activity");
+        if (activity && activity.took === undefined) activity.took = Clock.now() - this.turnSince;
+      }
       for (const message of this.messages) if (message.who === "activity") message.ended = true;
       // The queue moves on after a turn that ended well; Stop or an error hands it back to the draft.
       if (this.queued.length) {
@@ -1824,6 +1912,31 @@ export class ChatPanel {
     if (!you?.text) return false;
     this.input.value = you.text;
     this.mentions = [...(you.mentions ?? [])];
+    this.grow();
+    this.paintSend();
+    this.keepDraft();
+    const end = this.input.value.length;
+    this.input.setSelectionRange(end, end);
+    return true;
+  }
+
+  /** One step through the user's earlier messages: back (-1) or forward (1), past the newest to
+   *  an empty composer. False when there is nowhere to go, so the key does what it always does. */
+  private recallStep(dir: -1 | 1): boolean {
+    const sent = this.messages.filter((m): m is Extract<Message, { who: "you" }> => m.who === "you" && !!m.text);
+    if (!sent.length) return false;
+    const at = (this.recallAt ?? sent.length) + dir;
+    if (at < 0) return true;
+    if (at >= sent.length) {
+      if (this.recallAt === null) return false;
+      this.recallAt = null;
+      this.input.value = "";
+      this.mentions = [];
+    } else {
+      this.recallAt = at;
+      this.input.value = sent[at].text;
+      this.mentions = [...(sent[at].mentions ?? [])];
+    }
     this.grow();
     this.paintSend();
     this.keepDraft();
@@ -2220,10 +2333,30 @@ export class ChatPanel {
     if (this.input.style.height !== before) this.changed();
   }
 
+  /** What a message's node shows: the same key, the same node. Cards and activity keep their own. */
+  private nodeKey(m: Message): string | null {
+    const last = m === this.messages[this.messages.length - 1];
+    if (m.who === "zeca") {
+      const signed = this.opts.window === "nest" && this.messages[this.messages.indexOf(m) - 1]?.who !== "zeca";
+      return JSON.stringify([m.text, !!m.error, !!m.retry, last, last && this.busy, signed]);
+    }
+    if (m.who === "you") return JSON.stringify([m.text, m.files, m === this.lastYou() && !this.busy]);
+    if (m.who === "note") return m.text;
+    return null;
+  }
+
   private node(m: Message): HTMLElement {
+    const key = this.nodeKey(m);
+    const kept = key === null ? undefined : this.rendered.get(m);
+    if (kept && kept.key === key) {
+      // Put back in the log, its entrance must not play again.
+      kept.node.classList.remove("message-enter");
+      return kept.node;
+    }
     const node = this.messageNode(m);
     if (!this.appeared.has(m) && (m.who === "you" || (m.who === "zeca" && !m.error))) node.classList.add("message-enter");
     this.appeared.add(m);
+    if (key !== null) this.rendered.set(m, { key, node });
     return node;
   }
 
@@ -2247,9 +2380,21 @@ export class ChatPanel {
     }
     if (m.who === "note") return el("p", { class: "msg note", text: m.text });
     if (m.who === "you") {
+      const tools = el("div", { class: "msg-tools" });
+      if (m.text) {
+        const copy = copyTextButton(m.text, "msg-tool", t("Copy message"));
+        copy.prepend(icon("copy", 12, 2));
+        tools.append(copy);
+      }
+      // The last one, between turns: back in the composer, to change and send again.
+      if (m.text && m === this.lastYou() && !this.busy) {
+        const edit = el("button", { class: "msg-tool", onclick: () => { this.recall(); this.input.focus(); } }, icon("retry", 12, 2), el("span", { text: t("Edit and send again") }));
+        tools.append(edit);
+      }
       return el(
         "div",
         { class: "msg you" },
+        ...(tools.children.length ? [tools] : []),
         ...(m.text ? [el("span", { text: m.text })] : []),
         ...(m.files.length
           ? [
@@ -2304,7 +2449,10 @@ export class ChatPanel {
       this.activityNodes.set(m, kept);
     }
     const { data } = m;
-    kept.summary.textContent = data.tools.length === 1 ? t("Activity · 1 tool") : data.tools.length ? t("Activity · {n} tools", { n: data.tools.length }) : t("Activity");
+    kept.summary.replaceChildren(
+      el("span", { text: data.tools.length === 1 ? t("Activity · 1 tool") : data.tools.length ? t("Activity · {n} tools", { n: data.tools.length }) : t("Activity") }),
+      ...(m.took !== undefined ? [el("span", { class: "activity-took", text: duration(m.took) })] : []),
+    );
     const reasoning = data.reasoning.trim() ? data.reasoning : t("This engine has not provided thinking details.");
     if (kept.reasoning.textContent !== reasoning) kept.reasoning.textContent = reasoning;
     const toolNodes = data.tools.map(tool => {
@@ -2312,6 +2460,13 @@ export class ChatPanel {
       let entry = kept!.toolNodes.get(tool.id);
       if (!entry) {
         const label = el("span", { class: "tool-status" });
+        const target = el("span", { class: "tool-target", text: brief(tool.detail) });
+        const counts = el("span", { class: "tool-counts" });
+        // The change an edit makes, above what it returned.
+        const diff = el("div", { class: "activity-diff" });
+        diff.tabIndex = 0;
+        diff.setAttribute("role", "region");
+        diff.setAttribute("aria-label", t("Changes"));
         const detail = el("pre", { text: tool.detail || t("No arguments reported.") });
         detail.tabIndex = 0;
         detail.setAttribute("role", "region");
@@ -2321,14 +2476,22 @@ export class ChatPanel {
         output.tabIndex = 0;
         output.setAttribute("role", "region");
         output.setAttribute("aria-label", t("Output"));
-        const node = el("details", { class: "activity-tool" }, el("summary", {}, el("span", { text: tool.tool }), label), detail, output);
+        const node = el("details", { class: "activity-tool" }, el("summary", {}, el("span", { class: "tool-name", text: tool.tool }), target, counts, label), detail, diff, output);
         node.addEventListener("toggle", () => this.changed());
-        entry = { node, status: label, detail, output };
+        entry = { node, status: label, detail, output, diff, counts, target, shown: undefined };
         kept!.toolNodes.set(tool.id, entry);
       }
       entry.status.textContent = status;
       entry.status.classList.toggle("failed", tool.ok === false);
       entry.output.hidden = !tool.output;
+      entry.diff.hidden = !tool.diff;
+      if (tool.diff !== entry.shown) {
+        entry.shown = tool.diff;
+        const drawn = tool.diff ? diffNode(tool.diff) : null;
+        entry.diff.replaceChildren(...(drawn ? [drawn.node] : []));
+        entry.counts.replaceChildren(...(drawn ? [el("span", { class: "d-add", text: `+${drawn.added}` }), el("span", { class: "d-del", text: `−${drawn.removed}` })] : []));
+        if (drawn) entry.counts.setAttribute("aria-label", t("{added} lines added, {removed} removed", { added: drawn.added, removed: drawn.removed }));
+      }
       if (tool.output && entry.output.textContent !== tool.output) entry.output.textContent = tool.output;
       return entry.node;
     });
@@ -2498,10 +2661,14 @@ export class ChatPanel {
 
   /** Re-renders one message in place. */
   private replace(i: number): void {
-    const next = this.node(this.messages[i]);
+    const m = this.messages[i];
+    const next = this.node(m);
     // Keep the bubble itself: streaming must not cancel and restart its entrance.
     const current = this.nodes[i];
-    if (current) current.replaceChildren(...Array.from(next.childNodes));
+    if (!current || current === next) return;
+    current.replaceChildren(...Array.from(next.childNodes));
+    const key = this.nodeKey(m);
+    if (key !== null) this.rendered.set(m, { key, node: current });
   }
 
   /** The API choice only while a key is saved (or while its conversation is open). */
@@ -3286,15 +3453,79 @@ export class ChatPanel {
       return;
     }
     const words = el("span", { class: "typing-words" });
+    const time = el("span", { class: "typing-time" });
+    const running = this.runningTool();
+    words.textContent = running ? doing(running.tool, running.detail) : this.searching ? t("Using tools…") : t("Working…");
     const tick = () => {
       const ms = Clock.now() - this.turnSince;
-      words.textContent = ms < SHOW_ELAPSED_MS ? (this.searching ? t("Using tools…") : t("Working…")) : t("Working… {seconds} s", { seconds: Math.floor(ms / 1000) });
+      time.textContent = ms < SHOW_ELAPSED_MS ? "" : duration(ms);
     };
     tick();
-    this.thinking = el("div", { class: "typing" }, el("span", { class: "typing-dots" }, el("i", {}), el("i", {}), el("i", {})), words);
+    this.thinking = el("div", { class: "typing" }, el("span", { class: "typing-dots" }, el("i", {}), el("i", {}), el("i", {})), words, time);
     window.clearInterval(this.ticking);
     // Only its own words change: the island is not rendered again for a second going by.
     this.ticking = window.setInterval(tick, 1000);
+  }
+
+  /** What a message says, as find reads it. */
+  private findText(m: Message): string {
+    if (m.who === "you" || m.who === "zeca" || m.who === "note") return m.text;
+    if (m.who === "ask") return `${m.target}\n${m.description ?? ""}\n${m.replied ?? ""}`;
+    return m.data.tools.map(tool => `${tool.tool} ${tool.detail}`).join("\n");
+  }
+
+  private closeFind(): void {
+    this.findOpen = false;
+    this.findInput.value = "";
+    this.paintFind(false);
+    this.input.focus();
+  }
+
+  /** Marks the messages that match; `go` brings the current one into view. */
+  private paintFind(go: boolean): void {
+    this.findBar.classList.toggle("on", this.findOpen);
+    const query = this.findOpen ? this.findInput.value.trim().toLowerCase() : "";
+    const hits = query ? this.messages.flatMap((m, i) => this.findText(m).toLowerCase().includes(query) ? [i] : []) : [];
+    if (hits.length) this.findAt = ((this.findAt % hits.length) + hits.length) % hits.length;
+    this.nodes.forEach((node, i) => {
+      node.classList.toggle("found", hits.includes(i));
+      node.classList.toggle("found-current", hits[this.findAt] === i);
+    });
+    this.findCount.textContent = !query ? "" : hits.length ? t("{n} of {total}", { n: this.findAt + 1, total: hits.length }) : t("No matches");
+    // The words themselves, marked where the webview can (CSS highlights); the message is marked anyway.
+    const highlights = (globalThis as { CSS?: { highlights?: Map<string, unknown> } }).CSS?.highlights;
+    const Highlight = (globalThis as { Highlight?: new (...ranges: Range[]) => unknown }).Highlight;
+    if (highlights && Highlight) {
+      const ranges: Range[] = [];
+      for (const i of hits) {
+        const walker = document.createTreeWalker(this.nodes[i], NodeFilter.SHOW_TEXT);
+        for (let text = walker.nextNode(); text; text = walker.nextNode()) {
+          const value = (text.textContent ?? "").toLowerCase();
+          for (let at = value.indexOf(query); at >= 0; at = value.indexOf(query, at + query.length)) {
+            const range = document.createRange();
+            range.setStart(text, at);
+            range.setEnd(text, at + query.length);
+            ranges.push(range);
+          }
+        }
+      }
+      if (ranges.length) highlights.set("chat-find", new Highlight(...ranges));
+      else highlights.delete("chat-find" as never);
+    }
+    if (go && hits.length) {
+      this.following = false;
+      this.nodes[hits[this.findAt]]?.scrollIntoView?.({ block: "center" });
+    }
+  }
+
+  /** The tool the turn is running now: the latest one started and not ended. */
+  private runningTool(): { tool: string; detail: string } | undefined {
+    for (let i = this.messages.length - 1; i >= 0; i--) {
+      const m = this.messages[i];
+      if (m.who === "you") return undefined;
+      if (m.who === "activity") return [...m.data.tools].reverse().find(tool => tool.ok === null);
+    }
+    return undefined;
   }
 
   private paint(): void {
@@ -3309,7 +3540,7 @@ export class ChatPanel {
     this.paintApprovalQueue();
     const focused = document.activeElement && this.log.contains(document.activeElement) ? document.activeElement as HTMLElement : null;
     this.nodes = this.messages.map((m) => this.node(m));
-    this.log.replaceChildren(
+    const children = [
       ...(this.messages.length
         ? this.nodes
         : [
@@ -3317,7 +3548,11 @@ export class ChatPanel {
             this.suggestions,
           ]),
       ...(waiting && this.thinking ? [this.thinking] : []),
-    );
+    ];
+    // The same nodes in the same order stay where they are: a selection in them survives.
+    const current = Array.from(this.log.childNodes);
+    if (children.length !== current.length || children.some((node, i) => node !== current[i])) this.log.replaceChildren(...children);
+    this.paintFind(false);
     if (focused?.isConnected) focused.focus({ preventScroll: true });
     for (const path of this.attachmentNodes.keys()) if (!this.files.includes(path)) this.attachmentNodes.delete(path);
     const attachments = this.files.map((file) => {

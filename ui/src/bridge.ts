@@ -457,10 +457,12 @@ export type ChatActivityEvent =
   | { type: "end"; id: string; ok: boolean }
   /** What the tool printed or returned: its tail, secrets redacted. */
   | { type: "output"; id: string; text: string }
+  /** The change an editing tool makes, as diff lines (`-`, `+`, ` `, `@@ path`). */
+  | { type: "diff"; id: string; diff: string }
   | { type: "decision"; tool: string; target: string; answer: string; by: string };
 export type ChatActivity = {
   reasoning: string;
-  tools: { id: string; tool: string; detail: string; ok: boolean | null; output?: string }[];
+  tools: { id: string; tool: string; detail: string; ok: boolean | null; output?: string; diff?: string }[];
   decisions: { tool: string; target: string; answer: string; by: string }[];
   truncated: boolean;
 };

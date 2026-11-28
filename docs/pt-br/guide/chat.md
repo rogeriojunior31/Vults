@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 7e671bc54a9d -->
+<!-- source: 8756a79e8c0e -->
 
 Os painéis laterais redimensionáveis seguem o ponteiro que iniciou o arraste, ignoram toques adicionais e encerram o arraste quando a janela perde o foco. O cancelamento preserva a largura atual e mantém os rascunhos. Quando o espaço limita um painel, o arraste e o redimensionamento pelo teclado partem da largura visível; reduzir apenas o espaço disponível não sobrescreve a largura salva. Os controles de redimensionar e recolher usam a mesma cor de foco de teclado que o restante do tema selecionado.
 
@@ -234,7 +234,9 @@ Com a memória ligada, o que o Zeca lembra e o que ele recupera também entram: 
   a mensagem numa fila acima do rascunho (**×** tira da fila); quando o turno termina bem, a fila
   sai, em ordem, um turno para cada uma. Depois de **Stop** ou de um erro nada sai sozinho: as
   palavras da fila voltam para o rascunho. **↑** com o campo vazio traz
-  de volta a sua última mensagem, para mudá-la ou enviá-la de novo. **/** no começo do rascunho
+  de volta a sua última mensagem, e cada **↑** seguinte uma anterior; **↓** volta para frente, até
+  um rascunho vazio depois da mais nova. A sua última mensagem também oferece **Edit and send
+  again** enquanto nenhum turno roda, e toda mensagem sua pode ser copiada. **/** no começo do rascunho
   lista os comandos do chat: `/remember`, `/forget`, `/continue` e `/new`, que começa uma conversa
   nova na hora.
 - Quando o agente te pergunta algo (`AskUserQuestion` do Claude Code), o card mostra cada pergunta
@@ -251,10 +253,15 @@ Com a memória ligada, o que o Zeca lembra e o que ele recupera também entram: 
   **Copy**. Se a cópia falhar, o botão avisa e permite tentar de novo.
 - Tanto Quick quanto Room mostram títulos, listas, citações, código e tabelas. Código e tabelas
   largas têm uma área de rolagem própria que aceita foco pelo teclado. Links continuam como
-  texto, com o endereço ao lado do rótulo.
+  texto, com o endereço ao lado do rótulo; um endereço solto aparece como um. `~~texto~~` risca o
+  texto, e listas `- [ ]` / `- [x]` ganham as suas caixas.
 - Um turno que falha diz por quê, com **Try again**: ele envia as mesmas palavras e arquivos mais uma
   vez.
-- Enquanto um turno roda, *Thinking…* avisa, com os segundos depois que ele passa de três.
+- Enquanto um turno roda, a linha embaixo da conversa diz o que o agente está fazendo agora
+  (*Executando cargo test…*, *Editando lib.rs…*), com quanto tempo o turno já rodou depois que ele
+  passa de três segundos. Quando ele termina, a sua **Atividade** diz quanto tempo levou.
+- **Ctrl+F** (**⌘F**) busca na conversa: conta as mensagens que batem, **Enter** e
+  **Shift+Enter** passam por elas, **Escape** fecha.
 - No Nest a conversa é lida em uma coluna da largura do campo de texto, por mais larga que seja a
   janela. Cada resposta vem assinada pelo Zeca e pelo motor que a escreveu, e um bloco de código diz
   a sua linguagem.
@@ -305,7 +312,9 @@ A resposta fica separada de uma seção **Atividade** recolhida. Abra para ver o
 legível fornecido pelo motor e as ferramentas que ele informou. Cada ferramenta mostra seus
 argumentos ou comando, a conclusão ou falha informada e, quando o motor informa (os resultados de
 ferramenta do Claude Code, a saída de comando do Codex), os últimos 4.000 caracteres do que ela
-imprimiu, com segredos ocultados. Resultados ausentes ficam como **Nenhum
+imprimiu, com segredos ocultados. Uma edição mostra a sua mudança em linhas coloridas, com as
+linhas que adicionou e removeu na sua linha (Edit, MultiEdit e Write do Claude Code; as mudanças de
+arquivo do Codex). Resultados ausentes ficam como **Nenhum
 resultado informado**; o Vults não inventa pensamento nem trata a duração do turno como tempo
 medido de pensamento. O Codex mostra seus resumos públicos de raciocínio; motores que não fornecem
 detalhes informam isso.

@@ -3483,7 +3483,44 @@ body.still #island .inner:has(.main > .chat) .need-strip.top { animation: none; 
 /* The intro takes the room beside the perch and wraps in it: a long setup notice never pushes it
    past the panel's edge. */
 #island .chat-head > .chat-intro { margin-right: auto; flex: 1 1 0; min-width: 0; }
-#island .activity-output { margin: 6px 0 0; padding: 8px 10px; max-height: 220px; overflow: auto; border-left: 2px solid var(--line); background: var(--float); color: var(--fg-dim); font: 11px/1.5 var(--mono, monospace); white-space: pre-wrap; overflow-wrap: anywhere; }
+#island .activity-tool > summary { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.activity-tool .tool-name { flex: none; font-weight: 600; }
+.activity-tool .tool-target { flex: 1 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--fg-dim); font: 11px/1.4 var(--mono, monospace); }
+.activity-tool .tool-counts { flex: none; display: inline-flex; gap: 6px; font: 600 11px/1 var(--mono, monospace); }
+.activity-tool .tool-status { flex: none; margin-left: auto; }
+.d-add { color: var(--ok, #5fb87a); }
+.d-del { color: var(--danger, #e06c6c); }
+.activity-diff { margin: 6px 0 0; max-height: 320px; overflow: auto; border-radius: 6px; background: var(--float); font: 11px/1.5 var(--mono, monospace); }
+.activity-diff[hidden] { display: none; }
+.diff-lines { display: flex; flex-direction: column; min-width: max-content; padding: 4px 0; }
+.d-line { padding: 0 10px; white-space: pre; }
+.d-line.d-add { background: color-mix(in srgb, var(--ok, #5fb87a) 14%, transparent); }
+.d-line.d-del { background: color-mix(in srgb, var(--danger, #e06c6c) 14%, transparent); }
+.d-line.d-hunk { color: var(--fg-dim); font-weight: 600; padding-top: 4px; }
+.d-line.d-ctx { color: var(--fg-dim); }
+.chat-activity > summary { display: flex; align-items: center; gap: 8px; }
+.activity-took { color: var(--fg-dim); font-variant-numeric: tabular-nums; }
+.typing-time { margin-left: 8px; color: var(--fg-dim); font-variant-numeric: tabular-nums; }
+.typing-words { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; min-width: 0; }
+.msg.you { position: relative; }
+.msg.you > .msg-tools { position: absolute; top: -22px; right: 0; opacity: 0; transition: opacity .12s; }
+.msg.you:hover > .msg-tools, .msg.you:focus-within > .msg-tools { opacity: 1; }
+.chat-find { display: none; align-items: center; gap: 6px; padding: 6px 8px; border-bottom: 1px solid var(--line); background: var(--float); }
+.chat-find.on { display: flex; }
+.chat-find .find-input { flex: 1 1 auto; min-width: 0; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); font: var(--text-s)/1.4 var(--font); }
+.chat-find .find-count { flex: none; color: var(--fg-dim); font: var(--text-s)/1 var(--font); font-variant-numeric: tabular-nums; }
+.chat-find .find-step { flex: none; min-width: 24px; }
+.msg.found { outline: 1px dashed color-mix(in srgb, var(--accent, #d9a441) 60%, transparent); outline-offset: 3px; }
+.msg.found-current { outline: 2px solid var(--accent, #d9a441); }
+::highlight(chat-find) { background: color-mix(in srgb, var(--accent, #d9a441) 45%, transparent); color: inherit; }
+.msg li[data-depth="1"] { margin-left: 14px; }
+.msg li[data-depth="2"] { margin-left: 28px; }
+.msg li[data-depth="3"] { margin-left: 42px; }
+.msg li.task-item { list-style: none; }
+.msg .task { margin-right: 6px; color: var(--fg-dim); }
+.msg .task.done { color: var(--ok, #5fb87a); }
+.window-nest .msg { content-visibility: auto; contain-intrinsic-size: auto 80px; }
+.activity-output { margin: 6px 0 0; padding: 8px 10px; max-height: 220px; overflow: auto; border-left: 2px solid var(--line); background: var(--float); color: var(--fg-dim); font: 11px/1.5 var(--mono, monospace); white-space: pre-wrap; overflow-wrap: anywhere; }
 .activity-output[hidden] { display: none; }
 .ask-questions { display: flex; flex-direction: column; gap: 10px; margin: 8px 0; }
 .ask-question-text { margin: 0 0 6px; color: var(--fg); font: 600 var(--text-m)/1.4 var(--font); }

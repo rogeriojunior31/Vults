@@ -23,13 +23,16 @@ function codeBlock(code: string, info = ""): HTMLElement {
  *  followed: its label shows with the address beside it, to copy. */
 function inlineFull(text: string): Node[] {
   const out: Node[] = [];
-  const re = /(`[^`\n]+`|\*\*[^*\n]+\*\*|\[[^\[\]\n]+\]\([^)\s]+\)|(?<![\w*])\*[^*\n]+\*(?!\w)|(?<!\w)_[^_\n]+_(?!\w))/g;
+  const re = /(`[^`\n]+`|\*\*[^*\n]+\*\*|~~[^~\n]+~~|\[[^\[\]\n]+\]\([^)\s]+\)|https?:\/\/[^\s<>()]*[^\s<>().,;:!?'"]|(?<![\w*])\*[^*\n]+\*(?!\w)|(?<!\w)_[^_\n]+_(?!\w))/g;
   let last = 0;
   for (const m of text.matchAll(re)) {
     if (m.index! > last) out.push(document.createTextNode(text.slice(last, m.index)));
     const token = m[0];
     if (token.startsWith("`")) out.push(el("code", { text: token.slice(1, -1) }));
     else if (token.startsWith("**")) out.push(el("strong", { text: token.slice(2, -2) }));
+    else if (token.startsWith("~~")) out.push(el("s", { text: token.slice(2, -2) }));
+    // A bare address: shown as one, to copy; never followed.
+    else if (token.startsWith("http")) out.push(el("span", { class: "link", text: token }));
     else if (token.startsWith("[")) {
       const link = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(token)!;
       out.push(el("span", { class: "link", text: link[1] }), el("span", { class: "link-url", text: ` (${link[2]})` }));
@@ -112,7 +115,13 @@ export function renderFull(text: string): DocumentFragment {
         for (; n < lines.length; n++) {
           const next = /^\s*([-*•]|\d+[.)])\s+(.*)$/.exec(lines[n]);
           if (!next || /\d/.test(next[1]) !== ordered) break;
-          list.append(el("li", {}, ...inlineFull(next[2])));
+          // A task list's box, and how deep the item sits (two spaces a level).
+          const task = /^\[([ xX])\]\s+(.*)$/.exec(next[2]);
+          const li = el("li", {}, ...(task ? [el("span", { class: `task${task[1] === " " ? "" : " done"}`, text: task[1] === " " ? "☐" : "☑" }), ...inlineFull(task[2])] : inlineFull(next[2])));
+          const depth = Math.min(3, Math.floor((/^\s*/.exec(lines[n])![0].length) / 2));
+          if (depth) li.dataset.depth = String(depth);
+          if (task) li.classList.add("task-item");
+          list.append(li);
         }
         n--;
         frag.append(list);

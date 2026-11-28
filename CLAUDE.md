@@ -151,6 +151,7 @@ node scripts/check-card-arming.mjs  # a permission card ignores clicks in its fi
 node scripts/check-chat-queue.mjs  # messages written mid-turn queue, go after it, return on Stop
 node scripts/check-chat-paths.mjs  # @ lists the folder's files and folders; a dropped folder goes in by path
 node scripts/check-chat-asks.mjs  # an agent's question gets options; typing while a card waits answers it
+node scripts/check-chat-thread.mjs  # edits show their diff, the status line says what runs, ↑/↓ history, Ctrl+F, kept nodes
 cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
