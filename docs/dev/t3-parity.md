@@ -330,3 +330,31 @@ opening an editor runs a local program with the folder as its argument, never a 
 | W4 | **Create PR** from the chat: drafted from the conversation, shown as the connector's prepared write, sent with a click | `app/src/chat.rs`, `crates/connectors` | M |
 | W5 | **Open PR / Open issue** and the PR's checks dot on the bar | `crates/connectors`, `nest/` | S |
 | W6 | Docs and a check for the bar's states | `docs/guide/chat.md`, `scripts/` | S |
+
+## 10. Smaller things t3code does well
+
+Checked against Vults by grep; each says what Vults has today.
+
+| # | What t3code does | Vults today | Step for Vults | Size |
+|---|---|---|---|---|
+| X1 | **Keeps the computer awake while agents work** (`systemd-inhibit`, on by default; `server/src/background/KeepAwake.ts:66`) | nothing | A logind `Inhibit("sleep:idle")` over the existing zbus connection while a session or chat turn works; a switch in General; local only | S |
+| X2 | **Open in** any of ~25 editors, a preferred one remembered (`packages/contracts/src/editor.ts`) | only `code`, else the file manager (`app/src/open.rs`) | Merged into W3: a table of editors (code, codium, code-insiders, cursor, zed, JetBrains launchers) with their go-to-line argument; one absolute path argument, never a shell | S-M |
+| X3 | **Command palette** over threads, projects, settings, themes and actions; **Settings search** (~200 titles, `settingsSearch.ts`) | Ctrl+K in the Nest: sessions, `/continue`, `/remember`, five tabs (`ui/src/palette.ts`); no Settings search | Add New conversation, every Settings page (opened at its anchor) and the themes to the palette; a filter over Settings row titles with the same strings | S-M |
+| X4 | **Fallback model** when the default is out of usage (`settings.ts:1480`) | reads Claude's and Codex's usage windows (`app/src/usage.rs`), no fallback | *When {engine} is at its limit, start new conversations with...*; only at 100 % with a reset in the future; never switches a running conversation | S |
+| X5 | **Ask about lines**: a diff range becomes a context chip; *Cite* selected reply text (`composerContext.ts:182`, `AssistantSelectionToolbar.tsx`) | Changes is read-only; nothing quotes a reply | Select lines in Changes, *Ask Zeca*: path, lines and hunk (bounded) in the draft; *Quote* on selected reply text | M |
+| X6 | **Threads linked to issues** (`issue/IssueThreadLinks.tsx`) | Connections rows: *Ask Zeca* questions, *Open in*, *Seen* | *Work on this* on an issue or PR row: a chat in its roost's folder with the item as quoted, untrusted context | M |
+| X7 | **Steer a running turn** with a queued message; queue or steer by default | messages mid-turn only queue (`chat.ts`) | *Send now* on a queued item for drivers that take input mid-turn (Claude stream-json, ACP), hidden elsewhere; Lab first | M |
+| X8 | **Storage** page with cleanup (`StorageSettings.tsx`) | voice model sizes and Download; no Remove | *Remove* on an installed model not in use; one *Space used* line (models, meeting assets, `vults.sqlite`, logs) | S |
+| X9 | **Diagnostics** (`DiagnosticsSettings.tsx`) | agent and dictation doctors; no logs or report | *Open logs folder* and *Copy a report* in About (version, desktop, agent versions, doctor results, redacted, to the clipboard only) | S |
+| X10 | **Continue threads after restarts**, hold to quit | quitting mid-turn ends it silently | *Zeca is still working. Quit?* while a turn runs; the cut turn marked with *Continue* (a click, never automatic) | S |
+| X11 | **Delegate a task** to a child agent (`mcp/toolkits/orchestrator/tools.ts`) | Zeca cannot start a specialist | A `specialist_ask` tool: a card, the user approves, the run uses that specialist's own access, the answer returns to Zeca; Lab first | M |
+| X12 | **Skills in the `/` menu** (`ClaudeSkills.ts`) | `/` has remember, forget, continue, new | In *your setup* mode, the names in `~/.claude/skills/*/SKILL.md` and the project's `.claude/skills` as `/` entries; local read only | S |
+| X13 | **Pace** on quota windows (ahead, on, under) | % and reset time | The pace word beside the % | S |
+| X14 | **Favorite models** in the picker | *hide* planned (section 3) | A star on a model; favorites first | S |
+| X15 | **Nest hotkeys** and a cheat sheet (~70 bindable commands) | Ctrl+K, j/k, Esc | New conversation, tab switch, side panel; the list in Keyboard shortcuts | S |
+
+Skipped, with the reason: an integrated terminal (Vults jumps to the agent's own), a file tree (not
+an IDE; `@` lists paths), guest share links and tunnels (they expose the machine; the phone and its
+relay are the Vults way), 1Password and agent secret requests (secrets only in the keyring), webhooks
+(inbound network), *suggest next prompt* (sends every draft to a model), MCP server management (the
+CLI owns it), telemetry export (no telemetry), Mermaid and HTML render (heavy for little).

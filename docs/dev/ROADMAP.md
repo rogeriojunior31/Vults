@@ -19,10 +19,50 @@ Read them there when a task below names a step from them.
 
 - Released: **0.1.9** (tagged 2026-11-27; its draft release waits for the R3 smoke and the owner's Publish). Everything merged since is under *Unreleased* in the changelog.
 - Next release: **0.1.10**, from current `main`.
-- Current focus, set by the owner on 2026-11-11: **Windows functional validation**. Further connector
-  work (GitLab/Gitea CP3 onwards, Notion) waits until it is done.
+- Current focus, set by the owner on 2026-11-28: **what t3code does well, first** (the section below,
+  planned in [t3-parity.md](t3-parity.md)); then Windows functional validation and the rest. Further
+  connector work (GitLab/Gitea CP3 onwards, Notion) waits.
 
-## Now
+## t3code first
+
+Each id is a step in [t3-parity.md](t3-parity.md), where it says what it does, where it goes and its
+size. Done before this list: Labs (section 1), Chat folders (section 2), Settings pages, provider
+marks, the Agents page and shorter copy (section 3).
+
+**A. Quick wins** (S each, one PR per few)
+- [ ] X1 · Keep the computer awake while agents work · P1 · S
+- [ ] T1, T2, T6 · New-conversation defaults; pin, archive, confirm delete; copy as Markdown · P1 · S-M
+- [ ] X3 · Palette over conversations, Settings pages and themes; Settings search · P1 · S-M
+- [ ] X4 · Fallback model when an engine is at its limit · P1 · S
+- [ ] X10 · Ask before quitting mid-turn; *Continue* on a cut turn · P1 · S
+- [ ] X12, X13, X14, X15 · Skills in `/`; pace on quotas; favorite models; Nest hotkeys · P2 · S
+- [ ] X8, X9 · Remove a voice model, space used; logs folder and a copied report · P2 · S
+- [ ] Section 3, Providers 4-5 and Voice 3-4 · Models detail; version advisory; microphone test; *Test model* · P2 · S-M
+
+**B. The chat as a workspace** (sections 9, 7, 10)
+- [ ] W1, W2 · The workspace bar: repo, branch chip, worktree list with *Chat here* · P1 · S-M
+- [ ] W3 + X2 · *Open in* the editors found on this computer · P1 · M
+- [ ] W4, W5 · Create PR from the chat (prepared, a click); Open PR or issue, checks dot · P1 · M
+- [ ] X5, X6 · Ask about lines in Changes, quote a reply; *Work on this* from an issue or PR · P2 · M
+- [ ] T3, T4, T5 · Titles by a model; fork from a reply; search every conversation · P2 · M
+- [ ] W6 · Docs and checks for the bar · P1 · S
+
+**C. Scheduled tasks** (section 5: the vultures that fly in, work and leave)
+- [ ] S1-S4 · Design and rule 2, the Lab, the store, the gate feature `ROUTINES` · P1 · M
+- [ ] S5 · A specialist's run on the wire with its own bird (closes UX8-PROJ) · P1 · M
+- [ ] S6-S7 · A run with no window, access capped; the scheduler · P1 · L
+- [ ] S8-S9 · The flight in and out on the island; notifications · P1 · M
+- [ ] S10-S12 · Specialists, Scheduled tasks (editor with the vulture), the *Scheduled* mark, docs · P1 · L
+
+**D. Deeper work**
+- [ ] Section 4 · Code: projects with their context, handoff v2, git-backed Changes, a worktree per conversation · P2 · L
+- [ ] X7, X11 · Steer a running turn; Zeca hands a task to a specialist (Labs) · P2 · M
+- [ ] B1-B2 · Open links in; a session's local server with *Open* · P2 · S-M
+- [ ] B3-B4, T7 · Preview window and agent access (Labs); resume after a usage limit · P3 · L
+
+**E. Environments** (section 6): other machines over SSH, after D · P3 · L
+
+## Now (after t3code first)
 
 1. WIN · Windows functional validation (below)
 2. Native acceptance of merged work: FF1, FF3, FF5, VC4, VC6
