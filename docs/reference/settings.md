@@ -131,6 +131,7 @@ for supported destinations, clipboard behavior and privacy limits.
 | `connectors` | `{}` | Connector id → switched on |
 | `update_consent` | `{"state":"unasked"}` | The island's one question about the update notice: `unasked`, `asked` (with `atMs`; it comes back after a day), `yes` (one look a day at the releases list) or `no`. Set in the island or **Settings → General → Updates**. What the last look found, and *Later*, live in `update.json` beside the database. Absent from distro packages' builds |
 | `quiet_when_watching` | `true` | A finish or failure whose terminal is in front makes no sound and no reveal; Vults reads the active window once when a turn ends. Cards always sound. Set in **Settings → Sound and notifications → Stay quiet when I am looking** |
+| `keep_awake` | `true` | While a session in the flock thinks or works, or a chat turn runs, Vults holds a logind `sleep` inhibitor so the computer does not suspend; released as soon as nothing works. Only sleep: the screen still dims and locks. Linux; a local call on the system bus, nothing sent. Set in **Settings → General** |
 | `sounds` | `true` | 8-bit sounds |
 | `volume` | `50` | How loud the sounds play, in percent (0 to 100); `50` is how loud 0.1.0 played them |
 | `voice_model` | absent | The shared Chat/dictation voice model (`base`, `small`, `turbo`), downloaded into `~/.local/share/vults/voice/` (with the speech detector, `ggml-silero-v6.2.0.bin`); absent keeps voice off. Each Chat recording keeps up to one minute of audio; independent dictation keeps up to ten minutes |

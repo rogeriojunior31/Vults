@@ -3,6 +3,7 @@
 
 mod antigravity;
 mod audit;
+mod awake;
 mod chat;
 mod chat_paths;
 mod connector_snapshots;
@@ -402,6 +403,7 @@ pub fn run() {
             settings::set_visitors,
             settings::set_notifications,
             settings::set_quiet_when_watching,
+            settings::set_keep_awake,
             settings::set_dnd,
             settings::set_zeca,
             panel::set_presence,
@@ -598,6 +600,7 @@ pub fn run() {
             runtime::start(handle.clone());
             // After the runtime: a lock already on at start reaches its inbox.
             lock::start(&handle);
+            awake::start(&handle);
             // After the runtime too: its first read asks whether the screen is locked.
             pricing::start(&handle);
             update::start(&handle);

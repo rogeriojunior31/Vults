@@ -182,6 +182,10 @@ pub struct Settings {
     /// always sound; where the active window cannot be read, nothing changes.
     #[serde(default = "yes")]
     pub quiet_when_watching: bool,
+    /// The computer does not suspend while agents work (a logind `sleep` inhibitor; the screen
+    /// still locks).
+    #[serde(default = "yes")]
+    pub keep_awake: bool,
     /// Zeca, the companion who chats and listens. Off, the flock still works (ADR 0005).
     #[serde(default = "yes")]
     pub zeca: bool,
@@ -460,6 +464,7 @@ impl Default for Settings {
             presence: Default::default(),
             notifications: true,
             quiet_when_watching: true,
+            keep_awake: true,
             zeca: true,
             widget: None,
             projects: BTreeMap::new(),
@@ -601,6 +606,8 @@ pub struct Public {
     pub notifications: bool,
     #[serde(rename = "quietWhenWatching")]
     pub quiet_when_watching: bool,
+    #[serde(rename = "keepAwake")]
+    pub keep_awake: bool,
     pub zeca: bool,
     /// Activity's local history (the island's gear reads it here, without the history itself).
     pub history: bool,
@@ -678,6 +685,7 @@ pub fn app_settings(app: AppHandle, state: tauri::State<'_, SettingsState>) -> P
         presence: s.presence,
         notifications: s.notifications,
         quiet_when_watching: s.quiet_when_watching,
+        keep_awake: s.keep_awake,
         zeca: s.zeca,
         history: s.history,
         widget: s.widget,
@@ -971,6 +979,19 @@ pub fn update_consent(app: &AppHandle) -> crate::update::rules::Consent {
         .lock()
         .map(|s| s.update_consent)
         .unwrap_or_default()
+}
+
+/// Off, the computer may suspend while agents work, as before.
+#[tauri::command]
+pub fn set_keep_awake(app: AppHandle, window: tauri::Webview, on: bool) -> Result<(), String> {
+    crate::settings_page(&window)?;
+    edit(&app, |s| s.keep_awake = on)
+}
+
+#[cfg(target_os = "linux")]
+pub fn keep_awake(app: &AppHandle) -> bool {
+    app.try_state::<SettingsState>()
+        .is_some_and(|st| st.0.lock().is_ok_and(|s| s.keep_awake))
 }
 
 pub fn quiet_when_watching(app: &AppHandle) -> bool {
@@ -2675,6 +2696,7 @@ mod tests {
             presence: crate::panel::Presence::Island,
             notifications: true,
             quiet_when_watching: true,
+            keep_awake: true,
             zeca: true,
             widget: None,
             projects: BTreeMap::new(),

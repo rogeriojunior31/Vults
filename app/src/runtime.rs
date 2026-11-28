@@ -1408,6 +1408,12 @@ async fn run(app: AppHandle, mut rx: mpsc::Receiver<Msg>, tx: mpsc::Sender<Msg>)
         if last_view.as_ref() != Some(&view) {
             publish_view(&app, &view);
             crate::tray::show(&app, &view);
+            crate::awake::flock(
+                &app,
+                view.sessions
+                    .iter()
+                    .any(|s| matches!(s.status, core::Status::Thinking | core::Status::Working)),
+            );
             last_view = Some(view);
         }
         #[cfg(target_os = "linux")]

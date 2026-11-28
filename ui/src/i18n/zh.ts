@@ -1210,6 +1210,8 @@ export default {
   "A conversation keeps its model; New starts another.": "一段对话会保持它的模型；新建可开始另一段。",
   "The model and effort for new conversations in this folder.": "此文件夹中新对话的模型和力度。",
   "Clean": "干净",
+  "Keep the computer awake while agents work": "智能体工作时保持电脑唤醒",
+  "It won't suspend while a session or a chat turn runs. The screen still locks.": "会话或聊天轮次运行时不会休眠。屏幕仍会锁定。",
   "How Zeca's chat asks, searches the web and listens. Its agents and providers are in Agents.": "Zeca 的聊天如何请求许可、搜索网页和聆听。它的智能体和提供商在“智能体”中。",
   "API providers": "API 提供商",
   "In Zeca's chat": "在 Zeca 的聊天中",

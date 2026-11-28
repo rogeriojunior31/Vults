@@ -323,6 +323,13 @@ events.onSettingsSection("activity"); await tick();
 assert.equal(budgetReads, beforeExternalBudget + 1, "A native page request must load the budget just like sidebar navigation");
 assert.equal(budgetInput().disabled, false);
 console.log("check-settings-ui: external Activity navigation loads its budget editor");
+await go("General");
+const awake = page().querySelectorAll("input").find(n => n.type === "checkbox" && n.dataset.setting?.startsWith("Keep the computer awake"));
+assert.ok(awake && awake.checked, "General offers keep-awake, on by default");
+const beforeAwake = writes.length;
+awake.checked = false; awake.fire("change"); await tick(); await tick();
+assert.deepEqual(writes.slice(beforeAwake), [["setKeepAwake", false]], "Turning keep-awake off writes only that setting");
+console.log("check-settings-ui: keep-awake toggle on General");
 
 // Initial read failures and older responses must never replace a saved budget.
 const budgetBundle = await build({ configFile: false, root: ui, logLevel: "silent", build: {

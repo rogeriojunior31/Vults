@@ -1210,6 +1210,8 @@ export default {
   "A conversation keeps its model; New starts another.": "Uma conversa mantém o modelo dela; Novo começa outra.",
   "The model and effort for new conversations in this folder.": "O modelo e o esforço das novas conversas nesta pasta.",
   "Clean": "Limpo",
+  "Keep the computer awake while agents work": "Manter o computador acordado enquanto os agentes trabalham",
+  "It won't suspend while a session or a chat turn runs. The screen still locks.": "Ele não suspende enquanto uma sessão ou um turno do chat roda. A tela ainda bloqueia.",
   "How Zeca's chat asks, searches the web and listens. Its agents and providers are in Agents.": "Como o chat do Zeca pede permissão, busca na web e ouve. Os agentes e provedores dele ficam em Agentes.",
   "API providers": "Provedores de API",
   "In Zeca's chat": "No chat do Zeca",

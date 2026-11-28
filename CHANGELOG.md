@@ -32,6 +32,10 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 - **Phone**: the pairing code's text shows only on request, and **Copy** leaves it out of clipboard history and cloud sync.
 - **Phone relay**: plain `http://` only for a relay on this computer, a LAN or a tailnet; one address holds at most 64 connections (`VULTS_RELAY_PER_ADDRESS`, 0 behind a proxy).
 
+### Added
+
+- **Keep the computer awake while agents work** (Settings → General, on): a logind sleep inhibitor while a session or a chat turn works; the screen still locks.
+
 ### Changed
 
 - **Settings → Agents**: every agent and API provider in one page, as t3code's Providers: a list with each mark and state beside the chosen agent's hooks and its engine in Zeca's chat (Sign in, Check again); the API providers below. Chat & voice keeps permissions, web and voice.

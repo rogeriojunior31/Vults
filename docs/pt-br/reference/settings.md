@@ -1,5 +1,5 @@
 # Configurações e arquivos
-<!-- source: eb8a4c581cef -->
+<!-- source: c75ede449cdb -->
 
 **Ditado > Diagnóstico** oferece um teste explícito de microfone de seis segundos,
 somente na memória, estado atual do áudio/desktop/modelos, contadores desde o início do app e tempos
@@ -142,6 +142,7 @@ para destinos compatíveis, comportamento da área de transferência e limites d
 | `connectors` | `{}` | Id do conector → ligado |
 | `update_consent` | `{"state":"unasked"}` | A única pergunta da ilha sobre o aviso de atualização: `unasked`, `asked` (com `atMs`; volta depois de um dia), `yes` (uma olhada por dia na lista de versões) ou `no`. Definido na ilha ou em **Settings → General → Updates**. O que a última olhada achou, e o *Later*, ficam em `update.json` ao lado do banco. Não existe nos builds dos pacotes de distribuição |
 | `quiet_when_watching` | `true` | Um término ou falha cujo terminal está na frente não faz som nem abre a ilha; o Vults lê a janela ativa uma vez quando um turno termina. Cards sempre soam. Definido em **Settings → Sound and notifications → Stay quiet when I am looking** |
+| `keep_awake` | `true` | Enquanto uma sessão do bando pensa ou trabalha, ou um turno do chat roda, o Vults segura um inibidor `sleep` do logind para o computador não suspender; solto assim que nada trabalha. Só a suspensão: a tela ainda escurece e bloqueia. Linux; uma chamada local no barramento do sistema, nada é enviado. Definido em **Settings → General** |
 | `sounds` | `true` | Sons 8-bit |
 | `volume` | `50` | O volume dos sons, em porcentagem (0 a 100); `50` é o volume em que a 0.1.0 os tocava |
 | `voice_model` | ausente | O modelo de voz compartilhado pelo Chat e pelo ditado (`base`, `small`, `turbo`), baixado em `~/.local/share/vults/voice/` (junto com o detector de fala, `ggml-silero-v6.2.0.bin`); ausente deixa a voz desligada. Cada gravação do Chat guarda até um minuto de áudio; o ditado independente guarda até dez minutos |

@@ -307,6 +307,7 @@ let voice: VoiceStatus | null = null;
 const downloading = new Map<string, number>();
 let voiceError: string | null = null;
 let autostart = false;
+let keepAwake = true;
 let foldAfter = 15;
 let openOnHover = false;
 /** The language chosen, or null to follow the system. */
@@ -1286,6 +1287,14 @@ function generalPage(): HTMLElement[] {
         toggle(autostart, async (on) => {
           await Bridge.setAutostart(on);
           autostart = on;
+        }),
+      ),
+      row(
+        t("Keep the computer awake while agents work"),
+        t("It won't suspend while a session or a chat turn runs. The screen still locks."),
+        toggle(keepAwake, async (on) => {
+          await Bridge.setKeepAwake(on);
+          keepAwake = on;
         }),
       ),
     ),
@@ -2818,6 +2827,7 @@ void Bridge.appSettings().then((s) => {
   sounds = s.sounds;
   volume = savedVolume = s.volume;
   autostart = s.autostart;
+  keepAwake = s.keepAwake ?? true;
   // The nearest choice: the file may hold any number in range.
   foldAfter = FOLD_CHOICES.reduce((a, b) => (Math.abs(b - s.foldAfter) < Math.abs(a - s.foldAfter) ? b : a));
   openOnHover = s.openOnHover;

@@ -24,7 +24,7 @@ const settings = { questionAgents: false, antigravityApprovals: false, labs: {},
   dictationMicrophone: null, dictationDoubleTap: true, dictationSpaceLock: true, dictationEscapeCancel: true,
   dictationCaption: true, dictationInsert: false, dictationInsertAvailable: true, dictationWayland: false, chatAccess: "ask",
   memory: true, journalSummary: false, localEmbeddings: false, memorySuggest: true, sleep: false, zecaSpecies: "atratus",
-  zecaLook: "auto", flock: "brazil", visitors: true, presence: "island", notifications: true, quietWhenWatching: true,
+  zecaLook: "auto", flock: "brazil", visitors: true, presence: "island", notifications: true, quietWhenWatching: true, keepAwake: true,
   zeca: true, widget: null, dndUntil: null, language: null, lang: "en", settingsPath: "/home/me/.config/vults/settings.json",
   dataPath: "/home/me/.local/share/vults" };
 const fixtures = {
