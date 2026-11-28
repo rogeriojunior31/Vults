@@ -1,5 +1,5 @@
 # Atividade
-<!-- source: f7f050f6264e -->
+<!-- source: 2dd5bc3daf35 -->
 
 Week compara os números com a semana anterior do calendário, mostra os turnos registrados por
 agente e identifica os meses e dias da semana na grade anual. Uma base de comparação ausente ou
@@ -155,7 +155,7 @@ hora na memória, nunca em disco.
   guardado para o servidor MCP do
   Zeca, tudo de uma vez, deixando uma linha no log de
   auditoria: que você o limpou, e quando. O que fica: o que o Zeca lembra (os arquivos de memória
-  dele, **Settings → Chat & voice → Memory**), as políticas que você aceitou, os seus telefones
+  dele, **Settings → Zeca → Memory**), as políticas que você aceitou, os seus telefones
   pareados, os custos registrados dos agentes, os totais medidos de ditado e o dicionário, as
   substituições, os trechos e os estilos por aplicativo mantidos pelo usuário, as admissões de cota da limpeza sem conteúdo e o recibo
   de um merge, rerun, cancelamento ou exclusão de branch no GitHub que o GitHub pode ter feito, para

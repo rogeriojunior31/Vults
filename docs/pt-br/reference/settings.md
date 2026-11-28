@@ -1,5 +1,5 @@
 # Configurações e arquivos
-<!-- source: dc284176be7e -->
+<!-- source: b0fd11f05728 -->
 
 **Ditado > Diagnóstico** oferece um teste explícito de microfone de seis segundos,
 somente na memória, estado atual do áudio/desktop/modelos, contadores desde o início do app e tempos
@@ -141,7 +141,7 @@ para destinos compatíveis, comportamento da área de transferência e limites d
 | `version` | `41` | Versão do esquema, para que releases futuras possam migrar o arquivo. Se for mais nova que a do app (você voltou para uma release mais antiga), o app (a partir da 0.1.1) usa as chaves que conhece, guarda o arquivo como estava em `settings.json.v<version>-<time>` e avisa no log; a próxima mudança que você fizer salva só as chaves que ele conhece, na versão dele. Até lá, cada início guarda mais uma cópia. Se nenhuma cópia puder ser guardada, as mudanças não são salvas. Para voltar às configurações da release mais nova, restaure essa cópia. Um arquivo mais antigo é lido com os padrões para as chaves que faltam nele, e é salvo na versão do app |
 | `connectors` | `{}` | Id do conector → ligado |
 | `update_consent` | `{"state":"unasked"}` | A única pergunta da ilha sobre o aviso de atualização: `unasked`, `asked` (com `atMs`; volta depois de um dia), `yes` (uma olhada por dia na lista de versões) ou `no`. Definido na ilha ou em **Settings → General → Updates**. O que a última olhada achou, e o *Later*, ficam em `update.json` ao lado do banco. Não existe nos builds dos pacotes de distribuição |
-| `quiet_when_watching` | `true` | Um término ou falha cujo terminal está na frente não faz som nem abre a ilha; o Vults lê a janela ativa uma vez quando um turno termina. Cards sempre soam. Definido em **Settings → General → Stay quiet when I am looking** |
+| `quiet_when_watching` | `true` | Um término ou falha cujo terminal está na frente não faz som nem abre a ilha; o Vults lê a janela ativa uma vez quando um turno termina. Cards sempre soam. Definido em **Settings → Sound and notifications → Stay quiet when I am looking** |
 | `sounds` | `true` | Sons 8-bit |
 | `volume` | `50` | O volume dos sons, em porcentagem (0 a 100); `50` é o volume em que a 0.1.0 os tocava |
 | `voice_model` | ausente | O modelo de voz compartilhado pelo Chat e pelo ditado (`base`, `small`, `turbo`), baixado em `~/.local/share/vults/voice/` (junto com o detector de fala, `ggml-silero-v6.2.0.bin`); ausente deixa a voz desligada. Cada gravação do Chat guarda até um minuto de áudio; o ditado independente guarda até dez minutos |
@@ -210,7 +210,7 @@ para destinos compatíveis, comportamento da área de transferência e limites d
 | `dnd_until` | ausente | Não perturbe até esse momento, em segundos desde a época Unix: sem sons e sem notificações em repouso, sem lembretes; um card ainda abre a ilha com o seu som (e, no *Panel*, a sua notificação). Definido em **Settings → General**; um horário que já passou significa desligado (a partir da versão 9) |
 | `history` | `true` | Guardar um histórico local dos turnos dos agentes para **Settings → History and budget**: as contagens de cada turno terminado (12 semanas) e os totais de cada dia (um ano), no `vults.sqlite` da pasta de dados. Desligado, nada novo é guardado e o que existe fica; **Clear history** apaga tudo (a partir da versão 13), e o log de auditoria junto |
 | `recap_shown_week` | ausente | A segunda-feira da última semana cujo card de resumo você leu na ilha, para que ele venha uma vez só (a partir da versão 14) |
-| `theme` | `"dark"` | **Settings → General → Theme**, compartilhado por todas as janelas: `dark`, o neutro `light`, ou os temas SP Night `sp-night-paulista` (Noite Paulista), `sp-night-garoa` (Garoa) e `sp-night-jaragua` (Pico do Jaraguá). Um valor desconhecido usa Dark, e `black`, o nome dele antes da versão 45, é lido como `dark` (a partir da versão 23) |
+| `theme` | `"dark"` | **Settings → Appearance → Theme**, compartilhado por todas as janelas: `dark`, o neutro `light`, ou os temas SP Night `sp-night-paulista` (Noite Paulista), `sp-night-garoa` (Garoa) e `sp-night-jaragua` (Pico do Jaraguá). Um valor desconhecido usa Dark, e `black`, o nome dele antes da versão 45, é lido como `dark` (a partir da versão 23) |
 | `language` | ausente | O idioma do app: `en`, `pt-BR`, `es` ou `zh` (chinês simplificado), definido em **Settings → General**. Ausente segue o sistema (`LC_ALL`, `LC_MESSAGES` ou `LANG`; o locale do usuário no Windows), e um idioma que o Vults não fala vira inglês (a partir da versão 15) |
 | `notifications` | `true` | Notificações do desktop, só em *Panel* (no topo da tela a ilha já mostra tudo): uma sessão terminou, falhou ou ficou quieta, e um card esperando, na hora. A única ação delas abre a ilha |
 | `visitors` | `true` | De vez em quando, enquanto há sessões abertas, um urubu de fora do bando cruza o céu uma vez, sem nunca pousar |

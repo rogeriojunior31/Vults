@@ -857,3 +857,13 @@ code {
 .tp-line.short { width: 60%; }
 .tp-chip { align-self: flex-end; width: 34%; height: 7px; margin-top: auto; border-radius: 3px; background: var(--raised); box-shadow: inset 0 -1px 0 var(--mark); }
 @media (prefers-reduced-motion: reduce) { .theme-tile { transition: none; } }
+
+/* Settings → Zeca: his portrait leads, larger, with his name, species and switch beside it. */
+.zeca-hero { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 20px; padding: 16px 20px; }
+.zeca-hero .zeca-preview { image-rendering: pixelated; width: auto; height: auto; }
+.zeca-hero-body { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.zeca-hero-name { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; font: 600 var(--text-xl)/1.2 var(--font); color: var(--fg); }
+.zeca-hero-species { color: var(--fg-dim); font: 400 var(--text-m)/1.3 var(--font); }
+.zeca-hero .rows > .row { padding-left: 0; padding-right: 0; }
+.species-family { margin: 14px 0 8px; color: var(--fg-dim); font: 600 var(--text-m)/1.3 var(--font); }
+@media (max-width: 560px) { .zeca-hero { grid-template-columns: 1fr; justify-items: start; } }

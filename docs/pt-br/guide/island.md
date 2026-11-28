@@ -1,5 +1,5 @@
 # A ilha
-<!-- source: 254ca3e3c622 -->
+<!-- source: 0c55bc7dbdd4 -->
 
 A ilha fica pendurada na borda de cima da tela. No KDE Plasma, Hyprland, Sway e outros compositores
 com layer-shell, ela fica acima de todas as janelas, como um painel; no GNOME, é uma janela comum
@@ -7,7 +7,7 @@ sempre no topo. No X11, ela aparece em todas as áreas de trabalho. Ela só pega
 digita no chat, ou depois de **Ctrl+Alt+Space** ([abaixo](#getting-to-a-session)).
 
 Com mais de uma tela, o desktop escolhe uma (em geral, a tela em foco na inicialização). Para fixar a
-ilha numa tela, escolha-a em **Settings → General → Screen**. Se essa tela sumir, a ilha passa para
+ilha numa tela, escolha-a em **Settings → Island → Screen**. Se essa tela sumir, a ilha passa para
 outra e volta quando ela retornar.
 
 A prévia para Windows usa uma janela comum do desktop. A configuração de notificações do desktop
@@ -34,8 +34,8 @@ lugar dele. Toda outra sessão é um **vult**.
 As aves encenam o que as sessões fazem: leem, bicam o fio enquanto editam, levantam voo para a web e
 abrem as asas quando uma permissão espera (com uma marca sobre a cabeça; ao amanhecer as aves
 em descanso abrem as delas ao sol, sem marca). Sessões novas chegam voando; as que terminam vão embora.
-Com movimento reduzido, elas ficam nos poleiros. **Settings → Flock & Zeca** escolhe o conjunto de espécies,
-a espécie do Zeca e os visitantes raros. [Animações](../contributing/animations.md) lista cada clipe.
+Com movimento reduzido, elas ficam nos poleiros. **Settings → Flock** escolhe o conjunto de espécies e
+os visitantes raros; **Settings → Zeca**, a espécie e o visual dele. [Animações](../contributing/animations.md) lista cada clipe.
 
 <a id="zecas-seasonal-looks"></a>
 
@@ -56,7 +56,7 @@ estiver sob o ponteiro, um clique fica com ele, Escape o deixa como estava. Só 
 
 ### Sem o Zeca
 
-O Zeca é opcional. **Settings → Flock & Zeca → Zeca** o desliga; o bando continua funcionando: sessões no
+O Zeca é opcional. **Settings → Zeca → Zeca** o desliga; o bando continua funcionando: sessões no
 fio, cards de permissão e de pergunta, os atalhos de Allow / Deny, notificações, conectores e as
 predefinições. O que vai com ele:
 
@@ -104,10 +104,10 @@ você olhava: **Mini** recolhe na hora para a pílula, **Quick** é a ilha, **Ro
 [Nest](nest.md) no que a ilha mostra (o bando, o chat, as suas conexões ou esta semana; as Settings a
 partir da engrenagem) e **Full** o abre na tela toda. Cada um diz o que é no menu, e **Sounds** liga
 ou desliga os sons. Enquanto um card espera, ele
-ocupa o lugar do bando. **Settings → General → Fold the island** define a
+ocupa o lugar do bando. **Settings → Island → Fold the island** define a
 espera.
 
-Com **Settings → General → Open on hover** ligado, deixar o ponteiro sobre a pílula a abre sem
+Com **Settings → Island → Open on hover** ligado, deixar o ponteiro sobre a pílula a abre sem
 clique. Aberta assim, ela se recolhe assim que o ponteiro sai, a não ser que você tenha clicado nela.
 Desligado por padrão, e não vale no *Panel*.
 
@@ -151,7 +151,7 @@ posição de leitura. Uma falha ao salvar a largura é anunciada e mantém a esc
 
 ## Presença: quanto ela mostra
 
-**Settings → General → Presence**, ou o menu da bandeja (Linux), escolhe uma de quatro
+**Settings → Island → Presence**, ou o menu da bandeja (Linux), escolhe uma de quatro
 predefinições, na hora.
 
 | Predefinição | Em repouso | Um card que precisa de você |
@@ -196,7 +196,7 @@ abre a ilha no topo.
 
 ## O widget de canto
 
-**Settings → General → Corner widget** põe uma pequena janela num canto que você escolhe; fica
+**Settings → Island → Corner widget** põe uma pequena janela num canto que você escolhe; fica
 desligado até você escolher um. Funciona com todas as predefinições. Mostra até três aves (a sessão
 da frente, depois as que mais querem você) e quantas sessões precisam de você ou estão trabalhando.
 Uma borda âmbar significa que alguém precisa de você.
@@ -222,7 +222,7 @@ máximo uma, com o nome do projeto no título; ela some quando o card é respond
 trabalhar ou a sessão é encerrada; terminar uma resposta ou ficar em silêncio não remove a ave. O que aconteceu enquanto elas estavam desligadas não é avisado depois.
 
 **Open** (ou um clique) traz a ilha com aquela sessão na frente. Uma notificação nunca tem Allow nem
-Deny. Desligue-as em **Settings → General → Notifications**.
+Deny. Desligue-as em **Settings → Sound and notifications → Notifications**.
 
 No Windows, instale o pacote NSIS com o atalho no menu Iniciar para o Windows identificar o Vults.
 Um executável de desenvolvimento sem registro pode não exibir notificações. As configurações de
@@ -306,7 +306,7 @@ um nome completo (nunca tirado da rede).
 
 ## Tocando agora
 
-Ligue **Settings → General → Now playing** e a ilha mostra a música que o seu player está tocando
+Ligue **Settings → Sound and notifications → Now playing** e a ilha mostra a música que o seu player está tocando
 (qualquer player que fale MPRIS: Spotify, uma aba do navegador, mpv). A ilha compacta a mostra quando
 nada roda; a ilha aberta a mostra na barra de cima, com anterior, tocar/pausar e próxima ao passar o
 ponteiro. Enquanto ela toca, o Zeca dança e as aves ociosas do bando fazem o cortejo no fio em vez de
@@ -472,7 +472,7 @@ Essas escolhas pertencem ao projeto (a pasta dele): toda sessão nela as segue, 
 
 Bipes curtos de 8 bits quando uma sessão precisa de você, termina ou falha, e para novidades de
 conectores; outros mais suaves quando a ilha abre ou se recolhe e quando o Zeca reage a você. O botão
-de alto-falante na ilha, ou **Settings → General → Sounds**, os desliga; **Volume** define o quão
+de alto-falante na ilha, ou **Settings → Sound and notifications → Sounds**, os desliga; **Volume** define o quão
 alto. Um card que continua esperando soa de novo, e o **Do not disturb** silencia sons e notificações
 por um tempo: veja [Quando ninguém responde](approvals.md#when-nobody-answers).
 

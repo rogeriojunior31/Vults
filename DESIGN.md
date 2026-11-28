@@ -94,7 +94,7 @@ truth when that theme changes. Keep `--agent-*` colors as agent identity.
   available screen and viewport without overwriting the saved preference or resizing
   the mapped surface. Mini stays 38 logical pixels high at every width; a wider choice must
   not make the resting bar taller. Selected Quick widths remain capped at 600 logical pixels
-  including zoom and inline dictation feedback. General > Appearance and Quick's General page
+  including zoom and inline dictation feedback. Settings > Appearance and Quick's General page
   edit the same shared width preference, with cross-view refresh and the same save-failure behavior. Native placement, display scaling and input behavior still need
   desktop acceptance.
 - Room/Full share one header row with their tab navigation. At narrow widths,
@@ -103,7 +103,11 @@ truth when that theme changes. Keep `--agent-*` colors as agent identity.
   a 48 px rail. Arrow keys resize, Home/End reach the bounds and Enter folds;
   folding keeps selection and drafts. Below 900 px, each page keeps its existing
   narrow navigation instead of showing a rail.
-- Permanent preferences stay behind the gear. Settings > Dictation is one page
+- Permanent preferences stay behind the gear, one topic per page with titled sections
+  (t3code's arrangement): Your companion (Zeca: his portrait, switch, look, species and
+  memory; Chat & voice), Experience (General, Appearance, Island, Sound and notifications,
+  Keyboard shortcuts, Dictation, Flock), Work and System. A page leads with its title and
+  one sentence of scope; a section never repeats its page's name. Settings > Dictation is one page
   using the existing global Settings navigation, with Voice input, Recording, Text
   delivery, and History and privacy sections. Recognition and optional command,
   conversation, meeting and agent features use labeled disclosures on that page.
@@ -229,8 +233,8 @@ truth when that theme changes. Keep `--agent-*` colors as agent identity.
   Reactions communicate presence and never grant approval authority.
 - With Zeca off, preserve the independent flock, records, costs and other surfaces.
   New specialist Chat behavior must follow its agreed capability contract.
-- Memory-off guidance opens the Memory section of the existing Chat & voice
-  preferences, with a return to Memory in the Nest and no automatic activation.
+- Memory-off guidance opens the Memory section of Settings > Zeca, with a return to
+  Memory in the Nest and no automatic activation.
   Unknown write or Undo failures describe an unconfirmed result; technical detail
   stays in a disclosure. Recovery refreshes the current memory without replaying
   the change, and stale reads keep mutation controls disabled.

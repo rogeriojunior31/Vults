@@ -1,5 +1,5 @@
 # O Nest
-<!-- source: ec5a847d47cc -->
+<!-- source: 0cb7d9ff08f3 -->
 
 O Nest é a janela do próprio Vults, para quando a ilha fica pequena: o bando inteiro, o
 chat, o que aconteceu e as suas conexões. Abra pelo ícone da bandeja (**Nest…**) ou pela
@@ -12,7 +12,7 @@ card que espera é respondido onde você está: no Nest enquanto você está nel
 foco), e na ilha, que aparece para ele, enquanto você está em outro lugar.
 
 Atividade, Conexões e Configurações usam controles neutros, títulos, cards e estados de leitura
-compartilhados. **Settings → General → Theme** escolhe **Dark** (o padrão), o neutro **Light** ou um dos três
+compartilhados. **Settings → Appearance → Theme** escolhe **Dark** (o padrão), o neutro **Light** ou um dos três
 temas SP Night, três vistas de São Paulo à noite (**Noite Paulista**; **Garoa**, o cinza chapado do
 chuvisco; **Pico do Jaraguá**, o escuro da mata), em todas as janelas. Cada tema é um bloco com uma
 pequena imagem do Vults nas próprias cores (a ilha com o bando no fio, a lista do Nest e um cartão):
@@ -69,7 +69,7 @@ config de um agente, uma chave, uma política ou um celular, e nunca mostram tex
 menu mantém a aba em que você está: **Room** é a janela, **Full** a tela toda
 (**Esc** volta para Room), **Quick** fecha o Nest e abre a ilha, **Mini** o fecha e deixa a pílula.
 **Alt+1** a **Alt+5** escolhem uma aba nessa ordem (Chat oculto é ignorado). Embaixo, **Zeca on** / **Zeca off** liga e
-desliga o Zeca (como **Settings → Flock & Zeca → Zeca**), o lápis (**Zeca's look**) abre a página dele nas
+desliga o Zeca (como **Settings → Zeca → Zeca**), o lápis (**Zeca's look**) abre a página dele nas
 Configurações, **Open terminal** traz o terminal da sessão da frente e **Back to the island** traz a
 ilha.
 

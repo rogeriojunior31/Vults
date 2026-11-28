@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 2625e59e5d65 -->
+<!-- source: 9c8bd9ea49ab -->
 
 Os painéis laterais redimensionáveis seguem o ponteiro que iniciou o arraste, ignoram toques adicionais e encerram o arraste quando a janela perde o foco. O cancelamento preserva a largura atual e mantém os rascunhos. Quando o espaço limita um painel, o arraste e o redimensionamento pelo teclado partem da largura visível; reduzir apenas o espaço disponível não sobrescreve a largura salva. Os controles de redimensionar e recolher usam a mesma cor de foco de teclado que o restante do tema selecionado.
 
@@ -83,7 +83,7 @@ opcional/Enviar à direita; o clipe mantém o nome acessível
 e a dica **Anexar um arquivo**. Os cartões de arquivos ficam numa faixa própria acima dele. Suas mensagens ficam em balões à direita;
 as respostas seguem na coluna da conversa.
 
-O chat é do Zeca: com ele desligado (**Settings → Flock & Zeca → Zeca**) não há Chat nem
+O chat é do Zeca: com ele desligado (**Settings → Zeca → Zeca**) não há Chat nem
 microfone do Chat, e arquivos soltos na ilha não são aceitos. O [ditado local independente](dictation.md#dictate-into-any-app)
 continua funcionando, inclusive sua tecla de fala. Veja [Sem o Zeca](island.md#without-zeca).
 Altere as teclas globais em Configurações do Sistema → Atalhos; Settings > General mostra os

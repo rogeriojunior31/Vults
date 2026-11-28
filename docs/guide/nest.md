@@ -11,7 +11,7 @@ and all: one surface on screen at a time. The Nest has no system title bar: its 
 (its window has the focus), and on the island, which comes up for it, while you are elsewhere.
 
 Activity, Connections and Settings share neutral controls, page headings, cards and view states.
-**Settings → General → Theme** chooses **Dark** (the default), the neutral **Light**, or one of
+**Settings → Appearance → Theme** chooses **Dark** (the default), the neutral **Light**, or one of
 three SP Night themes, three views of the city at night (**Noite Paulista**; **Garoa**, the flat
 grey of drizzle; **Pico do Jaraguá**, the dark of the forest), across every window. <!-- check-english:allow -->
 Each theme is a tile holding a small picture of Vults in its own colors (the island with its flock on
@@ -71,7 +71,7 @@ agent's config, a key, a policy or a phone, and it never shows an agent's text. 
 the tab you are on: **Room** is the window, **Full** the whole screen (**Esc** goes
 back to Room), **Quick** closes the Nest and opens the island, **Mini** closes it and leaves the
 pill. **Alt+1** to **Alt+5** pick a tab in that order (hidden Chat is skipped). At the bottom, **Zeca on** / **Zeca off**
-switches him (as **Settings → Flock & Zeca → Zeca** does), the pencil (**Zeca's look**) opens his page in
+switches him (as **Settings → Zeca → Zeca** does), the pencil (**Zeca's look**) opens his page in
 Settings, **Open terminal** brings up the terminal of the session in front, and **Back to the
 island** brings the island up.
 

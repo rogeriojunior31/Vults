@@ -83,7 +83,7 @@ and optional microphone and Send on the right; the paperclip keeps its
 **Attach a file** accessible name and tooltip. File cards stay in a separate strip above it. Your messages sit in bubbles on the right; replies
 read in the conversation column.
 
-The chat is Zeca's: with him turned off (**Settings → Flock & Zeca → Zeca**) there is no Chat
+The chat is Zeca's: with him turned off (**Settings → Zeca → Zeca**) there is no Chat
 or Chat microphone, and files dropped on the island are not taken. Independent
 [local dictation](dictation.md#dictate-into-any-app) still works, including its talk key.
 See [Without Zeca](island.md#without-zeca). Change the global keys in System Settings → Shortcuts;

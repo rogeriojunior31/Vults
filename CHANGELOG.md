@@ -32,6 +32,8 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Changed
 
+- **Settings**: one topic per page, each with titled sections, as t3code arranges them. **Zeca** leads its own group with **Chat & voice**: his portrait, switch, look, species and memory (moved from Chat & voice). **General** keeps startup, usage and updates; **Appearance** (colors and themes, interface), **Island**, **Sound and notifications** and **Keyboard shortcuts** are pages of their own; **Flock** keeps the flock's species pool and rare visitors.
+
 - **Settings → General → Theme**: each theme is a tile with a small picture of Vults in its colors (the island's flock on the wire, the Nest's list, a card), Dark and Light first, then SP Night's three views; arrows move the choice.
 
 - **Zeca's chat**: Qwen Code, Copilot CLI and Kimi Code are offered as engines only once turned on in **Settings → Labs**.

@@ -42,20 +42,26 @@ import { createNestFoot, createNestHead, tabByKey } from "../nest/head";
 import { needsYou } from "../nest/flock";
 import type { SessionView } from "../../view.gen";
 
-type Page = "dictation" | "general" | "agents" | "chat" | "approvals" | "projects" | "activity" | "connectors" | "phone" | "flock" | "labs" | "about";
+type Page = "zeca" | "dictation" | "general" | "appearance" | "island" | "sound" | "shortcuts" | "agents" | "chat" | "approvals" | "projects" | "activity" | "connectors" | "phone" | "flock" | "labs" | "about";
 
 /** The sidebar's groups, in the prototype's order: how it feels, the work, the system. */
 const GROUPS = [
+  { id: "companion", label: tk("Your companion") },
   { id: "experience", label: tk("Experience") },
   { id: "work", label: tk("Work") },
   { id: "system", label: tk("System") },
 ] as const;
 
 const PAGES: { id: Page; label: string; group: (typeof GROUPS)[number]["id"]; icon: IconName }[] = [
+  { id: "zeca", label: "Zeca", group: "companion", icon: "bird" },
+  { id: "chat", label: tk("Chat & voice"), group: "companion", icon: "chat" },
   { id: "general", label: tk("General"), group: "experience", icon: "gear" },
+  { id: "appearance", label: tk("Appearance"), group: "experience", icon: "palette" },
+  { id: "island", label: tk("Island"), group: "experience", icon: "island" },
+  { id: "sound", label: tk("Sound and notifications"), group: "experience", icon: "sound" },
+  { id: "shortcuts", label: tk("Keyboard shortcuts"), group: "experience", icon: "keyboard" },
   { id: "dictation", label: tk("Dictation"), group: "experience", icon: "mic" },
-  { id: "chat", label: tk("Chat & voice"), group: "experience", icon: "chat" },
-  { id: "flock", label: tk("Flock & Zeca"), group: "experience", icon: "flock" },
+  { id: "flock", label: tk("Flock"), group: "experience", icon: "flock" },
   { id: "agents", label: tk("Agents"), group: "work", icon: "terminal" },
   { id: "approvals", label: tk("Approvals"), group: "work", icon: "check" },
   { id: "projects", label: tk("Projects"), group: "work", icon: "folder" },
@@ -105,12 +111,12 @@ let boundShortcuts: Record<string, string> = {};
 const boundKeys = (...ids: string[]) => ids.map(id => boundShortcuts[id]?.trim() || t("Not bound")).join(" · ");
 const keepShortcuts = (keys: Record<string, string>) => {
   boundShortcuts = keys;
-  if (page === "general" || page === "dictation") render();
+  if (page === "general" || page === "appearance" || page === "island" || page === "sound" || page === "shortcuts" || page === "dictation") render();
 };
 Bridge.onShortcutKeys(keepShortcuts);
 void Bridge.shortcutKeys().then(keepShortcuts, () => {});
 const windowsShortcuts = createWindowsShortcuts({ read: Bridge.windowsShortcuts, save: Bridge.setWindowsShortcuts }, () => {
-  if (page === "general" || page === "dictation") render();
+  if (page === "general" || page === "appearance" || page === "island" || page === "sound" || page === "shortcuts" || page === "dictation") render();
 });
 windowsShortcuts.initialize();
 const playerAudio = createWindowsPlayerAudio({ status: Bridge.mediaAudioStatus, list: Bridge.mediaAudioChoices, select: Bridge.mediaAudioSelect }, () => { if (page === "dictation") render(); });
@@ -189,7 +195,7 @@ window.addEventListener("keydown", (e) => {
     void Bridge.setSize("room", "settings");
   }
 });
-const asked = (section: string): Page | null => section === "chatmemory" ? "chat" : dictationSetting(section) ? "dictation" : PAGES.find((p) => p.id === section)?.id ?? null;
+const asked = (section: string): Page | null => section === "chatmemory" ? "zeca" : dictationSetting(section) ? "dictation" : PAGES.find((p) => p.id === section)?.id ?? null;
 /** The page the app asked for (the tray's Set up agents…), else General until the agents are read:
  *  Agents when one has no hooks yet or older ones (`chooseStart`). */
 let focusDestination = dictationSetting(location.hash.slice(1)) !== null || location.hash.slice(1) === "chatmemory";
@@ -1173,17 +1179,62 @@ function themeTiles(): HTMLElement {
 function generalPage(): HTMLElement[] {
   return [
     el("h1", { text: t("General") }),
-    el("h2", { class: "settings-group-title", text: t("Appearance") }),
+    el("h2", { class: "settings-group-title", text: t("Startup and usage") }),
     el("section", { class: "card rows" },
-      row(t("Mini and Quick width"), t("Shared width, limited to the available screen space."),
-        dropdown(ISLAND_WIDTHS.map(value => ({ value, label: value ? `${value} px` : t("Default") })), restoreWidth(), async value => {
-          if (!saveWidth(value)) throw new Error(t("Could not save the width. Choose it again to retry."));
-        })),
+      row(
+        t("Start with the desktop"),
+        t("Opens Vults when you log in."),
+        toggle(autostart, async (on) => {
+          await Bridge.setAutostart(on);
+          autostart = on;
+        }),
+      ),
+      row(
+        t("Codex usage"),
+        t("Shows your Codex plan's usage on the island. Vults asks the codex you are logged into every 5 minutes, and each ask reaches OpenAI. Off, nothing is asked."),
+        toggle(codexUsage, async (on) => {
+          await Bridge.setCodexUsage(on);
+          codexUsage = on;
+        }),
+      ),
+      row(
+        t("Claude usage"),
+        t("Reads your Claude plan's usage through Claude Code every 5 minutes and may contact Anthropic; no prompt is sent. Session reports still work when off."),
+        toggle(claudeUsage, async (on) => {
+          await Bridge.setClaudeUsage(on);
+          claudeUsage = on;
+        }),
+      ),
+      row(
+        t("Automatic model prices"),
+        t("Checks models.dev every 15 minutes without sending session data. Estimates use current standard API prices; cached prices expire after 24 hours."),
+        toggle(priceUpdates, async on => { await Bridge.setPriceUpdates(on); priceUpdates = on; render(); }),
+      ),
+      priceCatalogRow(),
+    ),
+    ...updatesSection(),
+  ];
+}
+
+/** Settings → Appearance: how every window looks (t3code's Colors & themes, then Interface). */
+function appearancePage(): HTMLElement[] {
+  return [
+    el("h1", { text: t("Appearance") }),
+    el("p", { class: "lede", text: t("How Vults looks in every window: its colors, its width and its language.") }),
+    el("h2", { class: "settings-group-title", text: t("Colors and themes") }),
+    el("section", { class: "card rows" },
       el("div", { class: "row theme-row" },
         el("div", { class: "row-title", text: t("Theme") }),
         el("div", { class: "row-about", text: t("Dark, a neutral light theme, or SP Night: three views of the city at night. Every window follows it.") }),
         themeTiles(),
         themeNote ? el("p", { class: "note error", text: themeNote }) : null),
+    ),
+    el("h2", { class: "settings-group-title", text: t("Interface") }),
+    el("section", { class: "card rows" },
+      row(t("Mini and Quick width"), t("Shared width, limited to the available screen space."),
+        dropdown(ISLAND_WIDTHS.map(value => ({ value, label: value ? `${value} px` : t("Default") })), restoreWidth(), async value => {
+          if (!saveWidth(value)) throw new Error(t("Could not save the width. Choose it again to retry."));
+        })),
       row(
         t("Language"),
         t("The language of the island, these settings, the tray and the notifications. System follows your desktop's."),
@@ -1197,62 +1248,14 @@ function generalPage(): HTMLElement[] {
         ),
       ),
     ),
-    el("h2", { class: "settings-group-title", text: t("Sound and notifications") }),
-    el("section", { class: "card rows" },
-      row(
-        t("Sounds"),
-        t("Short 8-bit blips when a session needs you, finishes or fails, and for connector news."),
-        toggle(sounds, async (on) => {
-          await Bridge.setSounds(on);
-          sounds = on;
-          render();
-        }),
-      ),
-      row(t("Volume"), t("How loud the sounds play. A cue plays when you let go of the slider."), slider(volume, !sounds)),
-      row(
-        t("Now playing"),
-        t("Shows the song your music player is playing, with play, pause and skip, and Zeca dances to it. Read from your media players on this computer; nothing leaves it."),
-        toggle(nowPlaying, async (on) => {
-          await Bridge.setNowPlaying(on);
-          nowPlaying = on;
-        }),
-      ),
-      row(
-        t("Do not disturb"),
-        dndUntil
-          ? t("On until {time}: no sounds and no notifications, and no reminders for a waiting card. A card still opens the island with its sound.", { time: new Date(dndUntil * 1000).toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit" }) })
-          : t("No sounds and no notifications for a while. A card still opens the island with its sound, so an agent never waits for nobody. It ends by itself."),
-        segmented(
-          [{ value: 0, label: t("Off") }, ...DND_CHOICES.map((m) => ({ value: m, label: m < 60 ? t("{n} min", { n: m }) : t("{n} h", { n: m / 60 }) }))],
-          // On, no length is marked: the time left is in the words.
-          dndUntil ? -1 : 0,
-          async (m) => {
-            await Bridge.setDnd(m || null);
-            dndUntil = m ? Math.floor(Date.now() / 1000) + m * 60 : null;
-            render();
-          },
-        ),
-      ),
-      row(
-        t("Notifications"),
-        t("Only in Panel, where the island is out of sight: a desktop notification when a session finishes or fails, goes quiet, or a card waits for you."),
-        toggle(notifications, async (on) => {
-          await Bridge.setNotifications(on);
-          notifications = on;
-        }),
-        t("In Island and Quiet the island shows it all, so nothing goes to the desktop. Its only button opens the island; it never answers a card."),
-      ),
-      row(
-        t("Stay quiet when I am looking"),
-        t("A session that finishes or fails while its terminal is in front makes no sound, and the island stays put. A card always sounds and opens."),
-        toggle(quietWhenWatching, async (on) => {
-          await Bridge.setQuietWhenWatching(on);
-          quietWhenWatching = on;
-        }),
-        t("Vults reads the active window once, when a turn ends. On GNOME Wayland, and for terminals on Windows, it cannot tell which session is in front, so every finish sounds as before."),
-      ),
-    ),
-    el("h2", { class: "settings-group-title", text: t("Island") }),
+  ];
+}
+
+/** Settings → Island. */
+function islandPage(): HTMLElement[] {
+  return [
+    el("h1", { text: t("Island") }),
+    el("p", { class: "lede", text: t("Where the island sits, how it opens and folds, and how present it is.") }),
     el("section", { class: "card rows" },
       row(
         t("Presence"),
@@ -1332,41 +1335,77 @@ function generalPage(): HTMLElement[] {
         ),
       ),
     ),
-    el("h2", { class: "settings-group-title", text: t("Startup and usage") }),
+  ];
+}
+
+/** Settings → Sound and notifications. */
+function soundPage(): HTMLElement[] {
+  return [
+    el("h1", { text: t("Sound and notifications") }),
+    el("p", { class: "lede", text: t("What Vults plays and shows when an agent finishes, fails or needs you.") }),
     el("section", { class: "card rows" },
       row(
-        t("Start with the desktop"),
-        t("Opens Vults when you log in."),
-        toggle(autostart, async (on) => {
-          await Bridge.setAutostart(on);
-          autostart = on;
+        t("Sounds"),
+        t("Short 8-bit blips when a session needs you, finishes or fails, and for connector news."),
+        toggle(sounds, async (on) => {
+          await Bridge.setSounds(on);
+          sounds = on;
+          render();
+        }),
+      ),
+      row(t("Volume"), t("How loud the sounds play. A cue plays when you let go of the slider."), slider(volume, !sounds)),
+      row(
+        t("Now playing"),
+        t("Shows the song your music player is playing, with play, pause and skip, and Zeca dances to it. Read from your media players on this computer; nothing leaves it."),
+        toggle(nowPlaying, async (on) => {
+          await Bridge.setNowPlaying(on);
+          nowPlaying = on;
         }),
       ),
       row(
-        t("Codex usage"),
-        t("Shows your Codex plan's usage on the island. Vults asks the codex you are logged into every 5 minutes, and each ask reaches OpenAI. Off, nothing is asked."),
-        toggle(codexUsage, async (on) => {
-          await Bridge.setCodexUsage(on);
-          codexUsage = on;
-        }),
+        t("Do not disturb"),
+        dndUntil
+          ? t("On until {time}: no sounds and no notifications, and no reminders for a waiting card. A card still opens the island with its sound.", { time: new Date(dndUntil * 1000).toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit" }) })
+          : t("No sounds and no notifications for a while. A card still opens the island with its sound, so an agent never waits for nobody. It ends by itself."),
+        segmented(
+          [{ value: 0, label: t("Off") }, ...DND_CHOICES.map((m) => ({ value: m, label: m < 60 ? t("{n} min", { n: m }) : t("{n} h", { n: m / 60 }) }))],
+          // On, no length is marked: the time left is in the words.
+          dndUntil ? -1 : 0,
+          async (m) => {
+            await Bridge.setDnd(m || null);
+            dndUntil = m ? Math.floor(Date.now() / 1000) + m * 60 : null;
+            render();
+          },
+        ),
       ),
       row(
-        t("Claude usage"),
-        t("Reads your Claude plan's usage through Claude Code every 5 minutes and may contact Anthropic; no prompt is sent. Session reports still work when off."),
-        toggle(claudeUsage, async (on) => {
-          await Bridge.setClaudeUsage(on);
-          claudeUsage = on;
+        t("Notifications"),
+        t("Only in Panel, where the island is out of sight: a desktop notification when a session finishes or fails, goes quiet, or a card waits for you."),
+        toggle(notifications, async (on) => {
+          await Bridge.setNotifications(on);
+          notifications = on;
         }),
+        t("In Island and Quiet the island shows it all, so nothing goes to the desktop. Its only button opens the island; it never answers a card."),
       ),
       row(
-        t("Automatic model prices"),
-        t("Checks models.dev every 15 minutes without sending session data. Estimates use current standard API prices; cached prices expire after 24 hours."),
-        toggle(priceUpdates, async on => { await Bridge.setPriceUpdates(on); priceUpdates = on; render(); }),
+        t("Stay quiet when I am looking"),
+        t("A session that finishes or fails while its terminal is in front makes no sound, and the island stays put. A card always sounds and opens."),
+        toggle(quietWhenWatching, async (on) => {
+          await Bridge.setQuietWhenWatching(on);
+          quietWhenWatching = on;
+        }),
+        t("Vults reads the active window once, when a turn ends. On GNOME Wayland, and for terminals on Windows, it cannot tell which session is in front, so every finish sounds as before."),
       ),
-      priceCatalogRow(),
     ),
-    ...updatesSection(),
-    disclosure(t("Keyboard shortcuts"), el(
+  ];
+}
+
+/** Settings → Keyboard shortcuts. */
+function shortcutsPage(): HTMLElement[] {
+  return [
+    el("h1", { text: t("Keyboard shortcuts") }),
+    el("p", { class: "lede", text: t("The keys that reach Vults from any app, and the ones inside its windows.") }),
+    el(
       "section",
       { class: "card rows" },
       windowsShortcuts.render(),
@@ -1379,7 +1418,7 @@ function generalPage(): HTMLElement[] {
       row(t("Change size"), t("Switch to Mini, Quick or Room from anywhere."), el("span", { class: "kbd", text: boundKeys("mini", "quick", "room") })),
       row(t("Command palette"), t("Find a session, open a tab or prepare a chat command in Quick or Room."), el("span", { class: "kbd", text: "Ctrl+K" })),
       row(t("The Nest's tabs"), t("Choose Flock, Chat, Dictation, Connections or Activity. Esc leaves Full."), el("span", { class: "kbd", text: "Alt+1–5" })),
-    )),
+    ),
   ];
 }
 
@@ -1848,10 +1887,6 @@ function chatPage(): HTMLElement[] {
   }
   rows.push(message ? el("div", { class: "row" }, message) : null);
 
-  const memoryTitle = el("h2", { text: t("Memory") });
-  memoryTitle.dataset.chatSection = "memory";
-  memoryTitle.dataset.setting = "chat-memory-heading";
-  memoryTitle.tabIndex = -1;
   return [
     el("h1", { text: t("Chat & voice") }),
     ...(zeca ? [] : [el("p", { class: "note", text: t("Zeca is off (Flock & Zeca): no chat or voice until you turn him back on.") })]),
@@ -1906,61 +1941,6 @@ function chatPage(): HTMLElement[] {
           ? [el("p", { class: "note warn with-icon" }, icon("warning", 14, 2), el("span", { text: t("With full access Zeca runs commands, edits files and reaches the network without asking, destructive commands included. Add deny lines to a policy for anything that must never run.") }))]
           : []),
       ...(accessNote ? [el("p", { class: "note error", text: accessNote })] : []),
-    ),
-    memoryTitle,
-    ...(chatSection === "memory" ? [button(t("Back to Chat"), () => void Bridge.openNest("memory"))] : []),
-    el(
-      "section",
-      { class: "card rows" },
-      row(
-        t("Zeca's memory"),
-        t("Keeps a local journal with secrets redacted. Recalled memories join your chat and reach its model. Off, journaling and recall stop; Clear history in Activity removes the journal."),
-        toggle(memory, async (on) => {
-          await Bridge.setMemory(on);
-          memory = on;
-          render();
-        }),
-        t("Keeps a journal on this computer of what your agents and Zeca's chat did: each turn's time and changes, each card's answer with its command or path, and the chat's lines, secrets redacted. What he remembers joins your conversations with Zeca, and only that reaches their model. Off, none of it reaches a model and nothing more is written; Clear history in Activity removes the journal."),
-      ),
-      ...(memory
-        ? [
-            row(
-              t("A summary of each day"),
-              t("Sends yesterday's journal to Claude Code's Haiku on your subscription for a daily summary. Up to 8 requests a day, recorded in the local trace."),
-              toggle(journalSummary, async (on) => {
-                await Bridge.setJournalSummary(on);
-                journalSummary = on;
-              }),
-              t("Once a day, sends the day before's journal to Claude Code's smallest model (Haiku, on your subscription, with no tools) to write a short summary for Zeca to recall; only days from when you turn this on. A request on your behalf: at most 8 a day, each kept in the local trace."),
-            ),
-            row(
-              t("Suggest what to remember"),
-              t("Sends the conversation you leave to Claude Code's Haiku on your subscription to suggest memories. You review them in Chat, Memory. Up to 20 requests a day; excludes conversations that read outside content."),
-              toggle(memorySuggest, async (on) => {
-                await Bridge.setMemorySuggest(on);
-                memorySuggest = on;
-              }),
-              t("When you start a new conversation or open another, sends the one you left to Claude Code's smallest model (Haiku, on your subscription, with no tools) to propose up to three facts worth remembering; you accept or turn down each in the Memory beside the Nest's Chat. Never one that read content from outside. A request on your behalf: at most 20 a day, each kept in the local trace."),
-            ),
-            row(
-              t("Let Zeca sleep on it"),
-              t("While idle at night, Claude Code's Haiku on your subscription reviews memories and recent summaries. Proposed merges wait for you in the Nest. Up to 4 requests a day, recorded in the local trace."),
-              toggle(sleep, async (on) => {
-                await Bridge.setSleep(on);
-                sleep = on;
-              }),
-              t("Once a day, from two in the morning and while nothing is working, Zeca proposes removing facts he remembers twice. On, Claude Code's smallest model (Haiku, on your subscription, with no tools) also reads what he remembers about you and across projects and the last week's summaries, to propose merges, which wait for you in the Nest, and write a short debrief. A request on your behalf: at most 4 a day, each kept in the local trace."),
-            ),
-            row(
-              t("Recall by meaning"),
-              t("Recall also by meaning, not only by words, through an Ollama running on this computer with nomic-embed-text. Each summary and each message you send is embedded on 127.0.0.1; nothing leaves this computer."),
-              toggle(localEmbeddings, async (on) => {
-                await Bridge.setLocalEmbeddings(on);
-                localEmbeddings = on;
-              }),
-            ),
-          ]
-        : []),
     ),
     el("h2", { text: t("Agent engines") }),
     el("p", { class: "note", text: t("The CLIs that run Zeca's chat on this computer, each with its own login. Vults only asks each one whether it is signed in.") }),
@@ -2294,7 +2274,73 @@ const FLOCKS: { value: Flock; label: string }[] = [
 /** The previews' timer: only while the page is on screen. */
 let previews: number | undefined;
 
-function flockPage(): HTMLElement[] {
+/** What Zeca remembers, and what may work on it: the Zeca page's last section (deep link
+ *  `chatmemory`, from the Nest's Memory). */
+function memorySection(): HTMLElement[] {
+  const memoryTitle = el("h2", { class: "settings-group-title", text: t("Memory") });
+  memoryTitle.dataset.chatSection = "memory";
+  memoryTitle.dataset.setting = "chat-memory-heading";
+  memoryTitle.tabIndex = -1;
+  return [
+    memoryTitle,
+    ...(chatSection === "memory" ? [button(t("Back to Chat"), () => void Bridge.openNest("memory"))] : []),
+    el(
+      "section",
+      { class: "card rows" },
+      row(
+        t("Zeca's memory"),
+        t("Keeps a local journal with secrets redacted. Recalled memories join your chat and reach its model. Off, journaling and recall stop; Clear history in Activity removes the journal."),
+        toggle(memory, async (on) => {
+          await Bridge.setMemory(on);
+          memory = on;
+          render();
+        }),
+        t("Keeps a journal on this computer of what your agents and Zeca's chat did: each turn's time and changes, each card's answer with its command or path, and the chat's lines, secrets redacted. What he remembers joins your conversations with Zeca, and only that reaches their model. Off, none of it reaches a model and nothing more is written; Clear history in Activity removes the journal."),
+      ),
+      ...(memory
+        ? [
+            row(
+              t("A summary of each day"),
+              t("Sends yesterday's journal to Claude Code's Haiku on your subscription for a daily summary. Up to 8 requests a day, recorded in the local trace."),
+              toggle(journalSummary, async (on) => {
+                await Bridge.setJournalSummary(on);
+                journalSummary = on;
+              }),
+              t("Once a day, sends the day before's journal to Claude Code's smallest model (Haiku, on your subscription, with no tools) to write a short summary for Zeca to recall; only days from when you turn this on. A request on your behalf: at most 8 a day, each kept in the local trace."),
+            ),
+            row(
+              t("Suggest what to remember"),
+              t("Sends the conversation you leave to Claude Code's Haiku on your subscription to suggest memories. You review them in Chat, Memory. Up to 20 requests a day; excludes conversations that read outside content."),
+              toggle(memorySuggest, async (on) => {
+                await Bridge.setMemorySuggest(on);
+                memorySuggest = on;
+              }),
+              t("When you start a new conversation or open another, sends the one you left to Claude Code's smallest model (Haiku, on your subscription, with no tools) to propose up to three facts worth remembering; you accept or turn down each in the Memory beside the Nest's Chat. Never one that read content from outside. A request on your behalf: at most 20 a day, each kept in the local trace."),
+            ),
+            row(
+              t("Let Zeca sleep on it"),
+              t("While idle at night, Claude Code's Haiku on your subscription reviews memories and recent summaries. Proposed merges wait for you in the Nest. Up to 4 requests a day, recorded in the local trace."),
+              toggle(sleep, async (on) => {
+                await Bridge.setSleep(on);
+                sleep = on;
+              }),
+              t("Once a day, from two in the morning and while nothing is working, Zeca proposes removing facts he remembers twice. On, Claude Code's smallest model (Haiku, on your subscription, with no tools) also reads what he remembers about you and across projects and the last week's summaries, to propose merges, which wait for you in the Nest, and write a short debrief. A request on your behalf: at most 4 a day, each kept in the local trace."),
+            ),
+            row(
+              t("Recall by meaning"),
+              t("Recall also by meaning, not only by words, through an Ollama running on this computer with nomic-embed-text. Each summary and each message you send is embedded on 127.0.0.1; nothing leaves this computer."),
+              toggle(localEmbeddings, async (on) => {
+                await Bridge.setLocalEmbeddings(on);
+                localEmbeddings = on;
+              }),
+            ),
+          ]
+        : []),
+    ),
+  ];
+}
+
+function zecaPage(): HTMLElement[] {
   const canvases: { id: string; canvas: HTMLCanvasElement }[] = [];
   // Each preview perches on the same wire line, so their sizes compare at a glance.
   const SCALE = 2, W = 44, WIRE = 36;
@@ -2326,14 +2372,16 @@ function flockPage(): HTMLElement[] {
     return button;
   };
   const group = (family: string, title: string) => [
-    el("h2", { text: title }),
+    el("h3", { class: "species-family", text: title }),
     el("div", { class: "species-grid" }, ...SPECIES.filter((s) => s.family === family).map((s) => card(s.id, s.name, s.latin))),
   ];
   // Zeca in his own feathers, or in the look picked (Auto shows his feathers: the season decides).
   const zecaCanvas = document.createElement("canvas");
   zecaCanvas.className = "zeca-preview";
-  zecaCanvas.width = W * SCALE;
-  zecaCanvas.height = (WIRE + 10) * SCALE;
+  // His portrait leads the page: twice the species' scale, still whole pixels.
+  const HERO = SCALE * 2;
+  zecaCanvas.width = W * HERO;
+  zecaCanvas.height = (WIRE + 10) * HERO;
   zecaCanvas.setAttribute("role", "img");
   const labelPreview = () =>
     zecaCanvas.setAttribute("aria-label", !zecaLook || zecaLook === "auto" || zecaLook === "none" ? t("Zeca, in his own feathers") : t("Zeca, in the look you picked"));
@@ -2361,7 +2409,7 @@ function flockPage(): HTMLElement[] {
         shown.set(zecaCanvas, frame);
         const ctx = zecaCanvas.getContext("2d")!;
         ctx.clearRect(0, 0, zecaCanvas.width, zecaCanvas.height);
-        drawFrame(ctx, set, frame, 10, WIRE + 6 - perchOf(set), SCALE);
+        drawFrame(ctx, set, frame, 10, WIRE + 6 - perchOf(set), HERO);
       }
     }
   };
@@ -2370,11 +2418,57 @@ function flockPage(): HTMLElement[] {
   previews = undefined;
   paint();
   if (!matchMedia("(prefers-reduced-motion: reduce)").matches) previews = window.setInterval(paint, 100);
+  const species = SPECIES.find((x) => x.id === zecaSpecies);
   return [
-    el("h1", { text: t("Flock & Zeca") }),
-    el(
-      "section",
-      { class: "card rows" },
+    el("h1", { text: "Zeca" }),
+    el("p", { class: "lede", text: t("Your companion: the bird who chats with you, listens and remembers. Choose who he is and how he looks.") }),
+    el("section", { class: "card zeca-hero" },
+      zecaCanvas,
+      el("div", { class: "zeca-hero-body" },
+        el("div", { class: "zeca-hero-name" }, el("span", { text: "Zeca" }), species ? el("span", { class: "zeca-hero-species", text: species.name }) : null),
+        el("p", { class: "row-about", text: zeca
+          ? t("Zeca is the bird in front: the session that needs you, or the one you picked.")
+          : t("Zeca is off: the session in front keeps its own bird. His species and look wait for him here.") }),
+        el("div", { class: "rows" },
+          row(
+            t("Zeca on"),
+            t("The companion who chats and listens. Off, the flock, cards, notifications, connectors and independent local dictation keep working; Chat is unavailable."),
+            toggle(zeca, async (on) => {
+              await Bridge.setZeca(on);
+              zeca = on;
+              render();
+            }),
+          )))),
+    el("h2", { class: "settings-group-title", text: t("Look") }),
+    el("section", { class: "card rows" },
+      row(
+        t("What he wears"),
+        t("Only Zeca wears it; the flock keeps its feathers."),
+        dropdown(LOOKS, zecaLook, async (look) => {
+          await Bridge.setZecaLook(look);
+          zecaLook = look;
+          shown.delete(zecaCanvas);
+          labelPreview();
+          paint();
+        }),
+        t("Auto dresses Zeca for the season: a witch hat from October 1 to November 1, a Santa hat from December 1 to 26, a party hat from New Year's Eve to January 2, bunny ears from Good Friday to Easter Monday. Sunglasses and the other outfits only when you pick them."),
+      ),
+    ),
+    el("h2", { class: "settings-group-title", text: t("Species") }),
+    el("p", { class: "note", text: t("Every vulture he can be. The one you pick is him in the island and in Chat.") }),
+    ...group("new-world", t("Vultures of the Americas")),
+    ...group("old-world", t("Vultures of Africa, Europe and Asia")),
+    ...memorySection(),
+  ];
+}
+
+function flockPage(): HTMLElement[] {
+  window.clearInterval(previews);
+  previews = undefined;
+  return [
+    el("h1", { text: t("Flock") }),
+    el("p", { class: "lede", text: t("The birds of your agents' sessions: where they come from, and who visits now and then.") }),
+    el("section", { class: "card rows" },
       row(
         t("The flock draws from"),
         t("Where the sessions' birds come from: Brazil's vultures, the vultures of the Americas (with both condors), or every vulture in the world."),
@@ -2393,44 +2487,6 @@ function flockPage(): HTMLElement[] {
         }),
       ),
     ),
-    el(
-      "section",
-      { class: "card rows" },
-      row(
-        "Zeca",
-        t("The companion who chats and listens. Off, the flock, cards, notifications, connectors and independent local dictation keep working; Chat is unavailable."),
-        toggle(zeca, async (on) => {
-          await Bridge.setZeca(on);
-          zeca = on;
-          render();
-        }),
-      ),
-      row(
-        t("Look"),
-        t("Only Zeca wears it; the flock keeps its feathers."),
-        el(
-          "div",
-          { class: "look-control" },
-          zecaCanvas,
-          dropdown(LOOKS, zecaLook, async (look) => {
-            await Bridge.setZecaLook(look);
-            zecaLook = look;
-            shown.delete(zecaCanvas);
-            labelPreview();
-            paint();
-          }),
-        ),
-        t("Auto dresses Zeca for the season: a witch hat from October 1 to November 1, a Santa hat from December 1 to 26, a party hat from New Year's Eve to January 2, bunny ears from Good Friday to Easter Monday. Sunglasses and the other outfits only when you pick them."),
-      ),
-    ),
-    el("p", {
-      class: "note",
-      text: zeca
-        ? t("Zeca is the bird in front: the session that needs you, or the one you picked. Choose his species.")
-        : t("Zeca is off: the session in front keeps its own bird. His species and look wait for him here."),
-    }),
-    ...group("new-world", t("Vultures of the Americas")),
-    ...group("old-world", t("Vultures of Africa, Europe and Asia")),
   ];
 }
 
@@ -2454,7 +2510,7 @@ function chooseDictation(section: DictationSetting): void {
 
 function choosePage(next: Page, section?: "memory"): void {
   page = next;
-  chatSection = next === "chat" ? section ?? null : null;
+  chatSection = next === "zeca" ? section ?? null : null;
   navigated = true;
   location.hash = next === "dictation" ? `dictation${dictationSection}` : chatSection === "memory" ? "chatmemory" : next;
   apiMessage = null;
@@ -2486,7 +2542,7 @@ function render(): void {
   playerAudio.context(page === "dictation" && dictationSection === "commands" && windowsShortcuts.supported() && !document.hidden, dictationCommands && dictationCommandMedia && nowPlaying);
   const tool = page === "dictation" && dictationTool();
   const preferences = page === "dictation" && !tool;
-  const place = tool ? `dictation${dictationSection}` : page === "chat" && chatSection === "memory" ? "chatmemory" : page;
+  const place = tool ? `dictation${dictationSection}` : page === "zeca" && chatSection === "memory" ? "chatmemory" : page;
   if (page === "activity") budget.relabel();
   const currentScroll = root.querySelector("main.page")?.scrollTop ?? 0;
   const sidebarScroll = root.querySelector(".sidebar")?.scrollTop ?? 0;
@@ -2516,6 +2572,14 @@ function render(): void {
   const content =
     page === "general"
       ? generalPage()
+      : page === "appearance"
+        ? appearancePage()
+      : page === "island"
+        ? islandPage()
+      : page === "sound"
+        ? soundPage()
+      : page === "shortcuts"
+        ? shortcutsPage()
       : page === "dictation"
         ? dictationPage()
       : page === "agents"
@@ -2538,10 +2602,12 @@ function render(): void {
               ? phonePage()
               : page === "flock"
                 ? flockPage()
+              : page === "zeca"
+                ? zecaPage()
                 : page === "labs"
                   ? labsPage()
                   : aboutPage();
-  if (page !== "flock") window.clearInterval(previews);
+  if (page !== "zeca") window.clearInterval(previews);
   const navButton = (p: (typeof PAGES)[number]) => {
     const b = el(
       "button",
@@ -2605,7 +2671,7 @@ function render(): void {
     }
   }
   if (focusDestination) {
-    const destination = page === "chat" && chatSection === "memory" ? main.querySelector<HTMLElement>('[data-chat-section="memory"]') : null;
+    const destination = page === "zeca" && chatSection === "memory" ? main.querySelector<HTMLElement>('[data-chat-section="memory"]') : null;
     destination?.scrollIntoView?.({ block: "start" });
     (destination ?? main).focus({ preventScroll: true });
     focusDestination = false;
@@ -2623,7 +2689,7 @@ window.addEventListener("pointerdown", () => void Bridge.away().catch(() => {}),
 if (page === "activity") { void refreshActivity(); budget.refresh(); }
 if (page === "phone") void refreshPhone(renderPhone);
 Bridge.onPhone(phoneEvent);
-watchWidth(() => { if (page === "general") render(); });
+watchWidth(() => { if (page === "appearance") render(); });
 
 void Bridge.appSettings().then((s) => {
   dictationCaption = dictation.captions(s.dictationCaption, true);
@@ -2702,7 +2768,7 @@ const refreshMonitors = () =>
   Bridge.monitors()
     .then((m) => {
       monitors = m;
-      if (page === "general") render();
+      if (page === "island") render();
     })
     .catch(() => {});
 void refreshMonitors();
@@ -2780,7 +2846,7 @@ Bridge.onSettings((s) => {
   }
   if (s.dndUntil !== undefined) {
     dndUntil = s.dndUntil;
-    if (page === "general") render();
+    if (page === "sound") render();
   }
   // A quick action on the island changed a project.
   if (s.projects !== undefined) {
