@@ -1185,6 +1185,46 @@ async fn send(
     // Older conversations omit general context; an explicit reference still carries its scope.
     let context = (companion && (chat.frozen().is_some() || targets.is_some()))
         .then(|| crate::context::volatile(source.as_ref(), &memories));
+    // A session referenced with @ brings what was said in it, from its agent's own transcript.
+    let sessions: Vec<(String, String)> = targets
+        .iter()
+        .flatten()
+        .filter_map(|t| match t {
+            crate::mentions::Target::Session { agent, id } => Some((agent.clone(), id.clone())),
+            crate::mentions::Target::Project { .. } => None,
+        })
+        .collect();
+    let said_there = if sessions.is_empty() {
+        Vec::new()
+    } else {
+        tauri::async_runtime::spawn_blocking(move || {
+            let home = paths::home();
+            sessions
+                .iter()
+                .filter_map(|(agent, id)| crate::session_transcript::excerpt(&home, agent, id))
+                .collect::<Vec<_>>()
+        })
+        .await
+        .unwrap_or_default()
+    };
+    let context = match (context, said_there.is_empty()) {
+        (context, true) => context,
+        (Some(context), false) => Some(format!(
+            "{context}
+
+{}",
+            said_there.join(
+                "
+
+"
+            )
+        )),
+        (None, false) => Some(said_there.join(
+            "
+
+",
+        )),
+    };
     // The journal keeps the words (M4), redacted and cut by the store, when they are said.
     if companion {
         crate::journal::chat(&app, "you", chat.folder(), &text, false);

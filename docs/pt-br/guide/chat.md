@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: ba46991431e9 -->
+<!-- source: 54b4045eae58 -->
 
 Os painéis laterais redimensionáveis seguem o ponteiro que iniciou o arraste, ignoram toques adicionais e encerram o arraste quando a janela perde o foco. O cancelamento preserva a largura atual e mantém os rascunhos. Quando o espaço limita um painel, o arraste e o redimensionamento pelo teclado partem da largura visível; reduzir apenas o espaço disponível não sobrescreve a largura salva. Os controles de redimensionar e recolher usam a mesma cor de foco de teclado que o restante do tema selecionado.
 
@@ -140,7 +140,11 @@ selecionar até oito referências, incluindo várias sessões numa mensagem.
 Uma referência de sessão seleciona aquele agente e ID exatos. Uma referência de projeto
 seleciona as sessões do bando naquela pasta exata, incluindo seus diferentes agentes.
 Ao enviar, o contexto do bando e as ferramentas que o consultam leem somente essas seleções
-naquele turno. Isso funciona nos motores CLI e API. As referências não mudam a pasta de
+naquele turno. Isso funciona nos motores CLI e API. Uma referência a uma sessão do Claude Code ou do Codex
+também leva o que foi dito nela, lido da transcrição do próprio agente: a primeira mensagem e as
+mais recentes que cabem em cerca de 6 mil tokens, só as palavras (chamadas e resultados de
+ferramentas ficam de fora), com segredos ocultados, marcadas para o modelo como um registro para
+ler, não instruções. As referências não mudam a pasta de
 trabalho da conversa nem respondem aos cards, e as mensagens anteriores continuam na
 conversa. Sem referências, o contexto habitual do bando continua igual.
 

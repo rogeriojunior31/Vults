@@ -49,6 +49,7 @@ mod records;
 mod roosts;
 mod runtime;
 mod session_presence;
+mod session_transcript;
 mod settings;
 mod shortcut_settings;
 mod sleep;

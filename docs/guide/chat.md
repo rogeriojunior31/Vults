@@ -132,7 +132,10 @@ eight references, including several sessions in one message.
 A session reference selects that exact agent and session ID. A project reference selects
 the flock sessions in that exact folder, including its different agents. When you send,
 the turn's flock context and flock tools read only those selections. This works with the
-CLI and API engines. References do not switch the conversation's working folder or answer
+CLI and API engines. A Claude Code or Codex session reference also brings what was said in that
+session, read from the agent's own transcript: the first message and the latest that fit about 6k
+tokens, the words only (tool calls and results left out), secrets hidden, marked for the model as
+a record to read and not instructions. References do not switch the conversation's working folder or answer
 cards, and earlier messages remain in the conversation. With no references, the usual
 flock context is unchanged.
 
