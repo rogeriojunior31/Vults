@@ -32,7 +32,7 @@ running app). Done before this list: Labs (1), Chat folders (2), Settings pages,
 Agents page and shorter copy (3).
 
 **A. Quick wins** (no dependency outside their section)
-- [ ] T1, T6 · New-conversation engine and model in Settings; copy a conversation as Markdown · P1 · S
+- [ ] T1 · New-conversation engine and model in Settings · P1 · S
 - [ ] X3 · Palette over conversations, Settings pages and themes; Settings search · P1 · S-M
 - [ ] X4 · Fallback model when an engine is at its limit (new conversations only) · P1 · S
 - [ ] X10 · Ask before quitting mid-turn; *Continue* on a cut turn · P1 · S

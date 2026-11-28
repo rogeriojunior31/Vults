@@ -205,4 +205,18 @@ panel.receive({ kind: "context", used: null, window: 200000 });
 assert.equal(meter.textContent, "21%");
 panel.receive({ kind: "context", used: 170000, window: null });
 assert.ok(meter.classList.contains("full"), "past 80% it warns");
+// t3code's Copy thread: the open conversation as Markdown, from the Conversations menu.
+let copied = null;
+Object.defineProperty(globalThis.navigator, "clipboard", { value: { writeText: async text => { copied = text; } }, configurable: true });
+panel.messages = [{ who: "you", text: "Fix the build", files: [] }, { who: "note", text: "Switched engine" }, { who: "zeca", text: "Done: **cargo** passes." }];
+panel.saved = [{ id: 1, title: "Build fix", label: "Claude", current: true }];
+panel.historyOpen = true; panel.paintHistory();
+const copyAll = nodes(panel.element).find(n => n.classList.contains("saved-copy"));
+assert.ok(copyAll, "the Conversations menu offers Copy as Markdown");
+copyAll.click(); await tick(); await tick();
+assert.ok(copied.startsWith("# Build fix\n\n**You**\n\nFix the build\n\n**"), "title, then who said each turn");
+assert.ok(copied.includes("Done: **cargo** passes.") && !copied.includes("Switched engine"), "replies as written; notes stay out");
+panel.messages = []; panel.paintHistory();
+assert.ok(!nodes(panel.element).some(n => n.classList.contains("saved-copy")), "nothing to copy, no button");
+panel.historyOpen = false;
 console.log("check-chat-thread: the context meter follows the engine; edits show their diff and counts, the status line says what runs, turns say how long they ran, nodes are kept, ↑/↓ walk earlier messages, Edit puts the last back, Ctrl+F finds and steps");

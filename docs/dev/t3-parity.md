@@ -328,7 +328,7 @@ a lost session resumed by handoff. Settings has nothing for them yet.
 | T3 | **Titles by a model**: the first turn names the conversation, **Regenerate title** in its menu; off without an engine; Claude/Codex CLI or the API provider, through the gate | `crates/chat`, `app/src/chat.rs` | M |
 | T4 | **Fork from this reply**: a new conversation with the turns up to it (handoff text, as `lost_session`) | `crates/chat/src/lib.rs`, `chat.ts` | M |
 | T5 | **Search every conversation** from the Nest (titles and text, from the store) | `crates/store`, `nest/` | M |
-| T6 | **Copy conversation** as Markdown, and its id | `chat.ts` | S |
+| T6 (done) | **Copy conversation** as Markdown | `chat.ts` | S |
 | T7 | **After a usage limit**: wait and resume when it resets (the agent's reset time, never guessed); **settle** idle ones after N days | `app/src/chat.rs`, Labs first | L |
 
 ## 8. Browser: what agents open

@@ -34,6 +34,7 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Added
 
+- **Copy as Markdown** in the chat's Conversations menu: the open conversation, its title and each message under who said it.
 - **Keep the computer awake while agents work** (Settings → General, on): a logind sleep inhibitor while a session or a chat turn works; the screen still locks.
 
 ### Changed

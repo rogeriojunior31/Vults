@@ -3057,8 +3057,13 @@ export class ChatPanel {
     };
     const error = this.historyError || this.historyReadError;
     this.historyMenu.setAttribute("aria-busy", String(!!this.historyPending));
+    // t3code's *Copy thread*: the open conversation as Markdown, what was said, not how it is drawn.
+    const said = this.messages.some(m => (m.who === "you" || m.who === "zeca") && m.text.trim());
+    const copy = said ? copyTextButton(() => this.markdown(), "saved-copy", t("Copy this conversation as Markdown"), t("Copy as Markdown")) : null;
+    copy?.prepend(icon("copy", 12, 2));
     this.historyMenu.replaceChildren(
       el("span", { class: "menu-label", text: t("Conversations") }),
+      ...(copy ? [copy] : []),
       ...(error ? [el("span", { class: "saved-empty", text: error })] : []),
       ...(this.saved.length
         ? this.saved.map(row)
@@ -3074,6 +3079,18 @@ export class ChatPanel {
     face.src = faceImage(this.specialistAppearance() ?? ZECA);
     face.classList.toggle("msg-face-profile", !!this.opts.specialist);
     return el("div", { class: "msg-who" }, face, el("span", { class: "msg-name", text: this.recipientName() }), el("span", { class: "msg-engine", text: this.opts.specialist ? this.specialistEngineLabel() : this.name(this.provider) }));
+  }
+
+  /** The open conversation as Markdown: its title, then each turn under who said it. Notes,
+   *  tools and questions stay out; a reply is copied as written. */
+  private markdown(): string {
+    const title = this.saved.find(c => c.current)?.title;
+    const parts = title ? [`# ${title}`] : [];
+    for (const m of this.messages) {
+      if ((m.who !== "you" && m.who !== "zeca") || !m.text.trim()) continue;
+      parts.push(`**${m.who === "you" ? t("You") : this.recipientName()}**`, m.text.trim());
+    }
+    return parts.join("\n\n") + "\n";
   }
 
   /** Copies a whole reply, as Markdown: what was written, not how it is drawn. */
