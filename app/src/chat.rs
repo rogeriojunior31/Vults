@@ -1283,6 +1283,18 @@ async fn send(
     if let Origin::Voice(ticket, _) = &origin {
         voice_result(&app, ticket, &text, vults_core::i18n::VoiceFeedback::SentToChat);
     }
+    // A resumed session its CLI may have lost: what was said so far, kept for a fresh one.
+    if chat.session().is_some()
+        && !chat.is_specialist()
+        && let Some(id) = conversation
+    {
+        let from = engine_label(&engine_name(&chat));
+        let lines = store(move |s| s.conversation_messages(id))
+            .await
+            .unwrap_or_default();
+        let said: Vec<(String, String)> = lines.iter().map(|l| (l.who.clone(), l.text.clone())).collect();
+        chat.set_fallback(vults_chat::handoff(&from, &said, vults_chat::HANDOFF_BUDGET));
+    }
     chat.send(Turn { text, files, context }, tx, approver, stop).await;
     drop(stop_guard);
     let (session, history, outside) = (chat.session(), chat.history(), chat.outside());

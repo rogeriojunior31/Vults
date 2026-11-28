@@ -1,5 +1,5 @@
 # Conversando com o Zeca
-<!-- source: 0d38ff3d4d4b -->
+<!-- source: 078af6d1c291 -->
 
 Os painéis laterais redimensionáveis seguem o ponteiro que iniciou o arraste, ignoram toques adicionais e encerram o arraste quando a janela perde o foco. O cancelamento preserva a largura atual e mantém os rascunhos. Quando o espaço limita um painel, o arraste e o redimensionamento pelo teclado partem da largura visível; reduzir apenas o espaço disponível não sobrescreve a largura salva. Os controles de redimensionar e recolher usam a mesma cor de foco de teclado que o restante do tema selecionado.
 
@@ -210,6 +210,8 @@ todas, a usada por último primeiro, com o motor e a pasta de cada uma. Clique n
 onde parou, mesmo depois de reiniciar: ela mantém o motor, a pasta, o modelo e o esforço, e a CLI dela
 retoma a própria sessão (a sessão do Claude Code, a thread do Codex; o chat por API reenvia o que foi
 dito, com cada arquivo mandado guardado só como um rótulo: um arquivo de texto pelo nome, um documento pelo título, uma imagem como "uma imagem", nunca pelo conteúdo). O lápis renomeia; o xis apaga depois de um segundo clique, com tudo o que foi dito nela.
+Se a CLI não tem mais essa sessão (o histórico dela foi limpo, ou a conversa veio de outro
+computador), o turno começa uma sessão nova que continua a partir do que foi dito, em vez de falhar.
 
 O que é salvo é o que o chat mostra: suas mensagens e os nomes dos arquivos que você mandou, as
 respostas do Zeca, erros e paradas; nunca a resposta a um card (o log de auditoria guarda essas) e

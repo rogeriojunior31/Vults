@@ -6,6 +6,8 @@ What changed in each release, newest first. Each release's notes on GitHub come 
 
 ### Fixed
 
+- **Zeca's chat**: a saved conversation whose Claude Code session or Codex thread is gone (history cleared, another computer) goes on in a fresh one from what was said, instead of failing with *No conversation found*.
+
 - **Zeca's chat, full access**: it asks nothing any more. Before, a destructive command still asked, and after the first `gh`, `curl` or web read every later command asked for the rest of the conversation. Only a policy of yours that denies still denies.
 - **A plan's card**: **Allow and accept edits** now reaches Claude Code; since 0.1.9 the click was dropped on the way and Claude Code asked in its terminal instead.
 - **Activity**: a day's bar, the busiest day and the grid count turns side by side once, as the week's total does (they added them up, so parallel agents showed more time per day than in the week).

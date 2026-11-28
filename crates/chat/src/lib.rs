@@ -1103,6 +1103,21 @@ pub struct Chat {
     tools: tools::Tools,
     /// What was said with the engine before, for the first turn of the one that took over.
     handoff: Option<String>,
+    /// What was said so far, kept for a resumed session its CLI lost: a fresh one starts with it.
+    fallback: Option<String>,
+}
+
+/// A CLI that can't find the session it was asked to resume (cleared history, another machine).
+pub fn lost_session(error: &str) -> bool {
+    let e = error.to_lowercase();
+    [
+        "no conversation found",
+        "no rollout found",
+        "thread not found",
+        "session not found",
+    ]
+    .iter()
+    .any(|s| e.contains(s))
 }
 
 impl Chat {
@@ -1124,6 +1139,7 @@ impl Chat {
             ),
             tools: Vec::new(),
             handoff: None,
+            fallback: None,
         }
     }
 
@@ -1306,6 +1322,11 @@ impl Chat {
     /// ([`handoff`]); it goes with that turn only.
     pub fn set_handoff(&mut self, text: Option<String>) {
         self.handoff = text;
+    }
+
+    /// What was said so far, for this turn only: used if the CLI lost the session it resumes.
+    pub fn set_fallback(&mut self, text: Option<String>) {
+        self.fallback = text;
     }
 
     /// The folder can only change before the first turn: a conversation lives in one place.
@@ -1557,7 +1578,27 @@ impl Chat {
                         () = service.serve(&self.tools,approver,&self.outside,out) => Err("The specialist tool service stopped.".into()),
                     };
                 }
-                driver.send(turn, &sink).await
+                let fallback = self.fallback.take();
+                let result = driver.send(turn, &sink).await;
+                // The session to resume is gone: a fresh one goes on from what was said, once.
+                match (result, fallback) {
+                    (Err(e), Some(said)) if driver.session().is_some() && lost_session(&e) => {
+                        let spec = self.spec.clone();
+                        let Some(fresh) = drivers::for_cli(self.provider, spec) else {
+                            return Err(e);
+                        };
+                        *driver = fresh;
+                        let again = Turn {
+                            context: Some(match &turn.context {
+                                Some(context) => format!("{said}\n{context}"),
+                                None => said,
+                            }),
+                            ..turn.clone()
+                        };
+                        driver.send(&again, &sink).await
+                    }
+                    (result, _) => result,
+                }
             }
             Provider::ClaudeApi => {
                 let (provider, model) = (self.api.0, self.api.1.clone());
@@ -1720,6 +1761,15 @@ fn target(tool: &str, detail: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_lost_session_is_told_apart_from_other_failures() {
+        assert!(lost_session(
+            "Claude stopped: No conversation found with session ID: 1f2e"
+        ));
+        assert!(lost_session("no rollout found for thread id 019a"));
+        assert!(!lost_session("Claude stopped: rate limited"));
+    }
 
     #[test]
     fn an_edit_diff_keeps_a_little_context_around_the_change() {

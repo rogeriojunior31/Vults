@@ -194,6 +194,9 @@ shows them, the latest used first, with the engine and folder of each. Click one
 where it stopped, even after a restart: it keeps its engine, folder, model and effort, and its CLI
 resumes its own session (Claude Code's session, Codex's thread; the API chat replays what was
 said, with each file sent kept only as a label: a text file by its name, a document by its title, an image as "an image", never the contents). The pencil renames one; the cross deletes it after a second click, with what was said in it.
+If the CLI no longer has that session (its history was cleared, or the conversation came from
+another computer), the turn starts a fresh session that goes on from what was said, instead of
+failing.
 
 What is saved is what the chat shows: your messages and the names of the files you sent, Zeca's
 replies, errors and stops; never a card's answer (the audit log keeps those) and never an
